@@ -7,7 +7,9 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 public final class ByteOutput implements Output {
@@ -31,6 +33,11 @@ public final class ByteOutput implements Output {
     @Override
     public void write(final OutputStream outputStream) throws IOException {
         outputStream.write(value);
+    }
+
+    @Override
+    public InputStream read() throws IOException {
+        return new ByteArrayInputStream(value);
     }
 
     @Override

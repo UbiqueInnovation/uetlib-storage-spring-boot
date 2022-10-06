@@ -6,8 +6,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.Optional;
 import java.util.zip.GZIPOutputStream;
 
@@ -16,7 +15,17 @@ public final class GZipOutput implements Output {
     private final Output uncompressed;
 
     public GZipOutput(final Output uncompressed) {
-        this.uncompressed = uncompressed;
+        if (uncompressed instanceof GZipOutput gZipOutput) {
+            this.uncompressed = gZipOutput.uncompressed;
+        }
+        else {
+            this.uncompressed = uncompressed;
+        }
+    }
+
+    @Override
+    public Output gZip() {
+        return this;
     }
 
     @Override
@@ -24,6 +33,15 @@ public final class GZipOutput implements Output {
         final var gZipOutputStream = new GZIPOutputStream(outputStream);
         uncompressed.write(gZipOutputStream);
         gZipOutputStream.finish();
+    }
+
+    @Override
+    public InputStream read() throws IOException {
+        try (final var outputStream = new ByteArrayOutputStream()){
+            write(outputStream);
+            final var bytes = outputStream.toByteArray();
+            return new ByteArrayInputStream(bytes);
+        }
     }
 
     @Override

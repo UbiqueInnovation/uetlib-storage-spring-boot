@@ -7,9 +7,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 
 public final class FileOutput implements Output {
 
@@ -28,6 +26,11 @@ public final class FileOutput implements Output {
     @Override
     public void write(OutputStream outputStream) throws IOException {
         FileUtils.copyFile(file, outputStream);
+    }
+
+    @Override
+    public InputStream read() throws IOException {
+        return new FileInputStream(file);
     }
 
     @Override

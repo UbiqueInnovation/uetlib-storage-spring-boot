@@ -49,12 +49,7 @@ public class AzureBlobStorageClient implements StorageClient {
 
     @Override
     public void write(Output output, String path, OutputMetaData metaData) throws IOException {
-        byte[] data;
-        try (final var outputStream = new ByteArrayOutputStream()) {
-            output.write(outputStream);
-            data = outputStream.toByteArray();
-        }
-        try (final var inputStream = new ByteArrayInputStream(data)) {
+        try (final var inputStream = output.read()) {
 
             // Set important headers
             final var headers = new BlobHttpHeaders();

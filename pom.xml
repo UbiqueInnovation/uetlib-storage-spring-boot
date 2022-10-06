@@ -25,11 +25,16 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!-- Azure -->
+        <!-- External storage clients -->
         <dependency>
             <groupId>com.azure</groupId>
             <artifactId>azure-storage-blob</artifactId>
             <version>12.19.1</version>
+        </dependency>
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.4.5</version>
         </dependency>
 
         <!-- Annotation processing & code generation -->
