@@ -3,6 +3,8 @@ package ch.ubique.backend.storage.clients;
 import ch.ubique.backend.storage.Output;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -13,6 +15,8 @@ public class FileSystemStorageClient implements StorageClient {
 
     private final String basePath;
 
+    private final Logger logger = LoggerFactory.getLogger(getClass());
+
     public FileSystemStorageClient(final String basePath) {
         this.basePath = basePath;
     }
@@ -21,8 +25,12 @@ public class FileSystemStorageClient implements StorageClient {
     public void write(Output output, String path, OutputMetaData metaData) throws IOException {
         final var file = new File(Path.of(basePath, path).toUri());
         final var parent = file.getParentFile();
-        if (!parent.exists() || !parent.mkdirs()) {
-            throw new FileNotFoundException("Could not create directory for path " + parent);
+        if (!parent.exists()) {
+            logger.info("Creating parent directory {}", parent);
+            final var createdDir = parent.mkdirs();
+            if (!createdDir) {
+                throw new FileNotFoundException("Could not create directory for path " + parent);
+            }
         }
         try (final var outputStream = new FileOutputStream(file)) {
             output.write(outputStream);
