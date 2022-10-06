@@ -14,4 +14,6 @@ public @interface OutputMapping {
     boolean gZip() default false;
 
     String contentType() default "";
+
+    Class<?> documentedClass() default Object.class;
 }

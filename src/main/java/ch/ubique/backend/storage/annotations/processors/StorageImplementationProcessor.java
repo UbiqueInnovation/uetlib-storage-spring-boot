@@ -1,8 +1,11 @@
-package ch.ubique.backend.storage.annotations;
+package ch.ubique.backend.storage.annotations.processors;
 
 import ch.ubique.backend.storage.Output;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.annotations.InputMapping;
+import ch.ubique.backend.storage.annotations.OutputMapping;
+import ch.ubique.backend.storage.annotations.Storage;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.FileOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
@@ -13,20 +16,17 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
 
-import javax.annotation.processing.*;
-import javax.lang.model.SourceVersion;
+import javax.annotation.processing.Processor;
+import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.TypeKind;
-import javax.lang.model.util.Elements;
-import javax.lang.model.util.Types;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Optional;
@@ -36,36 +36,11 @@ import java.util.stream.Collectors;
 import static javax.lang.model.element.Modifier.*;
 
 @AutoService(Processor.class)
-public class StorageAnnotationProcessor extends AbstractProcessor {
-
-    private static final Set<Class<? extends Annotation>> supportedAnnotations = Set.of(
-            Storage.class,
-            OutputMapping.class,
-            InputMapping.class
-    );
-
-    private Filer filer;
-    private Types typeUtils;
-    private Elements elementUtils;
+public class StorageImplementationProcessor extends AbstractStorageAnnotationProcessor {
 
     @Override
-    public synchronized void init(ProcessingEnvironment processingEnv) {
-        super.init(processingEnv);
-        this.filer = processingEnv.getFiler();
-        this.typeUtils = processingEnv.getTypeUtils();
-        this.elementUtils = processingEnv.getElementUtils();
-    }
-
-    @Override
-    public SourceVersion getSupportedSourceVersion() {
-        return SourceVersion.latestSupported();
-    }
-
-    @Override
-    public Set<String> getSupportedAnnotationTypes() {
-        return supportedAnnotations.stream()
-                .map(Class::getCanonicalName)
-                .collect(Collectors.toUnmodifiableSet());
+    protected Set<Class<? extends Annotation>> supportedAnnotations() {
+        return Set.of(Storage.class, OutputMapping.class, InputMapping.class);
     }
 
     @Override
@@ -73,7 +48,7 @@ public class StorageAnnotationProcessor extends AbstractProcessor {
 
         // Get a map for convenience, that maps for each annotation class from parent to annotated children
         // We use it to get e.g. all @OutputMapping annotated elements for a given element annotated with @Storage
-        final var annotatedElements = supportedAnnotations
+        final var annotatedElements = supportedAnnotations()
                 .stream().collect(Collectors.toMap(cls -> cls, cls -> roundEnv
                         .getElementsAnnotatedWith(cls)
                         .stream()
@@ -103,7 +78,8 @@ public class StorageAnnotationProcessor extends AbstractProcessor {
             writeClass(classBuilder, element);
         }
 
-        return true;
+        // Return false: marked as unclaimed -> i.e. other processors are also called
+        return false;
     }
 
     private TypeSpec.Builder generateClass(final Element element) {
@@ -240,14 +216,5 @@ public class StorageAnnotationProcessor extends AbstractProcessor {
         return ParameterSpec
                 .builder(TypeName.get(parameter.asType()), parameter.toString(), FINAL)
                 .build();
-    }
-
-    private void writeClass(TypeSpec.Builder classBuilder, Element element) {
-        try {
-            final var packageName = element.getEnclosingElement().toString();
-            JavaFile.builder(packageName, classBuilder.build()).build().writeTo(filer);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
     }
 }
