@@ -26,10 +26,14 @@ public class FileSystemStorageClient implements StorageClient {
         final var file = new File(Path.of(basePath, path).toUri());
         final var parent = file.getParentFile();
         if (!parent.exists()) {
-            logger.info("Creating parent directory {}", parent);
-            final var createdDir = parent.mkdirs();
-            if (!createdDir) {
-                throw new FileNotFoundException("Could not create directory for path " + parent);
+            synchronized (this) {
+                if (!parent.exists()) {
+                    logger.info("Creating parent directory {}", parent);
+                    final var createdDir = parent.mkdirs();
+                    if (!createdDir) {
+                        throw new FileNotFoundException("Could not create directory for path " + parent);
+                    }
+                }
             }
         }
         try (final var outputStream = new FileOutputStream(file)) {
