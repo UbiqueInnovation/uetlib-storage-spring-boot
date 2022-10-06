@@ -1,43 +1,22 @@
 package ch.ubique.backend.storage.annotations.processors;
 
-import ch.ubique.backend.storage.Output;
-import ch.ubique.backend.storage.OutputMetaData;
-import ch.ubique.backend.storage.StorageClient;
-import ch.ubique.backend.storage.annotations.InputMapping;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.annotations.Storage;
-import ch.ubique.backend.storage.output.ByteOutput;
-import ch.ubique.backend.storage.output.FileOutput;
-import ch.ubique.backend.storage.output.JsonOutput;
 import com.google.auto.service.AutoService;
-import com.squareup.javapoet.*;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PathVariable;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.TypeSpec;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.annotation.processing.*;
-import javax.lang.model.SourceVersion;
+import javax.annotation.processing.Processor;
+import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.ArrayType;
-import javax.lang.model.type.TypeKind;
-import javax.lang.model.util.Elements;
-import javax.lang.model.util.Types;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.lang.annotation.Annotation;
-import java.util.List;
-import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
-import static javax.lang.model.element.Modifier.*;
+import static javax.lang.model.element.Modifier.FINAL;
+import static javax.lang.model.element.Modifier.PUBLIC;
 
 @AutoService(Processor.class)
 public class StorageDocumentationProcessor extends AbstractStorageAnnotationProcessor {
@@ -57,10 +36,11 @@ public class StorageDocumentationProcessor extends AbstractStorageAnnotationProc
             final var classBuilder = generateClass(element);
 
             // Get all the output mappings of the given element
-            final var outputMappings = roundEnv.getElementsAnnotatedWith(OutputMapping.class)
+            classBuilder.addMethods(roundEnv.getElementsAnnotatedWith(OutputMapping.class)
                     .stream()
                     .filter(outputMapping -> outputMapping.getEnclosingElement().equals(element))
-                    .collect(Collectors.toUnmodifiableSet());
+                    .map(this::generateMethodForOutputMapping)
+                    .toList());
 
             // Write class to filer, it will be available as generated source
             writeClass(classBuilder, element);
@@ -75,5 +55,13 @@ public class StorageDocumentationProcessor extends AbstractStorageAnnotationProc
         return TypeSpec.classBuilder(className)
                 .addModifiers(PUBLIC, FINAL)
                 .addAnnotation(RestController.class);
+    }
+
+    private MethodSpec generateMethodForOutputMapping(final Element method) {
+        return MethodSpec
+                .methodBuilder(method.getSimpleName().toString())
+                .addModifiers(PUBLIC)
+                .addAnnotation(GetMapping.class)
+                .build();
     }
 }
