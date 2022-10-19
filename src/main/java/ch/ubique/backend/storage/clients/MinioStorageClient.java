@@ -10,6 +10,8 @@ import io.minio.*;
 import io.minio.errors.*;
 import io.minio.http.Method;
 
+import org.apache.commons.lang3.NotImplementedException;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
@@ -110,5 +112,12 @@ public class MinioStorageClient implements StorageClient {
                 | IOException e) {
             throw new WrappedException(e);
         }
+    }
+
+    @Override
+    public String getUrl(String path) {
+        throw new NotImplementedException(
+                "Minio (actually S3) does not support permanent share URLs? (Maximum is 7 days as"
+                        + " per S3 spec)");
     }
 }

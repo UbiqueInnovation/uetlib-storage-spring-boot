@@ -56,6 +56,11 @@ public class FileSystemStorageClient implements StorageClient {
 
     @Override
     public String getSignedUrl(String path, OffsetDateTime expiry) {
+        return getUrl(path);
+    }
+
+    @Override
+    public String getUrl(String path) {
         return Path.of(basePath, path).toString();
     }
 }

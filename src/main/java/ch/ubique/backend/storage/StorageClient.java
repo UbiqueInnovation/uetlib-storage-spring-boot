@@ -17,4 +17,6 @@ public interface StorageClient {
     boolean delete(String path) throws IOException;
 
     String getSignedUrl(String path, OffsetDateTime expiry);
+
+    String getUrl(String path);
 }
