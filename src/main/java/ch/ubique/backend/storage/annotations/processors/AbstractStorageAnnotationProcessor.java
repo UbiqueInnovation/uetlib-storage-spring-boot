@@ -3,6 +3,12 @@ package ch.ubique.backend.storage.annotations.processors;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.lang.annotation.Annotation;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -10,11 +16,6 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.lang.annotation.Annotation;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public abstract class AbstractStorageAnnotationProcessor extends AbstractProcessor {
 

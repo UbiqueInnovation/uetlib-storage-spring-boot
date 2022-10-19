@@ -1,7 +1,9 @@
 package ch.ubique.backend.storage.output;
 
 import ch.ubique.backend.storage.Output;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -56,7 +58,10 @@ public final class JsonOutput<T> implements Output {
         if (!(o instanceof JsonOutput<?> that)) {
             return false;
         }
-        return new EqualsBuilder().append(value, that.value).append(objectMapper, that.objectMapper).isEquals();
+        return new EqualsBuilder()
+                .append(value, that.value)
+                .append(objectMapper, that.objectMapper)
+                .isEquals();
     }
 
     @Override

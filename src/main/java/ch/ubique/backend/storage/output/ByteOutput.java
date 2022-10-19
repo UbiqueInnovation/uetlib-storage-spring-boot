@@ -2,6 +2,7 @@ package ch.ubique.backend.storage.output;
 
 import ch.ubique.backend.core.file.ByteFile;
 import ch.ubique.backend.storage.Output;
+
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -63,7 +64,10 @@ public final class ByteOutput implements Output {
             return false;
         }
 
-        return new EqualsBuilder().append(value, that.value).append(contentType, that.contentType).isEquals();
+        return new EqualsBuilder()
+                .append(value, that.value)
+                .append(contentType, that.contentType)
+                .isEquals();
     }
 
     @Override

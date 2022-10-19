@@ -1,6 +1,7 @@
 package ch.ubique.backend.storage.output;
 
 import ch.ubique.backend.storage.Output;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -54,7 +55,10 @@ public final class FileOutput implements Output {
         if (!(o instanceof FileOutput that)) {
             return false;
         }
-        return new EqualsBuilder().append(file, that.file).append(contentType, that.contentType).isEquals();
+        return new EqualsBuilder()
+                .append(file, that.file)
+                .append(contentType, that.contentType)
+                .isEquals();
     }
 
     @Override

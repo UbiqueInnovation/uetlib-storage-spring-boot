@@ -4,6 +4,7 @@ import ch.ubique.backend.core.http.cache.CacheHeaderUtility;
 import ch.ubique.backend.storage.Output;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
+
 import com.azure.core.util.Context;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
@@ -62,11 +63,13 @@ public class AzureBlobStorageClient implements StorageClient {
             uploadOptions.setHeaders(headers);
             uploadOptions.setMetadata(createAzureMetaData(metaData));
             uploadOptions.setRequestConditions(new BlobRequestConditions());
-            uploadOptions.setParallelTransferOptions(new ParallelTransferOptions().setMaxConcurrency(100));
+            uploadOptions.setParallelTransferOptions(
+                    new ParallelTransferOptions().setMaxConcurrency(100));
 
             // Upload
             final var timeout = Duration.ofSeconds(60);
-            blobServiceClient.getBlobContainerClient(container)
+            blobServiceClient
+                    .getBlobContainerClient(container)
                     .getBlobClient(path)
                     .uploadWithResponse(uploadOptions, timeout, Context.NONE);
         }
@@ -76,7 +79,8 @@ public class AzureBlobStorageClient implements StorageClient {
     public InputStream read(String path) throws IOException {
         byte[] data;
         try (final var outputStream = new ByteArrayOutputStream()) {
-            blobServiceClient.getBlobContainerClient(container)
+            blobServiceClient
+                    .getBlobContainerClient(container)
                     .getBlobClient(path)
                     .downloadStream(outputStream);
             data = outputStream.toByteArray();
@@ -86,7 +90,10 @@ public class AzureBlobStorageClient implements StorageClient {
 
     @Override
     public boolean delete(String path) {
-        return blobServiceClient.getBlobContainerClient(container).getBlobClient(path).deleteIfExists();
+        return blobServiceClient
+                .getBlobContainerClient(container)
+                .getBlobClient(path)
+                .deleteIfExists();
     }
 
     public String getSignedUrl(String path, OffsetDateTime expiry) {
@@ -104,27 +111,31 @@ public class AzureBlobStorageClient implements StorageClient {
                 + blobClient.generateSas(values);
     }
 
-    /**
-     * Creates the azure meta data object based on the given {@link OutputMetaData}.
-     */
+    /** Creates the azure metadata object based on the given {@link OutputMetaData}. */
     private HashMap<String, String> createAzureMetaData(OutputMetaData metaData) {
         final var azureMetaData = new HashMap<String, String>();
         if (metaData.getNextRefresh() != null) {
-            azureMetaData.put(CacheHeaderUtility.NEXT_REFRESH_SHORT, getHTTPDateString(metaData.getNextRefresh()));
+            azureMetaData.put(
+                    CacheHeaderUtility.NEXT_REFRESH_SHORT,
+                    getHTTPDateString(metaData.getNextRefresh()));
         }
         if (metaData.getBestBefore() != null) {
-            azureMetaData.put(CacheHeaderUtility.BEST_BEFORE_SHORT, getHTTPDateString(metaData.getBestBefore()));
+            azureMetaData.put(
+                    CacheHeaderUtility.BEST_BEFORE_SHORT,
+                    getHTTPDateString(metaData.getBestBefore()));
         }
         if (metaData.getCache() != null) {
             azureMetaData.put(CacheHeaderUtility.CACHE_SHORT, metaData.getCache());
         }
         if (metaData.getBackoff() != null) {
-            azureMetaData.put(CacheHeaderUtility.REFRESH_BACKOFF_SHORT, metaData.getBackoff().toString());
+            azureMetaData.put(
+                    CacheHeaderUtility.REFRESH_BACKOFF_SHORT, metaData.getBackoff().toString());
         }
-        azureMetaData.put(CacheHeaderUtility.MINIMUM_API_VERSION_SHORT, Optional
-                .ofNullable(metaData.getMinimumApiVersion())
-                .orElse(CacheHeaderUtility.DEFAULT_API_VERSION)
-                .toString());
+        azureMetaData.put(
+                CacheHeaderUtility.MINIMUM_API_VERSION_SHORT,
+                Optional.ofNullable(metaData.getMinimumApiVersion())
+                        .orElse(CacheHeaderUtility.DEFAULT_API_VERSION)
+                        .toString());
 
         return azureMetaData;
     }
