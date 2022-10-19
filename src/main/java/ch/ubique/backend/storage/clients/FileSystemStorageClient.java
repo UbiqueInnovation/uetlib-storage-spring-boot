@@ -14,9 +14,9 @@ import java.time.OffsetDateTime;
 
 public class FileSystemStorageClient implements StorageClient {
 
-    private final String basePath;
+    private static final Logger logger = LoggerFactory.getLogger(FileSystemStorageClient.class);
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final String basePath;
 
     public FileSystemStorageClient(final String basePath) {
         this.basePath = basePath;

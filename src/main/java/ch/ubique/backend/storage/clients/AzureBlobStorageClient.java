@@ -23,17 +23,20 @@ import java.io.InputStream;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class AzureBlobStorageClient implements StorageClient {
 
+    private static final DateTimeFormatter HTTP_DATE_FORMATTER =
+            DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss z", Locale.US)
+                    .withZone(ZoneId.of("UTC"));
+
     private final String container;
     private final BlobServiceClient blobServiceClient;
-    private final DateFormat httpDateFormat;
 
     public AzureBlobStorageClient(final String container, final String connectionString) {
         this.container = container;
@@ -42,10 +45,6 @@ public class AzureBlobStorageClient implements StorageClient {
                         .connectionString(connectionString)
                         .retryOptions(new RequestRetryOptions())
                         .buildClient();
-
-        DateFormat df = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
-        df.setTimeZone(TimeZone.getTimeZone("GMT"));
-        httpDateFormat = df;
     }
 
     @Override
@@ -96,6 +95,7 @@ public class AzureBlobStorageClient implements StorageClient {
                 .deleteIfExists();
     }
 
+    @Override
     public String getSignedUrl(String path, OffsetDateTime expiry) {
         final var blobSasPermission = new BlobSasPermission().setReadPermission(true);
         final var values =
@@ -117,12 +117,12 @@ public class AzureBlobStorageClient implements StorageClient {
         if (metaData.getNextRefresh() != null) {
             azureMetaData.put(
                     CacheHeaderUtility.NEXT_REFRESH_SHORT,
-                    getHTTPDateString(metaData.getNextRefresh()));
+                    HTTP_DATE_FORMATTER.format(metaData.getNextRefresh()));
         }
         if (metaData.getBestBefore() != null) {
             azureMetaData.put(
                     CacheHeaderUtility.BEST_BEFORE_SHORT,
-                    getHTTPDateString(metaData.getBestBefore()));
+                    HTTP_DATE_FORMATTER.format(metaData.getBestBefore()));
         }
         if (metaData.getCache() != null) {
             azureMetaData.put(CacheHeaderUtility.CACHE_SHORT, metaData.getCache());
@@ -138,9 +138,5 @@ public class AzureBlobStorageClient implements StorageClient {
                         .toString());
 
         return azureMetaData;
-    }
-
-    private synchronized String getHTTPDateString(Date date) {
-        return httpDateFormat.format(date);
     }
 }

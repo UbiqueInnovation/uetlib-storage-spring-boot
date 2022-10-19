@@ -2,7 +2,7 @@ package ch.ubique.backend.storage;
 
 import ch.ubique.backend.core.http.cache.CacheHeaderUtility;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Optional;
 
@@ -17,8 +17,8 @@ public final class OutputMetaData {
     private String contentType;
     private String contentEncoding;
 
-    private Date bestBefore;
-    private Date nextRefresh;
+    private Instant bestBefore;
+    private Instant nextRefresh;
     private String cache;
     private Long backoff;
     private Long maxAge = -1L;
@@ -32,19 +32,19 @@ public final class OutputMetaData {
         this.contentType = contentType;
     }
 
-    public Date getBestBefore() {
+    public Instant getBestBefore() {
         return bestBefore;
     }
 
-    public void setBestBefore(Date bestBefore) {
+    public void setBestBefore(Instant bestBefore) {
         this.bestBefore = bestBefore;
     }
 
-    public Date getNextRefresh() {
+    public Instant getNextRefresh() {
         return nextRefresh;
     }
 
-    public void setNextRefresh(Date nextRefresh) {
+    public void setNextRefresh(Instant nextRefresh) {
         this.nextRefresh = nextRefresh;
     }
 

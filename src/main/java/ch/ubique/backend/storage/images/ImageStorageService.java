@@ -46,6 +46,17 @@ public class ImageStorageService {
         this.blurHashClient = blurHashClient;
     }
 
+    /** Construct with default sasExpiry of 7 days. Useful if sas is not used. */
+    public ImageStorageService(
+            final StorageClient storageClient,
+            final ExecutorService highMemoryExecutor,
+            final BlurHashClient blurHashClient) {
+        this.storageClient = storageClient;
+        this.sasExpiry = Duration.ofDays(7);
+        this.highMemoryExecutor = highMemoryExecutor;
+        this.blurHashClient = blurHashClient;
+    }
+
     public BlurHashRepresentation processImage(
             final InputStream imageInputStream, final Function<ImageVariant, String> generatePath)
             throws ExecutionException, InterruptedException {
@@ -105,27 +116,26 @@ public class ImageStorageService {
     public void deleteImageVariants(final Function<ImageVariant, String> generatePath)
             throws IOException {
         for (final var variant : ImageVariant.values()) {
-            deleteImageVariant(generatePath, variant);
+            deleteImageVariant(generatePath.apply(variant));
         }
     }
 
-    public boolean deleteImageVariant(
-            final Function<ImageVariant, String> generatePath, final ImageVariant variant)
-            throws IOException {
-        return storageClient.delete(generatePath.apply(variant));
+    public boolean deleteImageVariant(final String path) throws IOException {
+        return storageClient.delete(path);
     }
 
-    public byte[] downloadBlobAsBytes(
-            final Function<ImageVariant, String> generatePath, final ImageVariant variant)
-            throws IOException {
-        try (final var inputStream = storageClient.read(generatePath.apply(variant))) {
+    public byte[] downloadBlobAsBytes(final String path) throws IOException {
+        try (final var inputStream = storageClient.read(path)) {
             return inputStream.readAllBytes();
         }
     }
 
-    public String getSignedUrl(
-            final ImageVariant variant, final Function<ImageVariant, String> generatePath) {
+    public String getSignedUrl(final String path) {
         return storageClient.getSignedUrl(
-                generatePath.apply(variant), OffsetDateTime.now().plusNanos(sasExpiry.toNanos()));
+                path, OffsetDateTime.now().plusNanos(sasExpiry.toNanos()));
+    }
+
+    public String getUrl(final String path) {
+        return storageClient.getUrl(path);
     }
 }
