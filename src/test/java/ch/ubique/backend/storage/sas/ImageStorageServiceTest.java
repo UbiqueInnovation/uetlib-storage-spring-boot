@@ -31,7 +31,6 @@ class ImageStorageServiceTest {
             imageId -> variant -> String.format("sasImage/%d-%s.jpeg", imageId, variant.key);
 
     private final AzureBlobStorageClient blobStorageService = mock(AzureBlobStorageClient.class);
-    private final String container = "sasContainer";
     private final Duration sasExpiry = Duration.of(3, ChronoUnit.DAYS);
     private final ExecutorService executorService = Executors.newFixedThreadPool(1);
     private final BlurHashClient blurHashClient = new BlurHashClient(10);
