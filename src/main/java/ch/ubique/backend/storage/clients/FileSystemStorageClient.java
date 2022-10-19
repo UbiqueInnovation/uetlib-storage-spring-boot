@@ -3,6 +3,7 @@ package ch.ubique.backend.storage.clients;
 import ch.ubique.backend.storage.Output;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +32,8 @@ public class FileSystemStorageClient implements StorageClient {
                     logger.info("Creating parent directory {}", parent);
                     final var createdDir = parent.mkdirs();
                     if (!createdDir) {
-                        throw new FileNotFoundException("Could not create directory for path " + parent);
+                        throw new FileNotFoundException(
+                                "Could not create directory for path " + parent);
                     }
                 }
             }

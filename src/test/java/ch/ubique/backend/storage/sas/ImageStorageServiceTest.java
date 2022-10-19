@@ -1,13 +1,18 @@
 package ch.ubique.backend.storage.sas;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
 import ch.ubique.backend.image.blurhash.BlurHashClient;
 import ch.ubique.backend.storage.clients.AzureBlobStorageClient;
 import ch.ubique.backend.storage.images.ImageStorageService;
 import ch.ubique.backend.storage.images.ImageVariant;
 import ch.ubique.backend.storage.output.ByteOutput;
+
 import org.junit.jupiter.api.Test;
 
-import javax.imageio.ImageIO;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -19,10 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import javax.imageio.ImageIO;
 
 class ImageStorageServiceTest {
     private static final Function<Integer, Function<ImageVariant, String>> GENERATE_GENERATE_PATH =
@@ -51,10 +53,8 @@ class ImageStorageServiceTest {
         assertEquals(1.77, blurHashRepresentation.aspectRatio(), 0.05);
         verify(blobStorageService, atLeastOnce())
                 .write(new ByteOutput(exampleImage, "image/jpeg"), "sasImage/0-original.jpeg");
-        verify(blobStorageService, atLeastOnce())
-                .write(any(), eq("sasImage/0-hires.jpeg"));
-        verify(blobStorageService, atLeastOnce())
-                .write(any(), eq("sasImage/0-thumbnail.jpeg"));
+        verify(blobStorageService, atLeastOnce()).write(any(), eq("sasImage/0-hires.jpeg"));
+        verify(blobStorageService, atLeastOnce()).write(any(), eq("sasImage/0-thumbnail.jpeg"));
     }
 
     @Test

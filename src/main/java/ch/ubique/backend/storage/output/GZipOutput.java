@@ -1,6 +1,7 @@
 package ch.ubique.backend.storage.output;
 
 import ch.ubique.backend.storage.Output;
+
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -17,8 +18,7 @@ public final class GZipOutput implements Output {
     public GZipOutput(final Output uncompressed) {
         if (uncompressed instanceof GZipOutput gZipOutput) {
             this.uncompressed = gZipOutput.uncompressed;
-        }
-        else {
+        } else {
             this.uncompressed = uncompressed;
         }
     }
@@ -37,7 +37,7 @@ public final class GZipOutput implements Output {
 
     @Override
     public InputStream read() throws IOException {
-        try (final var outputStream = new ByteArrayOutputStream()){
+        try (final var outputStream = new ByteArrayOutputStream()) {
             write(outputStream);
             final var bytes = outputStream.toByteArray();
             return new ByteArrayInputStream(bytes);

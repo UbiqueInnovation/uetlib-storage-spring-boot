@@ -108,5 +108,4 @@ public final class OutputMetaData {
         }
         return Optional.of(String.join(", ", parts));
     }
-
 }

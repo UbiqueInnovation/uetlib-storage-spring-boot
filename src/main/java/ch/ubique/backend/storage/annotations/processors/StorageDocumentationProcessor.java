@@ -1,22 +1,25 @@
 package ch.ubique.backend.storage.annotations.processors;
 
+import static javax.lang.model.element.Modifier.FINAL;
+import static javax.lang.model.element.Modifier.PUBLIC;
+
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.annotations.Storage;
+
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeSpec;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.lang.annotation.Annotation;
+import java.util.Set;
 
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
-import java.lang.annotation.Annotation;
-import java.util.Set;
-
-import static javax.lang.model.element.Modifier.FINAL;
-import static javax.lang.model.element.Modifier.PUBLIC;
 
 @AutoService(Processor.class)
 public class StorageDocumentationProcessor extends AbstractStorageAnnotationProcessor {
@@ -36,11 +39,13 @@ public class StorageDocumentationProcessor extends AbstractStorageAnnotationProc
             final var classBuilder = generateClass(element);
 
             // Get all the output mappings of the given element
-            classBuilder.addMethods(roundEnv.getElementsAnnotatedWith(OutputMapping.class)
-                    .stream()
-                    .filter(outputMapping -> outputMapping.getEnclosingElement().equals(element))
-                    .map(this::generateMethodForOutputMapping)
-                    .toList());
+            classBuilder.addMethods(
+                    roundEnv.getElementsAnnotatedWith(OutputMapping.class).stream()
+                            .filter(
+                                    outputMapping ->
+                                            outputMapping.getEnclosingElement().equals(element))
+                            .map(this::generateMethodForOutputMapping)
+                            .toList());
 
             // Write class to filer, it will be available as generated source
             writeClass(classBuilder, element);
@@ -58,8 +63,7 @@ public class StorageDocumentationProcessor extends AbstractStorageAnnotationProc
     }
 
     private MethodSpec generateMethodForOutputMapping(final Element method) {
-        return MethodSpec
-                .methodBuilder(method.getSimpleName().toString())
+        return MethodSpec.methodBuilder(method.getSimpleName().toString())
                 .addModifiers(PUBLIC)
                 .addAnnotation(GetMapping.class)
                 .build();

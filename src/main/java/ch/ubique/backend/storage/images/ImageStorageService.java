@@ -5,11 +5,12 @@ import ch.ubique.backend.image.blurhash.BlurHashRepresentation;
 import ch.ubique.backend.image.util.ExifTransform;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.ByteOutput;
+
 import com.drew.imaging.ImageProcessingException;
+
 import org.imgscalr.Scalr;
 import org.jetbrains.annotations.NotNull;
 
-import javax.imageio.ImageIO;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -20,10 +21,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
+import javax.imageio.ImageIO;
+
 /**
- * Saves images in multiple, resized variants and
- * retrieve singed access urls to the uploaded resources
- * using the provided {@link StorageClient} .
+ * Saves images in multiple, resized variants and retrieve singed access urls to the uploaded
+ * resources using the provided {@link StorageClient} .
  */
 public class ImageStorageService {
 
@@ -59,9 +61,9 @@ public class ImageStorageService {
         final byte[] imageBytes = imageInputStream.readAllBytes();
         // InputStream::readAllBytes does not close the imageInputStream
         imageInputStream.close();
-        storageClient.write(new ByteOutput(imageBytes, CONTENT_TYPE_JPG),
-                generatePath.apply(ImageVariant.ORIGINAL)
-                );
+        storageClient.write(
+                new ByteOutput(imageBytes, CONTENT_TYPE_JPG),
+                generatePath.apply(ImageVariant.ORIGINAL));
 
         final var imageInfo = ExifTransform.readImageInformation(imageBytes);
         final var imageStream = new ByteArrayInputStream(imageBytes);
@@ -78,7 +80,8 @@ public class ImageStorageService {
         // Flush clears native references so the image can be GC-ed. See tip of Scalr::resize
         final var hiresOutput = new ByteArrayOutputStream();
         ImageIO.write(hires, "jpeg", hiresOutput);
-        storageClient.write(new ByteOutput(hiresOutput.toByteArray(),CONTENT_TYPE_JPG),
+        storageClient.write(
+                new ByteOutput(hiresOutput.toByteArray(), CONTENT_TYPE_JPG),
                 generatePath.apply(ImageVariant.HIRES));
 
         final var thumbnail = Scalr.resize(hires, 320);
@@ -87,7 +90,8 @@ public class ImageStorageService {
         final var thumbnailOutput = new ByteArrayOutputStream();
         ImageIO.write(thumbnail, "jpeg", thumbnailOutput);
 
-        storageClient.write(new ByteOutput(thumbnailOutput.toByteArray(), CONTENT_TYPE_JPG),
+        storageClient.write(
+                new ByteOutput(thumbnailOutput.toByteArray(), CONTENT_TYPE_JPG),
                 generatePath.apply(ImageVariant.THUMBNAIL));
 
         final var blurHashRepresentation =
@@ -98,19 +102,22 @@ public class ImageStorageService {
         return blurHashRepresentation;
     }
 
-    public void deleteImageVariants(final Function<ImageVariant, String> generatePath) throws IOException {
+    public void deleteImageVariants(final Function<ImageVariant, String> generatePath)
+            throws IOException {
         for (final var variant : ImageVariant.values()) {
             deleteImageVariant(generatePath, variant);
         }
     }
 
     public boolean deleteImageVariant(
-            final Function<ImageVariant, String> generatePath, final ImageVariant variant) throws IOException {
+            final Function<ImageVariant, String> generatePath, final ImageVariant variant)
+            throws IOException {
         return storageClient.delete(generatePath.apply(variant));
     }
 
     public byte[] downloadBlobAsBytes(
-            final Function<ImageVariant, String> generatePath, final ImageVariant variant) throws IOException {
+            final Function<ImageVariant, String> generatePath, final ImageVariant variant)
+            throws IOException {
         try (final var inputStream = storageClient.read(generatePath.apply(variant))) {
             return inputStream.readAllBytes();
         }
@@ -118,6 +125,7 @@ public class ImageStorageService {
 
     public String getSignedUrl(
             final ImageVariant variant, final Function<ImageVariant, String> generatePath) {
-        return storageClient.getSignedUrl(generatePath.apply(variant), OffsetDateTime.now().plusNanos(sasExpiry.toNanos()));
+        return storageClient.getSignedUrl(
+                generatePath.apply(variant), OffsetDateTime.now().plusNanos(sasExpiry.toNanos()));
     }
 }
