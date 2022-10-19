@@ -111,6 +111,14 @@ public class AzureBlobStorageClient implements StorageClient {
                 + blobClient.generateSas(values);
     }
 
+    @Override
+    public String getUrl(String path) {
+        final var blobUrlEncoded = URLEncoder.encode(path, StandardCharsets.UTF_8);
+        final var blobClient =
+                blobServiceClient.getBlobContainerClient(container).getBlobClient(blobUrlEncoded);
+        return URLDecoder.decode(blobClient.getBlobUrl(), StandardCharsets.UTF_8);
+    }
+
     /** Creates the azure metadata object based on the given {@link OutputMetaData}. */
     private HashMap<String, String> createAzureMetaData(OutputMetaData metaData) {
         final var azureMetaData = new HashMap<String, String>();

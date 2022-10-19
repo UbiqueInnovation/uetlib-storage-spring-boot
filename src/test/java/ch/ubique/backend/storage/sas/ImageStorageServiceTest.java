@@ -58,7 +58,7 @@ class ImageStorageServiceTest {
 
     @Test
     void testImageSas() {
-        imageStorageService.getSignedUrl(ImageVariant.HIRES, GENERATE_GENERATE_PATH.apply(0));
+        imageStorageService.getSignedUrl(GENERATE_GENERATE_PATH.apply(0).apply(ImageVariant.HIRES));
         verify(blobStorageService, atLeastOnce()).getSignedUrl(eq("sasImage/0-hires.jpeg"), any());
     }
 }

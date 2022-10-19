@@ -120,6 +120,7 @@ public class ImageStorageService {
         }
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public boolean deleteImageVariant(final String path) throws IOException {
         return storageClient.delete(path);
     }
@@ -130,6 +131,7 @@ public class ImageStorageService {
         }
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public String getSignedUrl(final String path) {
         return storageClient.getSignedUrl(
                 path, OffsetDateTime.now().plusNanos(sasExpiry.toNanos()));
