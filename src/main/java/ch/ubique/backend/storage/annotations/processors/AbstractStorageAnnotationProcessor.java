@@ -6,6 +6,7 @@ import com.squareup.javapoet.TypeSpec;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.annotation.Annotation;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -14,6 +15,8 @@ import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
@@ -46,11 +49,19 @@ public abstract class AbstractStorageAnnotationProcessor extends AbstractProcess
     }
 
     protected final void writeClass(TypeSpec.Builder classBuilder, Element element) {
+        writeClass(classBuilder, element.getEnclosingElement().toString());
+    }
+
+    protected final void writeClass(TypeSpec.Builder classBuilder, String packageName) {
         try {
-            final var packageName = element.getEnclosingElement().toString();
             JavaFile.builder(packageName, classBuilder.build()).build().writeTo(filer);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    @SuppressWarnings("java:S1452")
+    protected final List<? extends VariableElement> getParameters(Element method) {
+        return ((ExecutableElement) method).getParameters();
     }
 }

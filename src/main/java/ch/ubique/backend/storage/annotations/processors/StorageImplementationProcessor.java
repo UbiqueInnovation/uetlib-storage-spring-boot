@@ -8,6 +8,7 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.InputMapping;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.annotations.Storage;
+import ch.ubique.backend.storage.annotations.StorageObject;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.FileOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
@@ -32,7 +33,6 @@ import java.util.stream.Collectors;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
@@ -103,26 +103,25 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                 .addModifiers(PUBLIC, FINAL)
                 .addAnnotation(Service.class)
                 .addSuperinterface(element.asType())
-                .addField(FieldSpec.builder(StorageClient.class, "client", PRIVATE, FINAL).build())
+                .addField(
+                        FieldSpec.builder(StorageClient.class, "storageClient", PRIVATE, FINAL)
+                                .build())
                 .addMethod(createConstructor(element));
     }
 
     private MethodSpec createConstructor(final Element interfaceElement) {
+        final var storageClientName =
+                interfaceElement.getAnnotation(Storage.class).clientQualifier();
         return MethodSpec.constructorBuilder()
                 .addModifiers(PUBLIC)
                 .addParameter(
-                        ParameterSpec.builder(StorageClient.class, "client")
+                        ParameterSpec.builder(StorageClient.class, storageClientName)
                                 .addAnnotation(
                                         AnnotationSpec.builder(Qualifier.class)
-                                                .addMember(
-                                                        "value",
-                                                        "$S",
-                                                        interfaceElement
-                                                                .getAnnotation(Storage.class)
-                                                                .clientQualifier())
+                                                .addMember("value", "$S", storageClientName)
                                                 .build())
                                 .build())
-                .addStatement("this.client = client")
+                .addStatement("this.storageClient = " + storageClientName)
                 .build();
     }
 
@@ -135,7 +134,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                 .returns(InputStream.class)
                 .addException(IOException.class)
                 .addParameters(parameters.stream().map(this::generateParameter).toList())
-                .addStatement("return client.read($L)", getPath(method, pathTemplate))
+                .addStatement("return storageClient.read($L)", getPath(method, pathTemplate))
                 .build();
     }
 
@@ -148,7 +147,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                 .addAnnotation(Override.class)
                 .addParameters(parameters.stream().map(this::generateParameter).toList())
                 .addStatement(
-                        "client.write($L, $L, $L)",
+                        "storageClient.write($L, $L, $L)",
                         getOutput(parameters, annotation),
                         getPath(method, pathTemplate),
                         getMetadata(parameters))
@@ -176,58 +175,52 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
 
     private CodeBlock getInnerOutput(
             List<? extends VariableElement> parameters, OutputMapping outputMapping) {
-        if (parameters.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Methods annotated with "
-                            + OutputMapping.class
-                            + " need to have at least one parameter for the output");
-        }
+        final var storageObjectParameter =
+                parameters.stream()
+                        .filter(param -> param.getAnnotation(StorageObject.class) != null)
+                        .findFirst()
+                        .orElseThrow(
+                                () -> {
+                                    throw new IllegalArgumentException(
+                                            "Methods annotated with "
+                                                    + OutputMapping.class
+                                                    + " need to have at least one parameter"
+                                                    + " annotated with @StorageObject for the"
+                                                    + " output");
+                                });
 
         final var outputType =
                 elementUtils.getTypeElement(Output.class.getCanonicalName()).asType();
-
         final var outputParameter =
                 parameters.stream()
                         .filter(param -> typeUtils.isAssignable(param.asType(), outputType))
                         .findFirst();
-
         if (outputParameter.isPresent()) {
             return CodeBlock.of("$L", outputParameter.get().getSimpleName().toString());
         }
 
         // Create output object from first parameter
-        final var firstParameter = parameters.get(0);
-        final var paramType = firstParameter.asType();
+        final var paramName = storageObjectParameter.getSimpleName().toString();
+        final var paramType = storageObjectParameter.asType();
         final var contentType = outputMapping.contentType();
 
         if (typeUtils.isAssignable(
                 paramType, elementUtils.getTypeElement(File.class.getCanonicalName()).asType())) {
             if (StringUtils.isEmpty(contentType)) {
-                return CodeBlock.of(
-                        "new $T($L)", FileOutput.class, firstParameter.getSimpleName().toString());
+                return CodeBlock.of("new $T($L)", FileOutput.class, paramName);
             }
-            return CodeBlock.of(
-                    "new $T($L, $S)",
-                    FileOutput.class,
-                    firstParameter.getSimpleName().toString(),
-                    contentType);
+            return CodeBlock.of("new $T($L, $S)", FileOutput.class, paramName, contentType);
         }
 
         if (paramType.getKind() == TypeKind.ARRAY
                 && ((ArrayType) paramType).getComponentType().getKind() == TypeKind.BYTE) {
             if (StringUtils.isEmpty(contentType)) {
-                return CodeBlock.of(
-                        "new $T($L)", ByteOutput.class, firstParameter.getSimpleName().toString());
+                return CodeBlock.of("new $T($L)", ByteOutput.class, paramName);
             }
-            return CodeBlock.of(
-                    "new $T($L, $S)",
-                    ByteOutput.class,
-                    firstParameter.getSimpleName().toString(),
-                    contentType);
+            return CodeBlock.of("new $T($L, $S)", ByteOutput.class, paramName, contentType);
         }
 
-        return CodeBlock.of(
-                "new $T<>($L)", JsonOutput.class, firstParameter.getSimpleName().toString());
+        return CodeBlock.of("new $T<>($L)", JsonOutput.class, paramName);
     }
 
     private CodeBlock getPath(final Element method, String pathTemplate) {
@@ -250,10 +243,6 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
         return String.format(
                 "replace(\"{%s}\", %s)",
                 parameterName, String.format(toStringFormat, parameterName));
-    }
-
-    private List<? extends VariableElement> getParameters(Element method) {
-        return ((ExecutableElement) method).getParameters();
     }
 
     private ParameterSpec generateParameter(final VariableElement parameter) {
