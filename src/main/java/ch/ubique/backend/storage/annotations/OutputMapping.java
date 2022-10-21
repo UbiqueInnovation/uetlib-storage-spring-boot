@@ -8,7 +8,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface OutputMapping {
-
     String path();
 
     boolean gZip() default false;
@@ -16,4 +15,6 @@ public @interface OutputMapping {
     String contentType() default "";
 
     Class<?> documentedClass() default Object.class;
+
+    boolean generateDocumentation() default true;
 }
