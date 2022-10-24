@@ -4,6 +4,7 @@ import ch.ubique.backend.storage.Output;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
 
+@SuppressWarnings("unused")
 public class FileSystemStorageClient implements StorageClient {
 
     private static final Logger logger = LoggerFactory.getLogger(FileSystemStorageClient.class);
@@ -23,7 +25,8 @@ public class FileSystemStorageClient implements StorageClient {
     }
 
     @Override
-    public void write(Output output, String path, OutputMetaData metaData) throws IOException {
+    public void write(Output output, String path, @Nullable OutputMetaData metaData)
+            throws IOException {
         final var file = new File(Path.of(basePath, path).toUri());
         final var parent = file.getParentFile();
         if (!parent.exists()) {
