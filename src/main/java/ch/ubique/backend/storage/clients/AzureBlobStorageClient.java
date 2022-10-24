@@ -16,6 +16,9 @@ import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 import com.azure.storage.common.policy.RequestRetryOptions;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -48,19 +51,24 @@ public class AzureBlobStorageClient implements StorageClient {
     }
 
     @Override
-    public void write(Output output, String path, OutputMetaData metaData) throws IOException {
+    public void write(Output output, String path, @Nullable OutputMetaData outputMetaData)
+            throws IOException {
         try (final var inputStream = output.read()) {
 
             // Set important headers
             final var headers = new BlobHttpHeaders();
             headers.setContentType(output.contentType());
             output.contentEncoding().ifPresent(headers::setContentEncoding);
-            metaData.getCacheControl().ifPresent(headers::setCacheControl);
+            Optional.ofNullable(outputMetaData)
+                    .flatMap(OutputMetaData::getCacheControl)
+                    .ifPresent(headers::setCacheControl);
 
             // Define upload
             final var uploadOptions = new BlobParallelUploadOptions(inputStream);
             uploadOptions.setHeaders(headers);
-            uploadOptions.setMetadata(createAzureMetaData(metaData));
+            Optional.ofNullable(outputMetaData)
+                    .map(AzureBlobStorageClient::createAzureMetaData)
+                    .ifPresent(uploadOptions::setMetadata);
             uploadOptions.setRequestConditions(new BlobRequestConditions());
             uploadOptions.setParallelTransferOptions(
                     new ParallelTransferOptions().setMaxConcurrency(100));
@@ -120,7 +128,8 @@ public class AzureBlobStorageClient implements StorageClient {
     }
 
     /** Creates the azure metadata object based on the given {@link OutputMetaData}. */
-    private HashMap<String, String> createAzureMetaData(OutputMetaData metaData) {
+    @NotNull
+    private static HashMap<String, String> createAzureMetaData(@NotNull OutputMetaData metaData) {
         final var azureMetaData = new HashMap<String, String>();
         if (metaData.getNextRefresh() != null) {
             azureMetaData.put(

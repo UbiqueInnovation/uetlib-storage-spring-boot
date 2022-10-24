@@ -11,6 +11,7 @@ import io.minio.errors.*;
 import io.minio.http.Method;
 
 import org.apache.commons.lang3.NotImplementedException;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,7 +36,8 @@ public class MinioStorageClient implements StorageClient {
     }
 
     @Override
-    public void write(Output output, String path, OutputMetaData metaData) throws IOException {
+    public void write(Output output, String path, @Nullable OutputMetaData metaData)
+            throws IOException {
         try (final var inputStream = output.read()) {
             minioClient.putObject(
                     PutObjectArgs.builder().bucket(bucket).object(path).stream(
