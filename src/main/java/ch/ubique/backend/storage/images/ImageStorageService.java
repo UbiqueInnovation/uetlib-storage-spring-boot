@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
 import javax.imageio.ImageIO;
+import org.springframework.http.MediaType;
 
 /**
  * Saves images in multiple, resized variants and retrieve singed access urls to the uploaded
@@ -29,7 +30,6 @@ import javax.imageio.ImageIO;
  */
 public class ImageStorageService {
 
-    private static final String CONTENT_TYPE_JPG = "image/jpeg";
     private final StorageClient storageClient;
     private final Duration sasExpiry;
     private final ExecutorService highMemoryExecutor;
@@ -57,23 +57,39 @@ public class ImageStorageService {
         this.blurHashClient = blurHashClient;
     }
 
+    /**
+     *
+     * @param imageInputStream
+     * @param generatePath
+     * @return
+     * @throws ExecutionException
+     * @throws InterruptedException
+     * @deprecated (since 0.7.4, only Image JPEG was supported, use processImagge with mediatype)
+     */
+    @Deprecated(since = "0.7.4")
     public BlurHashRepresentation processImage(
             final InputStream imageInputStream, final Function<ImageVariant, String> generatePath)
             throws ExecutionException, InterruptedException {
+        return processImage(imageInputStream,
+                generatePath, MediaType.IMAGE_JPEG);
+    }
+    public BlurHashRepresentation processImage(
+            final InputStream imageInputStream, final Function<ImageVariant, String> generatePath, MediaType mediaType)
+            throws ExecutionException, InterruptedException {
         return highMemoryExecutor
-                .submit(() -> processImageInternal(imageInputStream, generatePath))
+                .submit(() -> processImageInternal(imageInputStream, generatePath, mediaType))
                 .get();
     }
 
     @NotNull
     private BlurHashRepresentation processImageInternal(
-            final InputStream imageInputStream, final Function<ImageVariant, String> generatePath)
+            final InputStream imageInputStream, final Function<ImageVariant, String> generatePath, MediaType mediaType)
             throws IOException, ImageProcessingException {
         final byte[] imageBytes = imageInputStream.readAllBytes();
         // InputStream::readAllBytes does not close the imageInputStream
         imageInputStream.close();
         storageClient.write(
-                new ByteOutput(imageBytes, CONTENT_TYPE_JPG),
+                new ByteOutput(imageBytes, mediaType.toString()),
                 generatePath.apply(ImageVariant.ORIGINAL));
 
         final var imageInfo = ExifTransform.readImageInformation(imageBytes);
@@ -90,19 +106,19 @@ public class ImageStorageService {
         bufferedImage.flush();
         // Flush clears native references so the image can be GC-ed. See tip of Scalr::resize
         final var hiresOutput = new ByteArrayOutputStream();
-        ImageIO.write(hires, "jpeg", hiresOutput);
+        ImageIO.write(hires, mediaType.getSubtype(), hiresOutput);
         storageClient.write(
-                new ByteOutput(hiresOutput.toByteArray(), CONTENT_TYPE_JPG),
+                new ByteOutput(hiresOutput.toByteArray(), mediaType.toString()),
                 generatePath.apply(ImageVariant.HIRES));
 
         final var thumbnail = Scalr.resize(hires, 320);
         hires.flush();
         // Flush clears native references so the image can be GC-ed. See tip of Scalr::resize
         final var thumbnailOutput = new ByteArrayOutputStream();
-        ImageIO.write(thumbnail, "jpeg", thumbnailOutput);
+        ImageIO.write(thumbnail, mediaType.getSubtype(), thumbnailOutput);
 
         storageClient.write(
-                new ByteOutput(thumbnailOutput.toByteArray(), CONTENT_TYPE_JPG),
+                new ByteOutput(thumbnailOutput.toByteArray(), mediaType.toString()),
                 generatePath.apply(ImageVariant.THUMBNAIL));
 
         final var blurHashRepresentation =
