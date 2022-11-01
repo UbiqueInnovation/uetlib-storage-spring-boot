@@ -25,10 +25,13 @@ import java.util.concurrent.Executors;
 import java.util.function.Function;
 
 import javax.imageio.ImageIO;
+import org.springframework.http.MediaType;
 
 class ImageStorageServiceTest {
     private static final Function<Integer, Function<ImageVariant, String>> GENERATE_GENERATE_PATH =
             imageId -> variant -> String.format("sasImage/%d-%s.jpeg", imageId, variant.key);
+    private static final Function<Integer, Function<ImageVariant, String>> GENERATE_GENERATE_PATH_PNG =
+            imageId -> variant  -> String.format("sasImage/%d-%s.png", imageId, variant.key);
 
     private final AzureBlobStorageClient blobStorageService = mock(AzureBlobStorageClient.class);
     private final Duration sasExpiry = Duration.of(3, ChronoUnit.DAYS);
@@ -54,6 +57,22 @@ class ImageStorageServiceTest {
                 .write(new ByteOutput(exampleImage, "image/jpeg"), "sasImage/0-original.jpeg");
         verify(blobStorageService, atLeastOnce()).write(any(), eq("sasImage/0-hires.jpeg"));
         verify(blobStorageService, atLeastOnce()).write(any(), eq("sasImage/0-thumbnail.jpeg"));
+    }
+    @Test
+    void testPngImageUpload() throws IOException, ExecutionException, InterruptedException {
+        final var imageOutput = new ByteArrayOutputStream();
+        final var image = ImageIO.read(new File("src/test/resources/data/png.png"));
+        ImageIO.write(image, "png", imageOutput);
+        final var exampleImage = imageOutput.toByteArray();
+
+        final var blurHashRepresentation =
+                imageStorageService.processImage(
+                        new ByteArrayInputStream(exampleImage), GENERATE_GENERATE_PATH_PNG.apply(1),
+                        MediaType.IMAGE_PNG);
+        verify(blobStorageService, atLeastOnce())
+                .write(new ByteOutput(exampleImage, "image/png"), "sasImage/1-original.png");
+        verify(blobStorageService, atLeastOnce()).write(any(), eq("sasImage/1-hires.png"));
+        verify(blobStorageService, atLeastOnce()).write(any(), eq("sasImage/1-thumbnail.png"));
     }
 
     @Test
