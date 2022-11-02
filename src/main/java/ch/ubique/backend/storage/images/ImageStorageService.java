@@ -64,7 +64,7 @@ public class ImageStorageService {
      * @return
      * @throws ExecutionException
      * @throws InterruptedException
-     * @deprecated (since 0.7.4, only Image JPEG was supported, use processImagge with mediatype)
+     * @deprecated (since 0.7.4, only Image JPEG was supported, use processImage with mediaType)
      */
     @Deprecated(since = "0.7.4")
     public BlurHashRepresentation processImage(
