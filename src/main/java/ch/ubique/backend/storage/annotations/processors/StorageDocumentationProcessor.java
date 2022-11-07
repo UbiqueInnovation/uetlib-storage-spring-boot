@@ -16,7 +16,10 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import io.swagger.v3.oas.annotations.Operation;
 import java.lang.annotation.Annotation;
+import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -88,7 +91,15 @@ public class StorageDocumentationProcessor extends AbstractStorageAnnotationProc
                 .addAnnotation(RestController.class)
                 .addAnnotation(
                         AnnotationSpec.builder(RequestMapping.class)
-                                .addMember("value", "$S", storageAnnotation.baseUrl())
+                                .addMember(
+                                        "value",
+                                        "$S",
+                                        List.of(
+                                                        storageAnnotation.baseUrl(),
+                                                        storageAnnotation.basePath())
+                                                .stream()
+                                                .filter(Predicate.not(String::isBlank))
+                                                .collect(Collectors.joining("/")))
                                 .build())
         // the following does not work, as Swagger-UI does not show the controller
         /*.addAnnotation(
