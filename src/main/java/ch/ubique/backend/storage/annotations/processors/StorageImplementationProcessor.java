@@ -75,6 +75,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
 
             // Start generating an implementation for the given element annotated with @Storage
             final var injectObjectMapper = shouldInjectObjectMapper(element);
+            final var storageBasePath = getStorageBasePath(element);
             final var classBuilder = generateClass(element, injectObjectMapper);
 
             // Generate methods for each element annotated with @InputMapping
@@ -83,7 +84,11 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                             inputMappingElements ->
                                     classBuilder.addMethods(
                                             inputMappingElements.stream()
-                                                    .map(this::createInputMappingMethod)
+                                                    .map(
+                                                            inputMapping ->
+                                                                    createInputMappingMethod(
+                                                                            inputMapping,
+                                                                            storageBasePath))
                                                     .toList()));
 
             // Generate methods for each element annotated with @OutputMapping
@@ -96,6 +101,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                                                             outputMapping ->
                                                                     createOutputMappingMethod(
                                                                             outputMapping,
+                                                                            storageBasePath,
                                                                             injectObjectMapper))
                                                     .toList()));
 
@@ -109,6 +115,10 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
 
     private boolean shouldInjectObjectMapper(final Element interfaceElement) {
         return interfaceElement.getAnnotation(Storage.class).injectObjectMapper();
+    }
+
+    private String getStorageBasePath(final Element interfaceElement) {
+        return interfaceElement.getAnnotation(Storage.class).basePath();
     }
 
     private TypeSpec.Builder generateClass(
@@ -180,24 +190,25 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
         return constructorBuilder.build();
     }
 
-    private MethodSpec createInputMappingMethod(final Element method) {
+    private MethodSpec createInputMappingMethod(final Element method, String storageBasePath) {
         final var parameters = getParameters(method);
-        final var pathTemplate = method.getAnnotation(InputMapping.class).path();
+        final var pathTemplate =
+                getPathTemplate(storageBasePath, method.getAnnotation(InputMapping.class).path());
         return MethodSpec.methodBuilder(method.getSimpleName().toString())
                 .addModifiers(PUBLIC)
                 .addAnnotation(Override.class)
                 .returns(InputStream.class)
                 .addException(IOException.class)
                 .addParameters(parameters.stream().map(this::generateParameter).toList())
-                .addStatement("return storageClient.read($L)", getPath(method, pathTemplate))
+                .addStatement("return storageClient.read($L)", getPath(parameters, pathTemplate))
                 .build();
     }
 
     private MethodSpec createOutputMappingMethod(
-            final Element method, final boolean hasObjectMapperField) {
+            final Element method, String storageBasePath, final boolean hasObjectMapperField) {
         final var annotation = method.getAnnotation(OutputMapping.class);
         final var parameters = getParameters(method);
-        final var pathTemplate = annotation.path();
+        final var pathTemplate = getPathTemplate(storageBasePath, annotation.path());
         return MethodSpec.methodBuilder(method.getSimpleName().toString())
                 .addModifiers(PUBLIC)
                 .addAnnotation(Override.class)
@@ -205,11 +216,15 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                 .addStatement(
                         "storageClient.write(\n$>$L,\n$L,\n$L)$<",
                         getOutput(parameters, annotation, hasObjectMapperField),
-                        getPath(method, pathTemplate),
+                        getPath(parameters, pathTemplate),
                         getMetadata(parameters))
                 .returns(void.class)
                 .addException(IOException.class)
                 .build();
+    }
+
+    private static String getPathTemplate(String basePath, String path) {
+        return basePath.isBlank() ? path : basePath + "/" + path;
     }
 
     private Object getMetadata(List<? extends VariableElement> parameters) {
@@ -311,10 +326,11 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
         return CodeBlock.of("new $T()", objectMapperType);
     }
 
-    private CodeBlock getPath(final Element method, String pathTemplate) {
+    private CodeBlock getPath(
+            final List<? extends VariableElement> parameters, String pathTemplate) {
         final var replaceCalls =
                 CodeBlock.join(
-                        getParameters(method).stream()
+                        parameters.stream()
                                 .filter(p -> p.getAnnotation(PathVariable.class) != null)
                                 .map(this::stringReplace)
                                 .toList(),
