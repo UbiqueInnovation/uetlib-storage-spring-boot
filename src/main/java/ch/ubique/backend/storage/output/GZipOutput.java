@@ -1,15 +1,17 @@
 package ch.ubique.backend.storage.output;
 
 import ch.ubique.backend.storage.Output;
-
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Optional;
+import java.util.zip.GZIPOutputStream;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-
-import java.io.*;
-import java.util.Optional;
-import java.util.zip.GZIPOutputStream;
 
 public final class GZipOutput implements Output {
 
@@ -26,6 +28,11 @@ public final class GZipOutput implements Output {
     @Override
     public Output gZip() {
         return this;
+    }
+
+    @Override
+    public Output uncompressed() {
+        return this.uncompressed;
     }
 
     @Override

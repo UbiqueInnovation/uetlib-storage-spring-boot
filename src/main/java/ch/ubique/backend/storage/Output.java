@@ -1,7 +1,6 @@
 package ch.ubique.backend.storage;
 
 import ch.ubique.backend.storage.output.GZipOutput;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -21,5 +20,9 @@ public interface Output {
 
     default Output gZip() {
         return new GZipOutput(this);
+    }
+
+    default Output uncompressed() {
+        return this;
     }
 }

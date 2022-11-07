@@ -3,15 +3,18 @@ package ch.ubique.backend.storage.clients;
 import ch.ubique.backend.storage.Output;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
-
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("unused")
 public class FileSystemStorageClient implements StorageClient {
@@ -42,7 +45,7 @@ public class FileSystemStorageClient implements StorageClient {
             }
         }
         try (final var outputStream = new FileOutputStream(file)) {
-            output.write(outputStream);
+            output.uncompressed().write(outputStream);
         }
     }
 
