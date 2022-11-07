@@ -1,36 +1,29 @@
 package ch.ubique.backend.storage.annotations.processors;
 
-import static javax.lang.model.element.Modifier.FINAL;
-import static javax.lang.model.element.Modifier.PUBLIC;
-
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.annotations.Storage;
 import ch.ubique.backend.storage.annotations.StorageObject;
-
 import com.google.auto.service.AutoService;
 import com.google.common.collect.MoreCollectors;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
-
+import com.squareup.javapoet.*;
 import io.swagger.v3.oas.annotations.Operation;
-
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.lang.annotation.Annotation;
-import java.util.Set;
-
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.MirroredTypeException;
+import java.lang.annotation.Annotation;
+import java.util.Set;
+
+import static javax.lang.model.element.Modifier.FINAL;
+import static javax.lang.model.element.Modifier.PUBLIC;
 
 @AutoService(Processor.class)
 public class StorageDocumentationProcessor extends AbstractStorageAnnotationProcessor {
@@ -119,10 +112,15 @@ public class StorageDocumentationProcessor extends AbstractStorageAnnotationProc
                         .map(this::generateParameter)
                         .toList();
 
-        final var storageObjectParameter =
-                outputMappingMethodParameters.stream()
-                        .filter(element -> element.getAnnotation(StorageObject.class) != null)
-                        .collect(MoreCollectors.onlyElement());
+        final var documentedClass = getDocumentedClass(outputMappingAnnotation);
+        final var hasDocumentClass = !TypeName.OBJECT.equals(documentedClass);
+
+        final var typeOfStorageObject = TypeName.get(outputMappingMethodParameters.stream()
+                .filter(element -> element.getAnnotation(StorageObject.class) != null)
+                .collect(MoreCollectors.onlyElement()).asType());
+
+        final var returnType = hasDocumentClass ? documentedClass : typeOfStorageObject;
+
 
         return MethodSpec.methodBuilder(method.getSimpleName().toString())
                 .addModifiers(PUBLIC)
@@ -135,12 +133,20 @@ public class StorageDocumentationProcessor extends AbstractStorageAnnotationProc
                                         "Documentation for blob storage endpoint, accessible"
                                                 + " under {BASE_URL}")
                                 .build())
-                .returns(TypeName.get(storageObjectParameter.asType()))
+                .returns(returnType)
                 .addParameters(getMappingMethodParameters)
                 .addStatement(
                         "throw new IllegalCallerException(\"this Controller method exists only to"
                                 + " document blob storage endpoints as must not be called\")")
                 .build();
+    }
+
+    private TypeName getDocumentedClass(OutputMapping annotation) {
+        try {
+            return ClassName.get(annotation.documentedClass()); // this should throw
+        } catch (MirroredTypeException mte) {
+            return TypeName.get(mte.getTypeMirror());
+        }
     }
 
     private ParameterSpec generateParameter(final VariableElement parameter) {

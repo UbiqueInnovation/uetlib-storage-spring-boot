@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
 public @interface OutputMapping {
     String path();
 
-    boolean gZip() default false;
+    boolean gZip() default true;
 
     String contentType() default "";
 
