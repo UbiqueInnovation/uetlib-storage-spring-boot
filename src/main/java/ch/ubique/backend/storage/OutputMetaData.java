@@ -1,7 +1,7 @@
 package ch.ubique.backend.storage;
 
 import ch.ubique.backend.core.http.cache.CacheHeaderUtility;
-
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Optional;
@@ -22,6 +22,7 @@ public final class OutputMetaData {
     private String cache;
     private Long backoff;
     private Long maxAge = -1L;
+    private Long sMaxAge = Duration.ofDays(1).getSeconds();
     private Long minimumApiVersion;
 
     public String getContentType() {
@@ -94,6 +95,15 @@ public final class OutputMetaData {
         this.maxAge = maxAge;
     }
 
+    public Long getsMaxAge() {
+        return sMaxAge;
+    }
+
+    public OutputMetaData setsMaxAge(Long sMaxAge) {
+        this.sMaxAge = sMaxAge;
+        return this;
+    }
+
     public Optional<String> getCacheControl() {
         final var parts = new HashSet<String>();
         if (cache != null && !cache.isBlank()) {
@@ -101,6 +111,9 @@ public final class OutputMetaData {
         }
         if (maxAge > 0) {
             parts.add(CacheHeaderUtility.MAX_AGE + "=" + maxAge);
+        }
+        if (sMaxAge >= 0) {
+            parts.add(CacheHeaderUtility.S_MAX_AGE + "=" + sMaxAge);
         }
 
         if (parts.isEmpty()) {
