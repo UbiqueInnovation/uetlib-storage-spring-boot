@@ -53,22 +53,6 @@ public class ImageStorageService {
         this.blurHashClient = blurHashClient;
     }
 
-    /**
-     *
-     * @param imageInputStream
-     * @param generatePath
-     * @return
-     * @throws ExecutionException
-     * @throws InterruptedException
-     * @deprecated (since 0.7.4, only Image JPEG was supported, use processImage with mediaType)
-     */
-    @Deprecated(since = "0.7.4")
-    public BlurHashRepresentation processImage(
-            final InputStream imageInputStream, final Function<ImageVariant, String> generatePath)
-            throws ExecutionException, InterruptedException {
-        return processImage(imageInputStream,
-                generatePath, MediaType.IMAGE_JPEG);
-    }
     public BlurHashRepresentation processImage(
             final InputStream imageInputStream, final Function<ImageVariant, String> generatePath, MediaType mediaType)
             throws ExecutionException, InterruptedException {
