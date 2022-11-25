@@ -4,7 +4,6 @@ import ch.ubique.backend.core.http.cache.CacheHeaderUtility;
 import ch.ubique.backend.storage.Output;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
-
 import com.azure.core.util.Context;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
@@ -15,10 +14,6 @@ import com.azure.storage.blob.options.BlobParallelUploadOptions;
 import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 import com.azure.storage.common.policy.RequestRetryOptions;
-
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -30,7 +25,11 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Optional;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class AzureBlobStorageClient implements StorageClient {
 
@@ -57,7 +56,11 @@ public class AzureBlobStorageClient implements StorageClient {
 
             // Set important headers
             final var headers = new BlobHttpHeaders();
-            headers.setContentType(output.contentType());
+            final String contentType =
+                    outputMetaData != null && outputMetaData.getContentType() != null
+                            ? outputMetaData.getContentType()
+                            : output.contentType();
+            headers.setContentType(contentType);
             output.contentEncoding().ifPresent(headers::setContentEncoding);
             Optional.ofNullable(outputMetaData)
                     .flatMap(OutputMetaData::getCacheControl)
