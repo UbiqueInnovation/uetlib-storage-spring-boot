@@ -46,6 +46,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 @AutoService(Processor.class)
 public class StorageImplementationProcessor extends AbstractStorageAnnotationProcessor {
 
+    private static String getPathTemplate(String basePath, String path) {
+        return basePath.isBlank() ? path : basePath + "/" + path;
+    }
+
     @Override
     protected Set<Class<? extends Annotation>> supportedAnnotations() {
         return Set.of(Storage.class, OutputMapping.class, InputMapping.class);
@@ -221,10 +225,6 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                 .returns(void.class)
                 .addException(IOException.class)
                 .build();
-    }
-
-    private static String getPathTemplate(String basePath, String path) {
-        return basePath.isBlank() ? path : basePath + "/" + path;
     }
 
     private Object getMetadata(List<? extends VariableElement> parameters) {
