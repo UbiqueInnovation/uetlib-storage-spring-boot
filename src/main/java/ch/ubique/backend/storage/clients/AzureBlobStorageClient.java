@@ -14,6 +14,8 @@ import com.azure.storage.blob.options.BlobParallelUploadOptions;
 import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 import com.azure.storage.common.policy.RequestRetryOptions;
+import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -28,8 +30,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Optional;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public class AzureBlobStorageClient implements StorageClient {
 

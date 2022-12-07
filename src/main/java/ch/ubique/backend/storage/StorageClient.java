@@ -1,9 +1,9 @@
 package ch.ubique.backend.storage;
 
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.OffsetDateTime;
-import org.jetbrains.annotations.Nullable;
 
 public interface StorageClient {
 
