@@ -6,11 +6,7 @@ import ch.ubique.backend.image.util.ExifTransform;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.ByteOutput;
 import com.drew.imaging.ImageProcessingException;
-import org.imgscalr.Scalr;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.http.MediaType;
-
-import javax.imageio.ImageIO;
+import jakarta.validation.constraints.NotNull;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -20,6 +16,9 @@ import java.time.OffsetDateTime;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
+import javax.imageio.ImageIO;
+import org.imgscalr.Scalr;
+import org.springframework.http.MediaType;
 
 /**
  * Saves images in multiple, resized variants and retrieve singed access urls to the uploaded
