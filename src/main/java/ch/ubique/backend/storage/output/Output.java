@@ -1,12 +1,11 @@
-package ch.ubique.backend.storage;
+package ch.ubique.backend.storage.output;
 
-import ch.ubique.backend.storage.output.GZipOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Optional;
 
-public interface Output {
+public sealed interface Output permits GZipOutput, ByteOutput, FileOutput, JsonOutput {
 
     void write(final OutputStream outputStream) throws IOException;
 
@@ -20,6 +19,10 @@ public interface Output {
 
     default Output gZip() {
         return new GZipOutput(this);
+    }
+
+    default boolean isGZip() {
+        return this instanceof GZipOutput;
     }
 
     default Output uncompressed() {

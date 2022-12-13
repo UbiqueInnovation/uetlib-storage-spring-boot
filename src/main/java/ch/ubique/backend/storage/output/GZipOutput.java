@@ -1,6 +1,5 @@
 package ch.ubique.backend.storage.output;
 
-import ch.ubique.backend.storage.Output;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -13,9 +12,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
-public final class GZipOutput implements Output {
-
-    private final Output uncompressed;
+public record GZipOutput(Output uncompressed) implements Output {
 
     public GZipOutput(final Output uncompressed) {
         if (uncompressed instanceof GZipOutput gZipOutput) {
@@ -28,11 +25,6 @@ public final class GZipOutput implements Output {
     @Override
     public Output gZip() {
         return this;
-    }
-
-    @Override
-    public Output uncompressed() {
-        return this.uncompressed;
     }
 
     @Override

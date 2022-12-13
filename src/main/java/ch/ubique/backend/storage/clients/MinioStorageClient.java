@@ -1,8 +1,8 @@
 package ch.ubique.backend.storage.clients;
 
-import ch.ubique.backend.storage.Output;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.output.Output;
 import com.pivovarit.function.exception.WrappedException;
 import io.minio.GetObjectArgs;
 import io.minio.GetPresignedObjectUrlArgs;
@@ -23,6 +23,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.Map;
 import org.apache.commons.lang3.NotImplementedException;
 
 /**
@@ -43,11 +44,16 @@ public class MinioStorageClient implements StorageClient {
     @Override
     public void write(Output output, String path, @Nullable OutputMetaData metaData)
             throws IOException {
+
+        final var headers =
+                output.isGZip() ? Map.of("Content-Encoding", "gzip") : Map.<String, String>of();
+
         try (final var inputStream = output.read()) {
             minioClient.putObject(
                     PutObjectArgs.builder().bucket(bucket).object(path).stream(
                                     inputStream, inputStream.available(), -1)
                             .contentType(output.contentType())
+                            .headers(headers)
                             .build());
         } catch (ErrorResponseException
                 | InsufficientDataException
