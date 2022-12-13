@@ -1,5 +1,6 @@
 package ch.ubique.backend.storage;
 
+import ch.ubique.backend.storage.output.Output;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;

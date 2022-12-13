@@ -1,9 +1,9 @@
 package ch.ubique.backend.storage.clients;
 
 import ch.ubique.backend.core.http.cache.CacheHeaderUtility;
-import ch.ubique.backend.storage.Output;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.output.Output;
 import com.azure.core.util.Context;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;

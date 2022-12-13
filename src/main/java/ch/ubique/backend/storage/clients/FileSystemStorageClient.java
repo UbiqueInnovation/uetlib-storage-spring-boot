@@ -1,8 +1,8 @@
 package ch.ubique.backend.storage.clients;
 
-import ch.ubique.backend.storage.Output;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.output.Output;
 import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
