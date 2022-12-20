@@ -24,25 +24,45 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Map;
+import java.util.Optional;
+import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.NotImplementedException;
 
 /**
  * {@link ch.ubique.backend.storage.StorageClient } to perform bucket and object operations to any
  * Amazon S3 compatible object storage service.
  */
-public class MinioStorageClient implements StorageClient {
+public sealed class MinioStorageClient implements StorageClient
+        permits AmazonS3StorageClient, CloudflareR2StorageClient {
 
     private final String bucket;
     private final MinioClient minioClient;
 
-    public MinioStorageClient(String bucket, String endpoint, String accessKey, String secretKey) {
+    public MinioStorageClient(
+            final String bucket,
+            final String endpoint,
+            final String accessKey,
+            final String secretKey,
+            final Duration timeout) {
         this.bucket = bucket;
+        final var timeoutOrDefault = Optional.ofNullable(timeout).orElse(Duration.ofSeconds(15));
+        final var httpClient =
+                new OkHttpClient()
+                        .newBuilder()
+                        .connectTimeout(timeoutOrDefault)
+                        .readTimeout(timeoutOrDefault)
+                        .writeTimeout(timeoutOrDefault)
+                        .build();
         minioClient =
-                MinioClient.builder().endpoint(endpoint).credentials(accessKey, secretKey).build();
+                MinioClient.builder()
+                        .endpoint(endpoint)
+                        .credentials(accessKey, secretKey)
+                        .httpClient(httpClient)
+                        .build();
     }
 
     @Override
-    public void write(Output output, String path, @Nullable OutputMetaData metaData)
+    public final void write(Output output, String path, @Nullable OutputMetaData metaData)
             throws IOException {
 
         final var headers =
@@ -68,7 +88,7 @@ public class MinioStorageClient implements StorageClient {
     }
 
     @Override
-    public InputStream read(String path) throws IOException {
+    public final InputStream read(String path) throws IOException {
         try {
             return minioClient.getObject(
                     GetObjectArgs.builder().bucket(bucket).object(path).build());
@@ -85,7 +105,7 @@ public class MinioStorageClient implements StorageClient {
     }
 
     @Override
-    public boolean delete(String path) throws IOException {
+    public final boolean delete(String path) throws IOException {
         try {
             minioClient.removeObject(
                     RemoveObjectArgs.builder().bucket(bucket).object(path).build());
@@ -103,7 +123,7 @@ public class MinioStorageClient implements StorageClient {
     }
 
     @Override
-    public String getSignedUrl(String path, OffsetDateTime expiry) {
+    public final String getSignedUrl(String path, OffsetDateTime expiry) {
         try {
             return minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
@@ -128,7 +148,7 @@ public class MinioStorageClient implements StorageClient {
     }
 
     @Override
-    public String getUrl(String path) {
+    public final String getUrl(String path) {
         throw new NotImplementedException(
                 "Minio (actually S3) does not support permanent share URLs? (Maximum is 7 days as"
                         + " per S3 spec)");
