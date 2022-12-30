@@ -7,7 +7,7 @@ public enum OutputVersion {
 
     private final String version;
 
-    OutputVersion(String version) {
+    OutputVersion(final String version) {
         this.version = version;
     }
 

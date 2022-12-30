@@ -28,7 +28,8 @@ public class FileSystemStorageClient implements StorageClient {
     }
 
     @Override
-    public void write(Output output, String path, @Nullable OutputMetaData metaData)
+    public void write(
+            final Output output, final String path, @Nullable final OutputMetaData metaData)
             throws IOException {
         final var file = new File(Path.of(basePath, path).toUri());
         final var parent = file.getParentFile();
@@ -50,23 +51,23 @@ public class FileSystemStorageClient implements StorageClient {
     }
 
     @Override
-    public InputStream read(String path) throws IOException {
+    public InputStream read(final String path) throws IOException {
         final var file = new File(Path.of(basePath, path).toUri());
         return new FileInputStream(file);
     }
 
     @Override
-    public boolean delete(String path) throws IOException {
+    public boolean delete(final String path) throws IOException {
         return Files.deleteIfExists(Path.of(basePath, path));
     }
 
     @Override
-    public String getSignedUrl(String path, OffsetDateTime expiry) {
+    public String getSignedUrl(final String path, final OffsetDateTime expiry) {
         return getUrl(path);
     }
 
     @Override
-    public String getUrl(String path) {
+    public String getUrl(final String path) {
         return Path.of(basePath, path).toString();
     }
 }

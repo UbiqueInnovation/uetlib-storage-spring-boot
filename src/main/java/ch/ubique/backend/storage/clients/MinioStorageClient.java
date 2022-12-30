@@ -17,12 +17,14 @@ import io.minio.errors.ServerException;
 import io.minio.errors.XmlParserException;
 import io.minio.http.Method;
 import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import okhttp3.OkHttpClient;
@@ -37,14 +39,17 @@ public sealed class MinioStorageClient implements StorageClient
 
     private final String bucket;
     private final MinioClient minioClient;
+    @Nullable private final OutputMetaData defaultOutputMetaData;
 
     public MinioStorageClient(
             final String bucket,
             final String endpoint,
             final String accessKey,
             final String secretKey,
-            final Duration timeout) {
+            final Duration timeout,
+            final OutputMetaData defaultOutputMetaData) {
         this.bucket = bucket;
+        this.defaultOutputMetaData = defaultOutputMetaData;
         final var timeoutOrDefault = Optional.ofNullable(timeout).orElse(Duration.ofSeconds(15));
         final var httpClient =
                 new OkHttpClient()
@@ -61,21 +66,57 @@ public sealed class MinioStorageClient implements StorageClient
                         .build();
     }
 
-    @Override
-    public final void write(Output output, String path, @Nullable OutputMetaData metaData)
-            throws IOException {
+    @NotNull
+    private static Map<String, String> createHeaders(
+            @NotNull final Output output, @Nullable final OutputMetaData metaData) {
+        final var headers = new HashMap<String, String>();
 
-        final var headers =
-                output.isGZip() ? Map.of("Content-Encoding", "gzip") : Map.<String, String>of();
+        // contentType
+        final var contentType =
+                Optional.ofNullable(metaData)
+                        .map(OutputMetaData::getContentType)
+                        .orElse(output.contentType());
+        headers.put("Content-Type", contentType);
+
+        // contentEncoding
+        output.contentEncoding()
+                .ifPresent(contentEncoding -> headers.put("Content-Encoding", contentEncoding));
+
+        // cacheControl
+        Optional.ofNullable(metaData)
+                .flatMap(OutputMetaData::getCacheControl)
+                .ifPresent(cacheControl -> headers.put("Cache-Control", cacheControl));
+
+        return headers;
+    }
+
+    @Override
+    public final void write(
+            final Output output,
+            final String path,
+            @Nullable final OutputMetaData localOutputMetaData)
+            throws IOException {
+        final var metaData = Optional.ofNullable(localOutputMetaData).orElse(defaultOutputMetaData);
 
         try (final var inputStream = output.read()) {
-            minioClient.putObject(
-                    PutObjectArgs.builder().bucket(bucket).object(path).stream(
-                                    inputStream, inputStream.available(), -1)
-                            .contentType(output.contentType())
-                            .headers(headers)
-                            .build());
-        } catch (ErrorResponseException
+
+            final var contentType =
+                    Optional.ofNullable(metaData)
+                            .map(OutputMetaData::getContentType)
+                            .orElse(output.contentType());
+
+            final var putObjectArgs =
+                    PutObjectArgs.builder()
+                            .bucket(bucket)
+                            .object(path)
+                            .contentType(contentType)
+                            .headers(createHeaders(output, metaData))
+                            .stream(inputStream, inputStream.available(), -1);
+            Optional.ofNullable(metaData)
+                    .map(OutputMetaData::createStorageMetaData)
+                    .ifPresent(putObjectArgs::userMetadata);
+            minioClient.putObject(putObjectArgs.build());
+        } catch (final ErrorResponseException
                 | InsufficientDataException
                 | InternalException
                 | InvalidKeyException
@@ -88,11 +129,11 @@ public sealed class MinioStorageClient implements StorageClient
     }
 
     @Override
-    public final InputStream read(String path) throws IOException {
+    public final InputStream read(final String path) throws IOException {
         try {
             return minioClient.getObject(
                     GetObjectArgs.builder().bucket(bucket).object(path).build());
-        } catch (ErrorResponseException
+        } catch (final ErrorResponseException
                 | InsufficientDataException
                 | InternalException
                 | InvalidKeyException
@@ -105,11 +146,11 @@ public sealed class MinioStorageClient implements StorageClient
     }
 
     @Override
-    public final boolean delete(String path) throws IOException {
+    public final boolean delete(final String path) throws IOException {
         try {
             minioClient.removeObject(
                     RemoveObjectArgs.builder().bucket(bucket).object(path).build());
-        } catch (ErrorResponseException
+        } catch (final ErrorResponseException
                 | InsufficientDataException
                 | InternalException
                 | InvalidKeyException
@@ -123,7 +164,7 @@ public sealed class MinioStorageClient implements StorageClient
     }
 
     @Override
-    public final String getSignedUrl(String path, OffsetDateTime expiry) {
+    public final String getSignedUrl(final String path, final OffsetDateTime expiry) {
         try {
             return minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
@@ -134,7 +175,7 @@ public sealed class MinioStorageClient implements StorageClient
                                                     .toSeconds())
                             .bucket(bucket)
                             .build());
-        } catch (ErrorResponseException
+        } catch (final ErrorResponseException
                 | InsufficientDataException
                 | InternalException
                 | InvalidKeyException
@@ -148,7 +189,7 @@ public sealed class MinioStorageClient implements StorageClient
     }
 
     @Override
-    public final String getUrl(String path) {
+    public final String getUrl(final String path) {
         throw new NotImplementedException(
                 "Minio (actually S3) does not support permanent share URLs? (Maximum is 7 days as"
                         + " per S3 spec)");
