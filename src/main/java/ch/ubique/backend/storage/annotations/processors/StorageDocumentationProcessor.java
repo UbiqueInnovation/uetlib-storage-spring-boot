@@ -16,10 +16,9 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import io.swagger.v3.oas.annotations.Operation;
 import java.lang.annotation.Annotation;
-import java.util.List;
 import java.util.Set;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -41,7 +40,8 @@ public class StorageDocumentationProcessor extends AbstractStorageAnnotationProc
     }
 
     @Override
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    public boolean process(
+            final Set<? extends TypeElement> annotations, final RoundEnvironment roundEnv) {
 
         // Iterate over all elements annotated with @Storage with generateDocumentation == true
         roundEnv.getElementsAnnotatedWith(Storage.class).stream()
@@ -94,11 +94,10 @@ public class StorageDocumentationProcessor extends AbstractStorageAnnotationProc
                                 .addMember(
                                         "value",
                                         "$S",
-                                        List.of(
+                                        Stream.of(
                                                         storageAnnotation.baseUrl(),
                                                         storageAnnotation.basePath())
-                                                .stream()
-                                                .filter(Predicate.not(String::isBlank))
+                                                .filter(StringUtils::isNotBlank)
                                                 .collect(Collectors.joining("/")))
                                 .build())
         // the following does not work, as Swagger-UI does not show the controller
@@ -160,10 +159,10 @@ public class StorageDocumentationProcessor extends AbstractStorageAnnotationProc
                 .build();
     }
 
-    private TypeName getDocumentedClass(OutputMapping annotation) {
+    private TypeName getDocumentedClass(final OutputMapping annotation) {
         try {
             return ClassName.get(annotation.documentedClass()); // this should throw
-        } catch (MirroredTypeException mte) {
+        } catch (final MirroredTypeException mte) {
             return TypeName.get(mte.getTypeMirror());
         }
     }

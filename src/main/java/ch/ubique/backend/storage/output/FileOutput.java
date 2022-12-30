@@ -16,17 +16,17 @@ public final class FileOutput implements Output {
     private final File file;
     private final String contentType;
 
-    public FileOutput(File file) {
+    public FileOutput(final File file) {
         this(file, "application/octet-stream");
     }
 
-    public FileOutput(File file, String contentType) {
+    public FileOutput(final File file, final String contentType) {
         this.file = file;
         this.contentType = contentType;
     }
 
     @Override
-    public void write(OutputStream outputStream) throws IOException {
+    public void write(final OutputStream outputStream) throws IOException {
         FileUtils.copyFile(file, outputStream);
     }
 
@@ -49,7 +49,7 @@ public final class FileOutput implements Output {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(final Object o) {
         if (this == o) {
             return true;
         }

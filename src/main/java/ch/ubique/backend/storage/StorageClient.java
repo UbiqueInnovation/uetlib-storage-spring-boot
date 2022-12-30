@@ -8,7 +8,7 @@ import java.time.OffsetDateTime;
 
 public interface StorageClient {
 
-    default void write(Output output, String path) throws IOException {
+    default void write(final Output output, final String path) throws IOException {
         write(output, path, null);
     }
 

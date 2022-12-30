@@ -53,7 +53,9 @@ public class ImageStorageService {
     }
 
     public BlurHashRepresentation processImage(
-            final InputStream imageInputStream, final Function<ImageVariant, String> generatePath, MediaType mediaType)
+            final InputStream imageInputStream,
+            final Function<ImageVariant, String> generatePath,
+            final MediaType mediaType)
             throws ExecutionException, InterruptedException {
         return highMemoryExecutor
                 .submit(() -> processImageInternal(imageInputStream, generatePath, mediaType))
@@ -62,7 +64,9 @@ public class ImageStorageService {
 
     @NotNull
     private BlurHashRepresentation processImageInternal(
-            final InputStream imageInputStream, final Function<ImageVariant, String> generatePath, MediaType mediaType)
+            final InputStream imageInputStream,
+            final Function<ImageVariant, String> generatePath,
+            final MediaType mediaType)
             throws IOException, ImageProcessingException {
         final byte[] imageBytes = imageInputStream.readAllBytes();
         // InputStream::readAllBytes does not close the imageInputStream

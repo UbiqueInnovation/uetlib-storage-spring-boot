@@ -27,7 +27,7 @@ public abstract class AbstractStorageAnnotationProcessor extends AbstractProcess
     protected abstract Set<Class<? extends Annotation>> supportedAnnotations();
 
     @Override
-    public final synchronized void init(ProcessingEnvironment processingEnv) {
+    public final synchronized void init(final ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
         this.filer = processingEnv.getFiler();
         this.typeUtils = processingEnv.getTypeUtils();
@@ -46,20 +46,20 @@ public abstract class AbstractStorageAnnotationProcessor extends AbstractProcess
                 .collect(Collectors.toUnmodifiableSet());
     }
 
-    protected final void writeClass(TypeSpec.Builder classBuilder, Element element) {
+    protected final void writeClass(final TypeSpec.Builder classBuilder, final Element element) {
         writeClass(classBuilder, element.getEnclosingElement().toString());
     }
 
-    protected final void writeClass(TypeSpec.Builder classBuilder, String packageName) {
+    protected final void writeClass(final TypeSpec.Builder classBuilder, final String packageName) {
         try {
             JavaFile.builder(packageName, classBuilder.build()).build().writeTo(filer);
-        } catch (IOException e) {
+        } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
     @SuppressWarnings("java:S1452")
-    protected final List<? extends VariableElement> getParameters(Element method) {
+    protected final List<? extends VariableElement> getParameters(final Element method) {
         return ((ExecutableElement) method).getParameters();
     }
 }

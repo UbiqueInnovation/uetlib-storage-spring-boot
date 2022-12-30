@@ -61,7 +61,7 @@ public record GZipOutput(Output uncompressed) implements Output {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(final Object o) {
         if (this == o) return true;
 
         if (!(o instanceof GZipOutput that)) return false;

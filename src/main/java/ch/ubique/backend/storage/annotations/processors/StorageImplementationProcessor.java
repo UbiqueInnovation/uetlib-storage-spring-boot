@@ -46,7 +46,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 @AutoService(Processor.class)
 public class StorageImplementationProcessor extends AbstractStorageAnnotationProcessor {
 
-    private static String getPathTemplate(String basePath, String path) {
+    private static String getPathTemplate(final String basePath, final String path) {
         return basePath.isBlank() ? path : basePath + "/" + path;
     }
 
@@ -56,7 +56,8 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
     }
 
     @Override
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    public boolean process(
+            final Set<? extends TypeElement> annotations, final RoundEnvironment roundEnv) {
 
         // Get a map for convenience, that maps for each annotation class from parent to annotated
         // children
@@ -194,7 +195,8 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
         return constructorBuilder.build();
     }
 
-    private MethodSpec createInputMappingMethod(final Element method, String storageBasePath) {
+    private MethodSpec createInputMappingMethod(
+            final Element method, final String storageBasePath) {
         final var parameters = getParameters(method);
         final var pathTemplate =
                 getPathTemplate(storageBasePath, method.getAnnotation(InputMapping.class).path());
@@ -209,7 +211,9 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
     }
 
     private MethodSpec createOutputMappingMethod(
-            final Element method, String storageBasePath, final boolean hasObjectMapperField) {
+            final Element method,
+            final String storageBasePath,
+            final boolean hasObjectMapperField) {
         final var annotation = method.getAnnotation(OutputMapping.class);
         final var parameters = getParameters(method);
         final var pathTemplate = getPathTemplate(storageBasePath, annotation.path());
@@ -227,7 +231,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                 .build();
     }
 
-    private Object getMetadata(List<? extends VariableElement> parameters) {
+    private Object getMetadata(final List<? extends VariableElement> parameters) {
         return parameters.stream()
                 .filter(p -> TypeName.get(p.asType()).equals(TypeName.get(OutputMetaData.class)))
                 .findFirst()
@@ -236,8 +240,8 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
     }
 
     private CodeBlock getOutput(
-            List<? extends VariableElement> parameters,
-            OutputMapping outputMapping,
+            final List<? extends VariableElement> parameters,
+            final OutputMapping outputMapping,
             final boolean hasObjectMapperField) {
         final var inner = getInnerOutput(parameters, outputMapping, hasObjectMapperField);
         if (outputMapping.gZip()) {
@@ -248,7 +252,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
 
     private CodeBlock getInnerOutput(
             final List<? extends VariableElement> parameters,
-            OutputMapping outputMapping,
+            final OutputMapping outputMapping,
             final boolean hasObjectMapperField) {
         final var storageObjectParameter =
                 parameters.stream()
@@ -327,7 +331,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
     }
 
     private CodeBlock getPath(
-            final List<? extends VariableElement> parameters, String pathTemplate) {
+            final List<? extends VariableElement> parameters, final String pathTemplate) {
         final var replaceCalls =
                 CodeBlock.join(
                         parameters.stream()
@@ -342,7 +346,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
         return CodeBlock.of("$S\n$>.$L$<", pathTemplate, replaceCalls);
     }
 
-    private CodeBlock stringReplace(VariableElement parameter) {
+    private CodeBlock stringReplace(final VariableElement parameter) {
         final var parameterName = parameter.toString();
         final var isPrimitive = TypeName.get(parameter.asType()).isPrimitive();
         final var toString =
