@@ -66,7 +66,7 @@ public class AzureBlobStorageClient implements StorageClient {
 
         // cacheControl
         Optional.ofNullable(metaData)
-                .flatMap(OutputMetaData::getCacheControl)
+                .map(OutputMetaData::getCacheControl)
                 .ifPresent(headers::setCacheControl);
 
         return headers;
@@ -85,7 +85,7 @@ public class AzureBlobStorageClient implements StorageClient {
             final var uploadOptions = new BlobParallelUploadOptions(inputStream);
             uploadOptions.setHeaders(createHeaders(output, metaData));
             Optional.ofNullable(metaData)
-                    .map(OutputMetaData::createStorageMetaData)
+                    .map(OutputMetaData::createMetaDataMap)
                     .ifPresent(uploadOptions::setMetadata);
             uploadOptions.setRequestConditions(new BlobRequestConditions());
             uploadOptions.setParallelTransferOptions(

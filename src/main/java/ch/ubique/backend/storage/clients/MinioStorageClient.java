@@ -84,7 +84,7 @@ public sealed class MinioStorageClient implements StorageClient
 
         // cacheControl
         Optional.ofNullable(metaData)
-                .flatMap(OutputMetaData::getCacheControl)
+                .map(OutputMetaData::getCacheControl)
                 .ifPresent(cacheControl -> headers.put("Cache-Control", cacheControl));
 
         return headers;
@@ -113,7 +113,7 @@ public sealed class MinioStorageClient implements StorageClient
                             .headers(createHeaders(output, metaData))
                             .stream(inputStream, inputStream.available(), -1);
             Optional.ofNullable(metaData)
-                    .map(OutputMetaData::createStorageMetaData)
+                    .map(OutputMetaData::createMetaDataMap)
                     .ifPresent(putObjectArgs::userMetadata);
             minioClient.putObject(putObjectArgs.build());
         } catch (final ErrorResponseException

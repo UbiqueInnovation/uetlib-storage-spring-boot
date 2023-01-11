@@ -1,20 +1,18 @@
 package ch.ubique.backend.storage;
 
 import ch.ubique.backend.core.http.cache.CacheHeaderUtility;
-import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
+import org.apache.commons.lang3.StringUtils;
 
 public final class OutputMetaData {
 
-    private static DateTimeFormatter HTTP_DATE_FORMATTER =
+    private static final DateTimeFormatter HTTP_DATE_FORMATTER =
             DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss z", Locale.US)
                     .withZone(ZoneId.of("UTC"));
 
@@ -32,64 +30,72 @@ public final class OutputMetaData {
         return contentType;
     }
 
-    public void setContentType(final String contentType) {
+    public OutputMetaData setContentType(final String contentType) {
         this.contentType = contentType;
+        return this;
     }
 
     public Instant getBestBefore() {
         return bestBefore;
     }
 
-    public void setBestBefore(final Instant bestBefore) {
+    public OutputMetaData setBestBefore(final Instant bestBefore) {
         this.bestBefore = bestBefore;
+        return this;
     }
 
     public Instant getNextRefresh() {
         return nextRefresh;
     }
 
-    public void setNextRefresh(final Instant nextRefresh) {
+    public OutputMetaData setNextRefresh(final Instant nextRefresh) {
         this.nextRefresh = nextRefresh;
+        return this;
     }
 
     public String getCache() {
         return cache;
     }
 
-    public void setCache(final String cache) {
+    public OutputMetaData setCache(final String cache) {
         this.cache = cache;
+        return this;
     }
 
     public Long getBackoff() {
         return backoff;
     }
 
-    public void setBackoff(final Long backoff) {
+    public OutputMetaData setBackoff(final Long backoff) {
         this.backoff = backoff;
+        return this;
     }
 
     public Long getMinimumApiVersion() {
         return minimumApiVersion;
     }
 
-    public void setMinimumApiVersion(final Long minimumApiVersion) {
+    public OutputMetaData setMinimumApiVersion(final Long minimumApiVersion) {
         this.minimumApiVersion = minimumApiVersion;
+        return this;
     }
 
     public String getContentEncoding() {
         return contentEncoding;
     }
 
-    public void setContentEncoding(final String contentEncoding) {
+    public OutputMetaData setContentEncoding(final String contentEncoding) {
         this.contentEncoding = contentEncoding;
+        return this;
     }
 
     public Long getMaxAge() {
         return maxAge;
     }
 
-    public void setMaxAge(final Long maxAge) {
+    public OutputMetaData setMaxAge(final Long maxAge) {
         this.maxAge = maxAge;
+        return this;
     }
 
     public Long getsMaxAge() {
@@ -101,9 +107,9 @@ public final class OutputMetaData {
         return this;
     }
 
-    public Optional<String> getCacheControl() {
-        final var parts = new HashSet<String>();
-        if (cache != null && !cache.isBlank()) {
+    public String getCacheControl() {
+        final var parts = new ArrayList<>();
+        if (StringUtils.isNotBlank(cache)) {
             parts.add(cache);
         }
         if (maxAge > 0) {
@@ -113,35 +119,21 @@ public final class OutputMetaData {
             parts.add(CacheHeaderUtility.S_MAX_AGE + "=" + sMaxAge);
         }
 
-        if (parts.isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(String.join(", ", parts));
+        return parts.isEmpty() ? null : StringUtils.join(", ", parts);
     }
 
-    @NotNull
-    public Map<String, String> createStorageMetaData() {
-        final var azureMetaData = new HashMap<String, String>();
-        if (nextRefresh != null) {
-            azureMetaData.put(
-                    CacheHeaderUtility.NEXT_REFRESH_SHORT, HTTP_DATE_FORMATTER.format(nextRefresh));
-        }
-        if (bestBefore != null) {
-            azureMetaData.put(
-                    CacheHeaderUtility.BEST_BEFORE_SHORT, HTTP_DATE_FORMATTER.format(bestBefore));
-        }
-        if (cache != null) {
-            azureMetaData.put(CacheHeaderUtility.CACHE_SHORT, cache);
-        }
-        if (backoff != null) {
-            azureMetaData.put(CacheHeaderUtility.REFRESH_BACKOFF_SHORT, backoff.toString());
-        }
-        azureMetaData.put(
-                CacheHeaderUtility.MINIMUM_API_VERSION_SHORT,
-                Optional.ofNullable(minimumApiVersion)
-                        .orElse(CacheHeaderUtility.DEFAULT_API_VERSION)
-                        .toString());
-
-        return azureMetaData;
+    public Map<String, String> createMetaDataMap() {
+        return Map.ofEntries(
+                Map.entry(
+                        CacheHeaderUtility.NEXT_REFRESH_SHORT,
+                        HTTP_DATE_FORMATTER.format(nextRefresh)),
+                Map.entry(
+                        CacheHeaderUtility.BEST_BEFORE_SHORT,
+                        HTTP_DATE_FORMATTER.format(bestBefore)),
+                Map.entry(CacheHeaderUtility.CACHE_SHORT, cache),
+                Map.entry(CacheHeaderUtility.REFRESH_BACKOFF_SHORT, backoff.toString()),
+                Map.entry(
+                        CacheHeaderUtility.MINIMUM_API_VERSION_SHORT,
+                        minimumApiVersion.toString()));
     }
 }
