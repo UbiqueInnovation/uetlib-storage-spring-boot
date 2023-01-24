@@ -49,14 +49,14 @@ class ImageStorageServiceTest {
         final var blurHashRepresentation =
                 imageStorageService.processImage(
                         new ByteArrayInputStream(exampleImage),
-                        GENERATE_GENERATE_PATH.apply(0),
+                        GENERATE_GENERATE_PATH.apply(1),
                         MediaType.IMAGE_JPEG);
-        assertEquals("UXJRXJ?GI:s;~qoLWExttSRjRPbHM_WCoeof", blurHashRepresentation.blurHash());
+        assertEquals("UWJa[-?GIps:~qoKWExttSRjRPbHMxWCoeof", blurHashRepresentation.blurHash());
         assertEquals(1.77, blurHashRepresentation.aspectRatio(), 0.05);
         verify(blobStorageService, atLeastOnce())
-                .write(new ByteOutput(exampleImage, "image/jpeg"), "sasImage/0-original.jpeg");
-        verify(blobStorageService, atLeastOnce()).write(any(), eq("sasImage/0-hires.jpeg"));
-        verify(blobStorageService, atLeastOnce()).write(any(), eq("sasImage/0-thumbnail.jpeg"));
+                .write(new ByteOutput(exampleImage, "image/jpeg"), "sasImage/1-original.jpeg");
+        verify(blobStorageService, atLeastOnce()).write(any(), eq("sasImage/1-hires.jpeg"));
+        verify(blobStorageService, atLeastOnce()).write(any(), eq("sasImage/1-thumbnail.jpeg"));
     }
 
     @Test
