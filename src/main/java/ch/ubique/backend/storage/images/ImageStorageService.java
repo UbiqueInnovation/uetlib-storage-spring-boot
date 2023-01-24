@@ -99,8 +99,7 @@ public class ImageStorageService {
         // ByteArrayOutputStream::toByteArray does not close the stream
         thumbnailOutput.close();
 
-        final var blurHashRepresentation =
-                blurHashClient.encodeToBlurHash(thumbnail, BlurHashClient.FALLBACK_GREY_BLUR_HASH);
+        final var blurHashRepresentation = blurHashClient.encodeToBlurHashRepresentationNoResize(thumbnail);
         // Flush clears native references so the image can be GC-ed. See tip of Scalr::resize
         thumbnail.flush();
         return blurHashRepresentation;
