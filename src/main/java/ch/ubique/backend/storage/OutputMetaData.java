@@ -6,6 +6,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
@@ -123,17 +125,23 @@ public final class OutputMetaData {
     }
 
     public Map<String, String> createMetaDataMap() {
-        return Map.ofEntries(
-                Map.entry(
-                        CacheHeaderUtility.NEXT_REFRESH_SHORT,
-                        HTTP_DATE_FORMATTER.format(nextRefresh)),
-                Map.entry(
-                        CacheHeaderUtility.BEST_BEFORE_SHORT,
-                        HTTP_DATE_FORMATTER.format(bestBefore)),
-                Map.entry(CacheHeaderUtility.CACHE_SHORT, cache),
-                Map.entry(CacheHeaderUtility.REFRESH_BACKOFF_SHORT, backoff.toString()),
-                Map.entry(
-                        CacheHeaderUtility.MINIMUM_API_VERSION_SHORT,
-                        minimumApiVersion.toString()));
+        final var map = new HashMap<String, String>();
+        if (nextRefresh != null) {
+            map.put(CacheHeaderUtility.NEXT_REFRESH_SHORT, HTTP_DATE_FORMATTER.format(nextRefresh));
+        }
+        if (bestBefore != null) {
+            map.put(CacheHeaderUtility.BEST_BEFORE_SHORT, HTTP_DATE_FORMATTER.format(bestBefore));
+        }
+        if (StringUtils.isNotBlank(cache)) {
+            map.put(CacheHeaderUtility.CACHE_SHORT, cache);
+        }
+        if (backoff != null) {
+            map.put(CacheHeaderUtility.REFRESH_BACKOFF_SHORT, backoff.toString());
+        }
+        if (minimumApiVersion != null) {
+            map.put(CacheHeaderUtility.MINIMUM_API_VERSION_SHORT, minimumApiVersion.toString());
+        }
+
+        return Collections.unmodifiableMap(map);
     }
 }
