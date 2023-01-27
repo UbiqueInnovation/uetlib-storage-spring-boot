@@ -254,19 +254,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
             final List<? extends VariableElement> parameters,
             final OutputMapping outputMapping,
             final boolean hasObjectMapperField) {
-        final var storageObjectParameter =
-                parameters.stream()
-                        .filter(param -> param.getAnnotation(StorageObject.class) != null)
-                        .findFirst()
-                        .orElseThrow(
-                                () -> {
-                                    throw new IllegalArgumentException(
-                                            "Methods annotated with "
-                                                    + OutputMapping.class
-                                                    + " need to have at least one parameter"
-                                                    + " annotated with @StorageObject for the"
-                                                    + " output");
-                                });
+        final var storageObjectParameter = getStorageObjectParameter(parameters);
 
         final var outputType =
                 elementUtils.getTypeElement(Output.class.getCanonicalName()).asType();
