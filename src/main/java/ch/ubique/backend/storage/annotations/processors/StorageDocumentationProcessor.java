@@ -5,9 +5,7 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.annotations.Storage;
-import ch.ubique.backend.storage.annotations.StorageObject;
 import com.google.auto.service.AutoService;
-import com.google.common.collect.MoreCollectors;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
@@ -130,13 +128,7 @@ public class StorageDocumentationProcessor extends AbstractStorageAnnotationProc
         final var hasDocumentClass = !TypeName.OBJECT.equals(documentedClass);
 
         final var typeOfStorageObject =
-                TypeName.get(
-                        outputMappingMethodParameters.stream()
-                                .filter(
-                                        element ->
-                                                element.getAnnotation(StorageObject.class) != null)
-                                .collect(MoreCollectors.onlyElement())
-                                .asType());
+                TypeName.get(getStorageObjectParameter(outputMappingMethodParameters).asType());
 
         final var returnType = hasDocumentClass ? documentedClass : typeOfStorageObject;
 

@@ -1,10 +1,13 @@
 package ch.ubique.backend.storage.annotations.processors;
 
+import ch.ubique.backend.storage.annotations.OutputMapping;
+import ch.ubique.backend.storage.annotations.StorageObject;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.annotation.Annotation;
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -23,6 +26,28 @@ public abstract class AbstractStorageAnnotationProcessor extends AbstractProcess
     protected Filer filer;
     protected Types typeUtils;
     protected Elements elementUtils;
+
+    @SuppressWarnings("java:S1452")
+    protected static List<? extends VariableElement> getParameters(final Element method) {
+        return ((ExecutableElement) method).getParameters();
+    }
+
+    protected static VariableElement getStorageObjectParameter(
+            final List<? extends VariableElement> parameters) {
+        if (parameters.size() == 1) {
+            return parameters.get(0);
+        }
+        return parameters.stream()
+                .filter(param -> param.getAnnotation(StorageObject.class) != null)
+                .findFirst()
+                .orElseThrow(
+                        () -> {
+                            throw new IllegalArgumentException(
+                                    MessageFormat.format(
+                                            "Methods annotated with '@{0}' need to have either exactly one parameter or at least one parameter annotated with '@{1}' for the output",
+                                            OutputMapping.class, StorageObject.class));
+                        });
+    }
 
     protected abstract Set<Class<? extends Annotation>> supportedAnnotations();
 
@@ -56,10 +81,5 @@ public abstract class AbstractStorageAnnotationProcessor extends AbstractProcess
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    @SuppressWarnings("java:S1452")
-    protected final List<? extends VariableElement> getParameters(final Element method) {
-        return ((ExecutableElement) method).getParameters();
     }
 }
