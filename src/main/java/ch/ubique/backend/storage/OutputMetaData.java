@@ -8,7 +8,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import org.jetbrains.annotations.Contract;
 
@@ -46,31 +49,19 @@ public final class OutputMetaData {
         return new OutputMetaData(Duration.ofDays(1), Duration.ofDays(1));
     }
 
-    public Instant getBestBefore() {
-        return bestBefore;
-    }
-
-    public OutputMetaData setBestBefore(@NotNull final Instant bestBefore) {
+    public OutputMetaData bestBefore(@NotNull final Instant bestBefore) {
         Objects.requireNonNull(bestBefore);
         this.bestBefore = bestBefore;
         return this;
     }
 
-    public Instant getNextRefresh() {
-        return nextRefresh;
-    }
-
-    public OutputMetaData setNextRefresh(@NotNull final Instant nextRefresh) {
+    public OutputMetaData nextRefresh(@NotNull final Instant nextRefresh) {
         Objects.requireNonNull(nextRefresh);
         this.nextRefresh = nextRefresh;
         return this;
     }
 
-    public Duration getBackoff() {
-        return backoff;
-    }
-
-    public OutputMetaData setBackoff(@NotNull final Duration backoff) {
+    public OutputMetaData backoff(@NotNull final Duration backoff) {
         Objects.requireNonNull(backoff);
         this.backoff = backoff;
         return this;
@@ -81,5 +72,41 @@ public final class OutputMetaData {
                 ", ",
                 CacheHeader.MAX_AGE.value() + "=" + maxAge.getSeconds(),
                 CacheHeader.S_MAX_AGE.value() + "=" + sMaxAge.getSeconds());
+    }
+
+    public Map<String, String> createMinioMetaDataMap() {
+        final var map = new HashMap<String, String>();
+
+        if (nextRefresh != null) {
+            map.put(CacheHeader.NEXT_REFRESH.value(), HTTP_DATE_FORMATTER.format(nextRefresh));
+        }
+        if (bestBefore != null) {
+            map.put(CacheHeader.BEST_BEFORE.value(), HTTP_DATE_FORMATTER.format(bestBefore));
+        }
+        if (backoff != null) {
+            map.put(CacheHeader.REFRESH_BACKOFF.value(), backoff.toString());
+        }
+
+        return Collections.unmodifiableMap(map);
+    }
+
+    public Map<String, String> createAzureMetaDataMap() {
+        final var map = new HashMap<String, String>();
+
+        if (nextRefresh != null) {
+            map.put(
+                    CacheHeader.NEXT_REFRESH.noDashesAzure(),
+                    HTTP_DATE_FORMATTER.format(nextRefresh));
+        }
+        if (bestBefore != null) {
+            map.put(
+                    CacheHeader.BEST_BEFORE.noDashesAzure(),
+                    HTTP_DATE_FORMATTER.format(bestBefore));
+        }
+        if (backoff != null) {
+            map.put(CacheHeader.REFRESH_BACKOFF.noDashesAzure(), backoff.toString());
+        }
+
+        return Collections.unmodifiableMap(map);
     }
 }

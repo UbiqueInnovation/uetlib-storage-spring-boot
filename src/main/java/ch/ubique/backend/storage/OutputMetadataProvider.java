@@ -14,6 +14,10 @@ public final class OutputMetadataProvider {
     private Duration nextRefreshOffset;
     private Duration backoff;
 
+    /**
+     * @param maxAge Duration must not be null
+     * @param sMaxAge Duration will be set to maxAge if null
+     */
     public OutputMetadataProvider(
             @NotNull final Duration maxAge, @Nullable final Duration sMaxAge) {
         Objects.requireNonNull(maxAge);
@@ -43,15 +47,13 @@ public final class OutputMetadataProvider {
         final var outputMetaData = new OutputMetaData(maxAge, sMaxAge);
 
         final var now = Instant.now();
-
         if (bestBeforeOffset != null) {
-            outputMetaData.setBestBefore(now.plus(bestBeforeOffset));
+            outputMetaData.bestBefore(now.plus(bestBeforeOffset));
         }
         if (nextRefreshOffset != null) {
-            outputMetaData.setNextRefresh(now.plus(nextRefreshOffset));
+            outputMetaData.nextRefresh(now.plus(nextRefreshOffset));
         }
-
-        outputMetaData.setBackoff(backoff);
+        outputMetaData.backoff(backoff);
 
         return outputMetaData;
     }

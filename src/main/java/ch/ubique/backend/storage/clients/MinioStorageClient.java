@@ -1,8 +1,5 @@
 package ch.ubique.backend.storage.clients;
 
-import static ch.ubique.backend.storage.OutputMetaData.HTTP_DATE_FORMATTER;
-
-import ch.ubique.backend.core.http.cache.CacheHeader;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetadataProvider;
 import ch.ubique.backend.storage.StorageClient;
@@ -28,7 +25,6 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -106,7 +102,7 @@ public sealed class MinioStorageClient implements StorageClient
                             .contentType(contentType)
                             .headers(createHeaders(output, metaData))
                             .stream(inputStream, inputStream.available(), -1);
-            putObjectArgs.userMetadata(createMetaDataMap(metaData));
+            putObjectArgs.userMetadata(metaData.createMinioMetaDataMap());
             minioClient.putObject(putObjectArgs.build());
         } catch (final ErrorResponseException
                 | InsufficientDataException
@@ -185,24 +181,5 @@ public sealed class MinioStorageClient implements StorageClient
         throw new NotImplementedException(
                 "Minio (actually S3) does not support permanent share URLs? (Maximum is 7 days as"
                         + " per S3 spec)");
-    }
-
-    public Map<String, String> createMetaDataMap(final OutputMetaData outputMetaData) {
-        final var map = new HashMap<String, String>();
-
-        final var nextRefresh = outputMetaData.getNextRefresh();
-        if (nextRefresh != null) {
-            map.put(CacheHeader.NEXT_REFRESH.value(), HTTP_DATE_FORMATTER.format(nextRefresh));
-        }
-        final var bestBefore = outputMetaData.getBestBefore();
-        if (bestBefore != null) {
-            map.put(CacheHeader.BEST_BEFORE.value(), HTTP_DATE_FORMATTER.format(bestBefore));
-        }
-        final var backoff = outputMetaData.getBackoff();
-        if (backoff != null) {
-            map.put(CacheHeader.REFRESH_BACKOFF.value(), backoff.toString());
-        }
-
-        return Collections.unmodifiableMap(map);
     }
 }
