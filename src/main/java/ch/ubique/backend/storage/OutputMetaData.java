@@ -105,7 +105,7 @@ public final class OutputMetaData {
                     CacheHeaderUtil.formatHttpHeaderTimestamp(bestBefore));
         }
         if (backoff != null) {
-            map.put(CacheHeader.REFRESH_BACKOFF.noDashesAzure(), backoff.toString());
+            map.put(CacheHeader.REFRESH_BACKOFF.noDashesAzure(), String.valueOf(backoff.getSeconds()));
         }
 
         return Collections.unmodifiableMap(map);
