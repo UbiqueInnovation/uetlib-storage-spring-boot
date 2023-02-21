@@ -1,8 +1,5 @@
 package ch.ubique.backend.storage.clients;
 
-import static ch.ubique.backend.storage.OutputMetaData.HTTP_DATE_FORMATTER;
-
-import ch.ubique.backend.core.http.cache.CacheHeader;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetadataProvider;
 import ch.ubique.backend.storage.StorageClient;
@@ -28,9 +25,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -88,7 +82,7 @@ public class AzureBlobStorageClient implements StorageClient {
             final var uploadOptions = new BlobParallelUploadOptions(inputStream);
             uploadOptions.setHeaders(createHeaders(output, metaData));
             Optional.ofNullable(metaData)
-                    .map(this::createMetaDataMap)
+                    .map(OutputMetaData::createAzureMetaDataMap)
                     .ifPresent(uploadOptions::setMetadata);
             uploadOptions.setRequestConditions(new BlobRequestConditions());
             uploadOptions.setParallelTransferOptions(
@@ -146,28 +140,5 @@ public class AzureBlobStorageClient implements StorageClient {
         final var blobClient =
                 blobServiceClient.getBlobContainerClient(container).getBlobClient(blobUrlEncoded);
         return URLDecoder.decode(blobClient.getBlobUrl(), StandardCharsets.UTF_8);
-    }
-
-    public Map<String, String> createMetaDataMap(final OutputMetaData outputMetaData) {
-        final var map = new HashMap<String, String>();
-
-        final var nextRefresh = outputMetaData.getNextRefresh();
-        if (nextRefresh != null) {
-            map.put(
-                    CacheHeader.NEXT_REFRESH.noDashesAzure(),
-                    HTTP_DATE_FORMATTER.format(nextRefresh));
-        }
-        final var bestBefore = outputMetaData.getBestBefore();
-        if (bestBefore != null) {
-            map.put(
-                    CacheHeader.BEST_BEFORE.noDashesAzure(),
-                    HTTP_DATE_FORMATTER.format(bestBefore));
-        }
-        final var backoff = outputMetaData.getBackoff();
-        if (backoff != null) {
-            map.put(CacheHeader.REFRESH_BACKOFF.noDashesAzure(), backoff.toString());
-        }
-
-        return Collections.unmodifiableMap(map);
     }
 }
