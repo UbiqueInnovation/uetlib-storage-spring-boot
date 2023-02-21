@@ -43,18 +43,21 @@ public final class OutputMetaData {
         return new OutputMetaData(Duration.ofDays(1), Duration.ofDays(1));
     }
 
+    @Contract("null -> fail")
     public OutputMetaData bestBefore(@NotNull final Instant bestBefore) {
         Objects.requireNonNull(bestBefore);
         this.bestBefore = bestBefore;
         return this;
     }
 
+    @Contract("null -> fail")
     public OutputMetaData nextRefresh(@NotNull final Instant nextRefresh) {
         Objects.requireNonNull(nextRefresh);
         this.nextRefresh = nextRefresh;
         return this;
     }
 
+    @Contract("null -> fail")
     public OutputMetaData backoff(@NotNull final Duration backoff) {
         Objects.requireNonNull(backoff);
         this.backoff = backoff;
