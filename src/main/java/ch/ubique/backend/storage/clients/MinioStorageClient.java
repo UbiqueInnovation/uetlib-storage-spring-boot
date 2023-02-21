@@ -1,6 +1,10 @@
 package ch.ubique.backend.storage.clients;
 
+import static ch.ubique.backend.storage.OutputMetaData.HTTP_DATE_FORMATTER;
+
+import ch.ubique.backend.core.http.cache.CacheHeader;
 import ch.ubique.backend.storage.OutputMetaData;
+import ch.ubique.backend.storage.OutputMetadataProvider;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
 import com.pivovarit.function.exception.WrappedException;
@@ -24,8 +28,10 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.NotImplementedException;
@@ -39,7 +45,7 @@ public sealed class MinioStorageClient implements StorageClient
 
     private final String bucket;
     private final MinioClient minioClient;
-    @Nullable private final OutputMetaData defaultOutputMetaData;
+    @Nullable private final OutputMetadataProvider outputMetadataProvider;
 
     public MinioStorageClient(
             final String bucket,
@@ -47,9 +53,9 @@ public sealed class MinioStorageClient implements StorageClient
             final String accessKey,
             final String secretKey,
             final Duration timeout,
-            final OutputMetaData defaultOutputMetaData) {
+            final OutputMetadataProvider outputMetadataProvider) {
         this.bucket = bucket;
-        this.defaultOutputMetaData = defaultOutputMetaData;
+        this.outputMetadataProvider = outputMetadataProvider;
         final var timeoutOrDefault = Optional.ofNullable(timeout).orElse(Duration.ofSeconds(15));
         final var httpClient =
                 new OkHttpClient()
@@ -71,20 +77,13 @@ public sealed class MinioStorageClient implements StorageClient
             @NotNull final Output output, @Nullable final OutputMetaData metaData) {
         final var headers = new HashMap<String, String>();
 
-        // contentType
-        final var contentType =
-                Optional.ofNullable(metaData)
-                        .map(OutputMetaData::getContentType)
-                        .orElse(output.contentType());
-        headers.put("Content-Type", contentType);
-
         // contentEncoding
         output.contentEncoding()
                 .ifPresent(contentEncoding -> headers.put("Content-Encoding", contentEncoding));
 
         // cacheControl
         Optional.ofNullable(metaData)
-                .map(OutputMetaData::getCacheControl)
+                .map(OutputMetaData::createCacheControl)
                 .ifPresent(cacheControl -> headers.put("Cache-Control", cacheControl));
 
         return headers;
@@ -92,18 +91,13 @@ public sealed class MinioStorageClient implements StorageClient
 
     @Override
     public final void write(
-            final Output output,
-            final String path,
-            @Nullable final OutputMetaData localOutputMetaData)
+            final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws IOException {
-        final var metaData = Optional.ofNullable(localOutputMetaData).orElse(defaultOutputMetaData);
+        final var metaData = resolveOutputMetaData(outputMetaData, outputMetadataProvider);
 
         try (final var inputStream = output.read()) {
 
-            final var contentType =
-                    Optional.ofNullable(metaData)
-                            .map(OutputMetaData::getContentType)
-                            .orElse(output.contentType());
+            final var contentType = Objects.requireNonNull(output.contentType());
 
             final var putObjectArgs =
                     PutObjectArgs.builder()
@@ -112,9 +106,7 @@ public sealed class MinioStorageClient implements StorageClient
                             .contentType(contentType)
                             .headers(createHeaders(output, metaData))
                             .stream(inputStream, inputStream.available(), -1);
-            Optional.ofNullable(metaData)
-                    .map(OutputMetaData::createMetaDataMap)
-                    .ifPresent(putObjectArgs::userMetadata);
+            putObjectArgs.userMetadata(createMetaDataMap(metaData));
             minioClient.putObject(putObjectArgs.build());
         } catch (final ErrorResponseException
                 | InsufficientDataException
@@ -193,5 +185,24 @@ public sealed class MinioStorageClient implements StorageClient
         throw new NotImplementedException(
                 "Minio (actually S3) does not support permanent share URLs? (Maximum is 7 days as"
                         + " per S3 spec)");
+    }
+
+    public Map<String, String> createMetaDataMap(final OutputMetaData outputMetaData) {
+        final var map = new HashMap<String, String>();
+
+        final var nextRefresh = outputMetaData.getNextRefresh();
+        if (nextRefresh != null) {
+            map.put(CacheHeader.NEXT_REFRESH.value(), HTTP_DATE_FORMATTER.format(nextRefresh));
+        }
+        final var bestBefore = outputMetaData.getBestBefore();
+        if (bestBefore != null) {
+            map.put(CacheHeader.BEST_BEFORE.value(), HTTP_DATE_FORMATTER.format(bestBefore));
+        }
+        final var backoff = outputMetaData.getBackoff();
+        if (backoff != null) {
+            map.put(CacheHeader.REFRESH_BACKOFF.value(), backoff.toString());
+        }
+
+        return Collections.unmodifiableMap(map);
     }
 }
