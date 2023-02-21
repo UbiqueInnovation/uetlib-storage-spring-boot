@@ -1,145 +1,111 @@
 package ch.ubique.backend.storage;
 
-import ch.ubique.backend.core.http.cache.CacheHeaderUtility;
+import ch.ubique.backend.core.http.cache.CacheHeader;
+import ch.ubique.backend.core.http.cache.CacheHeaderUtil;
+import ch.ubique.backend.storage.annotations.OutputMapping;
+import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
-import org.apache.commons.lang3.StringUtils;
+import java.util.Objects;
+import org.jetbrains.annotations.Contract;
 
 public final class OutputMetaData {
+    @NotNull private final Duration maxAge;
+    @NotNull private final Duration sMaxAge;
 
-    private static final DateTimeFormatter HTTP_DATE_FORMATTER =
-            DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss z", Locale.US)
-                    .withZone(ZoneId.of("UTC"));
-
-    private String contentType;
-    private String contentEncoding;
     private Instant bestBefore;
     private Instant nextRefresh;
-    private String cache;
-    private Long backoff;
-    private Long maxAge = -1L;
-    private Long sMaxAge = Duration.ofDays(1).getSeconds();
-    private Long minimumApiVersion;
+    private Duration backoff;
 
-    public String getContentType() {
-        return contentType;
+    /**
+     * @param maxAge Duration must not be null
+     * @param sMaxAge Duration will be set to maxAge if null
+     */
+    @Contract("null, _ -> fail")
+    public OutputMetaData(@NotNull final Duration maxAge, @Nullable final Duration sMaxAge) {
+        Objects.requireNonNull(maxAge);
+        this.maxAge = maxAge;
+        this.sMaxAge = Objects.requireNonNullElse(sMaxAge, maxAge);
     }
 
-    public OutputMetaData setContentType(final String contentType) {
-        this.contentType = contentType;
-        return this;
+    /**
+     * This is used if neither a {@link OutputMetaData} is passed to the {@link
+     * OutputMapping}/{@link StorageClient#write} method nor a default is provided to the {@link
+     * StorageClient}.
+     *
+     * <p>Sets both {@code max-age} and {@code s-maxage} to one day.
+     */
+    public static OutputMetaData defaults() {
+        return new OutputMetaData(Duration.ofDays(1), Duration.ofDays(1));
     }
 
-    public Instant getBestBefore() {
-        return bestBefore;
-    }
-
-    public OutputMetaData setBestBefore(final Instant bestBefore) {
+    @Contract("null -> fail")
+    public OutputMetaData bestBefore(@NotNull final Instant bestBefore) {
+        Objects.requireNonNull(bestBefore);
         this.bestBefore = bestBefore;
         return this;
     }
 
-    public Instant getNextRefresh() {
-        return nextRefresh;
-    }
-
-    public OutputMetaData setNextRefresh(final Instant nextRefresh) {
+    @Contract("null -> fail")
+    public OutputMetaData nextRefresh(@NotNull final Instant nextRefresh) {
+        Objects.requireNonNull(nextRefresh);
         this.nextRefresh = nextRefresh;
         return this;
     }
 
-    public String getCache() {
-        return cache;
-    }
-
-    public OutputMetaData setCache(final String cache) {
-        this.cache = cache;
-        return this;
-    }
-
-    public Long getBackoff() {
-        return backoff;
-    }
-
-    public OutputMetaData setBackoff(final Long backoff) {
+    @Contract("null -> fail")
+    public OutputMetaData backoff(@NotNull final Duration backoff) {
+        Objects.requireNonNull(backoff);
         this.backoff = backoff;
         return this;
     }
 
-    public Long getMinimumApiVersion() {
-        return minimumApiVersion;
+    public String createCacheControl() {
+        return String.join(
+                ", ",
+                CacheHeader.MAX_AGE.value() + "=" + maxAge.getSeconds(),
+                CacheHeader.S_MAX_AGE.value() + "=" + sMaxAge.getSeconds());
     }
 
-    public OutputMetaData setMinimumApiVersion(final Long minimumApiVersion) {
-        this.minimumApiVersion = minimumApiVersion;
-        return this;
-    }
-
-    public String getContentEncoding() {
-        return contentEncoding;
-    }
-
-    public OutputMetaData setContentEncoding(final String contentEncoding) {
-        this.contentEncoding = contentEncoding;
-        return this;
-    }
-
-    public Long getMaxAge() {
-        return maxAge;
-    }
-
-    public OutputMetaData setMaxAge(final Long maxAge) {
-        this.maxAge = maxAge;
-        return this;
-    }
-
-    public Long getsMaxAge() {
-        return sMaxAge;
-    }
-
-    public OutputMetaData setsMaxAge(final Long sMaxAge) {
-        this.sMaxAge = sMaxAge;
-        return this;
-    }
-
-    public String getCacheControl() {
-        final var parts = new ArrayList<>();
-        if (StringUtils.isNotBlank(cache)) {
-            parts.add(cache);
-        }
-        if (maxAge > 0) {
-            parts.add(CacheHeaderUtility.MAX_AGE + "=" + maxAge);
-        }
-        if (sMaxAge >= 0) {
-            parts.add(CacheHeaderUtility.S_MAX_AGE + "=" + sMaxAge);
-        }
-
-        return parts.isEmpty() ? null : StringUtils.join(", ", parts);
-    }
-
-    public Map<String, String> createMetaDataMap() {
+    public Map<String, String> createMinioMetaDataMap() {
         final var map = new HashMap<String, String>();
+
         if (nextRefresh != null) {
-            map.put(CacheHeaderUtility.NEXT_REFRESH_SHORT, HTTP_DATE_FORMATTER.format(nextRefresh));
+            map.put(
+                    CacheHeader.NEXT_REFRESH.value(),
+                    CacheHeaderUtil.formatHttpHeaderTimestamp(nextRefresh));
         }
         if (bestBefore != null) {
-            map.put(CacheHeaderUtility.BEST_BEFORE_SHORT, HTTP_DATE_FORMATTER.format(bestBefore));
-        }
-        if (StringUtils.isNotBlank(cache)) {
-            map.put(CacheHeaderUtility.CACHE_SHORT, cache);
+            map.put(
+                    CacheHeader.BEST_BEFORE.value(),
+                    CacheHeaderUtil.formatHttpHeaderTimestamp(bestBefore));
         }
         if (backoff != null) {
-            map.put(CacheHeaderUtility.REFRESH_BACKOFF_SHORT, backoff.toString());
+            map.put(CacheHeader.BACKOFF.value(), String.valueOf(backoff.getSeconds()));
         }
-        if (minimumApiVersion != null) {
-            map.put(CacheHeaderUtility.MINIMUM_API_VERSION_SHORT, minimumApiVersion.toString());
+
+        return Collections.unmodifiableMap(map);
+    }
+
+    public Map<String, String> createAzureMetaDataMap() {
+        final var map = new HashMap<String, String>();
+
+        if (nextRefresh != null) {
+            map.put(
+                    CacheHeader.NEXT_REFRESH.noDashesAzure(),
+                    CacheHeaderUtil.formatHttpHeaderTimestamp(nextRefresh));
+        }
+        if (bestBefore != null) {
+            map.put(
+                    CacheHeader.BEST_BEFORE.noDashesAzure(),
+                    CacheHeaderUtil.formatHttpHeaderTimestamp(bestBefore));
+        }
+        if (backoff != null) {
+            map.put(CacheHeader.BACKOFF.noDashesAzure(), String.valueOf(backoff.getSeconds()));
         }
 
         return Collections.unmodifiableMap(map);
