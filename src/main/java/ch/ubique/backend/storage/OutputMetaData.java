@@ -10,6 +10,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Objects;
+import org.jetbrains.annotations.Contract;
 
 public final class OutputMetaData {
 
@@ -27,6 +28,7 @@ public final class OutputMetaData {
      * @param maxAge Duration must not be null
      * @param sMaxAge Duration will be set to maxAge if null
      */
+    @Contract("null, _ -> fail")
     public OutputMetaData(@NotNull final Duration maxAge, @Nullable final Duration sMaxAge) {
         Objects.requireNonNull(maxAge);
         this.maxAge = maxAge;
@@ -77,7 +79,7 @@ public final class OutputMetaData {
     public String createCacheControl() {
         return String.join(
                 ", ",
-                CacheHeader.MAX_AGE + "=" + maxAge.getSeconds(),
-                CacheHeader.S_MAX_AGE + "=" + sMaxAge.getSeconds());
+                CacheHeader.MAX_AGE.value() + "=" + maxAge.getSeconds(),
+                CacheHeader.S_MAX_AGE.value() + "=" + sMaxAge.getSeconds());
     }
 }
