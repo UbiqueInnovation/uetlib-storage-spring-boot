@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import org.jetbrains.annotations.Contract;
 
 public final class OutputMetadataProvider {
 
@@ -18,6 +19,7 @@ public final class OutputMetadataProvider {
      * @param maxAge Duration must not be null
      * @param sMaxAge Duration will be set to maxAge if null
      */
+    @Contract("null, _ -> fail")
     public OutputMetadataProvider(
             @NotNull final Duration maxAge, @Nullable final Duration sMaxAge) {
         Objects.requireNonNull(maxAge);
@@ -25,18 +27,21 @@ public final class OutputMetadataProvider {
         this.sMaxAge = Objects.requireNonNullElse(sMaxAge, maxAge);
     }
 
+    @Contract("null -> fail")
     public OutputMetadataProvider bestBeforeOffset(@NotNull final Duration bestBeforeOffset) {
         Objects.requireNonNull(bestBeforeOffset);
         this.bestBeforeOffset = bestBeforeOffset;
         return this;
     }
 
+    @Contract("null -> fail")
     public OutputMetadataProvider nextRefreshOffset(@NotNull final Duration nextRefreshOffset) {
         Objects.requireNonNull(nextRefreshOffset);
         this.nextRefreshOffset = nextRefreshOffset;
         return this;
     }
 
+    @Contract("null -> fail")
     public OutputMetadataProvider backoff(@NotNull final Duration backoff) {
         Objects.requireNonNull(backoff);
         this.backoff = backoff;
