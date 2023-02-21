@@ -1,25 +1,19 @@
 package ch.ubique.backend.storage;
 
 import ch.ubique.backend.core.http.cache.CacheHeader;
+import ch.ubique.backend.core.http.cache.CacheHeaderUtil;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import org.jetbrains.annotations.Contract;
 
 public final class OutputMetaData {
-
-    public static final DateTimeFormatter HTTP_DATE_FORMATTER =
-            DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss z", Locale.US)
-                    .withZone(ZoneId.of("UTC"));
     @NotNull private final Duration maxAge;
     @NotNull private final Duration sMaxAge;
 
@@ -78,10 +72,14 @@ public final class OutputMetaData {
         final var map = new HashMap<String, String>();
 
         if (nextRefresh != null) {
-            map.put(CacheHeader.NEXT_REFRESH.value(), HTTP_DATE_FORMATTER.format(nextRefresh));
+            map.put(
+                    CacheHeader.NEXT_REFRESH.value(),
+                    CacheHeaderUtil.formatHttpHeaderTimestamp(nextRefresh));
         }
         if (bestBefore != null) {
-            map.put(CacheHeader.BEST_BEFORE.value(), HTTP_DATE_FORMATTER.format(bestBefore));
+            map.put(
+                    CacheHeader.BEST_BEFORE.value(),
+                    CacheHeaderUtil.formatHttpHeaderTimestamp(bestBefore));
         }
         if (backoff != null) {
             map.put(CacheHeader.REFRESH_BACKOFF.value(), backoff.toString());
@@ -96,12 +94,12 @@ public final class OutputMetaData {
         if (nextRefresh != null) {
             map.put(
                     CacheHeader.NEXT_REFRESH.noDashesAzure(),
-                    HTTP_DATE_FORMATTER.format(nextRefresh));
+                    CacheHeaderUtil.formatHttpHeaderTimestamp(nextRefresh));
         }
         if (bestBefore != null) {
             map.put(
                     CacheHeader.BEST_BEFORE.noDashesAzure(),
-                    HTTP_DATE_FORMATTER.format(bestBefore));
+                    CacheHeaderUtil.formatHttpHeaderTimestamp(bestBefore));
         }
         if (backoff != null) {
             map.put(CacheHeader.REFRESH_BACKOFF.noDashesAzure(), backoff.toString());
