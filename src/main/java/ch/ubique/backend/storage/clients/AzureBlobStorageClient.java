@@ -1,6 +1,10 @@
 package ch.ubique.backend.storage.clients;
 
+import static ch.ubique.backend.storage.OutputMetaData.HTTP_DATE_FORMATTER;
+
+import ch.ubique.backend.core.http.cache.CacheHeader;
 import ch.ubique.backend.storage.OutputMetaData;
+import ch.ubique.backend.storage.OutputMetadataProvider;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
 import com.azure.core.util.Context;
@@ -24,13 +28,17 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 public class AzureBlobStorageClient implements StorageClient {
 
     private final String container;
     private final BlobServiceClient blobServiceClient;
-    @Nullable private final OutputMetaData defaultOutputMetaData;
+    @Nullable private final OutputMetadataProvider outputMetadataProvider;
 
     public AzureBlobStorageClient(final String container, final String connectionString) {
         this(container, connectionString, null);
@@ -39,14 +47,14 @@ public class AzureBlobStorageClient implements StorageClient {
     public AzureBlobStorageClient(
             final String container,
             final String connectionString,
-            final OutputMetaData defaultOutputMetaData) {
+            final OutputMetadataProvider outputMetadataProvider) {
         this.container = container;
         this.blobServiceClient =
                 new BlobServiceClientBuilder()
                         .connectionString(connectionString)
                         .retryOptions(new RequestRetryOptions())
                         .buildClient();
-        this.defaultOutputMetaData = defaultOutputMetaData;
+        this.outputMetadataProvider = outputMetadataProvider;
     }
 
     @NotNull
@@ -55,18 +63,14 @@ public class AzureBlobStorageClient implements StorageClient {
         final var headers = new BlobHttpHeaders();
 
         // contentType
-        final var contentType =
-                Optional.ofNullable(metaData)
-                        .map(OutputMetaData::getContentType)
-                        .orElse(output.contentType());
-        headers.setContentType(contentType);
+        headers.setContentType(Objects.requireNonNull(output.contentType()));
 
         // contentEncoding
         output.contentEncoding().ifPresent(headers::setContentEncoding);
 
         // cacheControl
         Optional.ofNullable(metaData)
-                .map(OutputMetaData::getCacheControl)
+                .map(OutputMetaData::createCacheControl)
                 .ifPresent(headers::setCacheControl);
 
         return headers;
@@ -74,18 +78,17 @@ public class AzureBlobStorageClient implements StorageClient {
 
     @Override
     public void write(
-            final Output output,
-            final String path,
-            @Nullable final OutputMetaData localOutputMetaData)
+            final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws IOException {
-        final var metaData = Optional.ofNullable(localOutputMetaData).orElse(defaultOutputMetaData);
+        final var metaData = resolveOutputMetaData(outputMetaData, outputMetadataProvider);
+
         try (final var inputStream = output.read()) {
 
             // Define upload
             final var uploadOptions = new BlobParallelUploadOptions(inputStream);
             uploadOptions.setHeaders(createHeaders(output, metaData));
             Optional.ofNullable(metaData)
-                    .map(OutputMetaData::createMetaDataMap)
+                    .map(this::createMetaDataMap)
                     .ifPresent(uploadOptions::setMetadata);
             uploadOptions.setRequestConditions(new BlobRequestConditions());
             uploadOptions.setParallelTransferOptions(
@@ -143,5 +146,28 @@ public class AzureBlobStorageClient implements StorageClient {
         final var blobClient =
                 blobServiceClient.getBlobContainerClient(container).getBlobClient(blobUrlEncoded);
         return URLDecoder.decode(blobClient.getBlobUrl(), StandardCharsets.UTF_8);
+    }
+
+    public Map<String, String> createMetaDataMap(final OutputMetaData outputMetaData) {
+        final var map = new HashMap<String, String>();
+
+        final var nextRefresh = outputMetaData.getNextRefresh();
+        if (nextRefresh != null) {
+            map.put(
+                    CacheHeader.NEXT_REFRESH.noDashesAzure(),
+                    HTTP_DATE_FORMATTER.format(nextRefresh));
+        }
+        final var bestBefore = outputMetaData.getBestBefore();
+        if (bestBefore != null) {
+            map.put(
+                    CacheHeader.BEST_BEFORE.noDashesAzure(),
+                    HTTP_DATE_FORMATTER.format(bestBefore));
+        }
+        final var backoff = outputMetaData.getBackoff();
+        if (backoff != null) {
+            map.put(CacheHeader.REFRESH_BACKOFF.noDashesAzure(), backoff.toString());
+        }
+
+        return Collections.unmodifiableMap(map);
     }
 }
