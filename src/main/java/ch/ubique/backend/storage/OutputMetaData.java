@@ -85,7 +85,7 @@ public final class OutputMetaData {
                     CacheHeaderUtil.formatHttpHeaderTimestamp(bestBefore));
         }
         if (backoff != null) {
-            map.put(CacheHeader.REFRESH_BACKOFF.value(), String.valueOf(backoff.getSeconds()));
+            map.put(CacheHeader.BACKOFF.value(), String.valueOf(backoff.getSeconds()));
         }
 
         return Collections.unmodifiableMap(map);
@@ -105,7 +105,7 @@ public final class OutputMetaData {
                     CacheHeaderUtil.formatHttpHeaderTimestamp(bestBefore));
         }
         if (backoff != null) {
-            map.put(CacheHeader.REFRESH_BACKOFF.noDashesAzure(), String.valueOf(backoff.getSeconds()));
+            map.put(CacheHeader.BACKOFF.noDashesAzure(), String.valueOf(backoff.getSeconds()));
         }
 
         return Collections.unmodifiableMap(map);

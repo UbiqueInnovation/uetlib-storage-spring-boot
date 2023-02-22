@@ -1,13 +1,15 @@
 package ch.ubique.backend.storage;
 
+import ch.ubique.backend.core.http.cache.CacheHeader;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class OutputMetaDataTest {
-
-    @Test
-    void fromDefaults() {}
 
     @Test
     @SuppressWarnings("java:S5778")
@@ -25,5 +27,31 @@ class OutputMetaDataTest {
     }
 
     @Test
-    void createMetaDataMap() {}
+    void createMetaDataMap() {
+        final var defaults = OutputMetaData.defaults();
+        Assertions.assertEquals(Map.of(), defaults.createAzureMetaDataMap());
+        Assertions.assertEquals(Map.of(), defaults.createMinioMetaDataMap());
+
+        final var metadata =
+                new OutputMetaData(Duration.ofDays(1), Duration.ofDays(1))
+                        .nextRefresh(Instant.now().plus(Duration.ofHours(1)))
+                        .bestBefore(Instant.now().plus(Duration.ofHours(4)))
+                        .backoff(Duration.ofMinutes(2));
+        final var azureMetaDataMap = metadata.createAzureMetaDataMap();
+        final var minioMetaDataMap = metadata.createMinioMetaDataMap();
+        Assertions.assertEquals(
+                Set.of(
+                        CacheHeader.NEXT_REFRESH.noDashesAzure(),
+                        CacheHeader.BEST_BEFORE.noDashesAzure(),
+                        CacheHeader.BACKOFF.noDashesAzure()),
+                azureMetaDataMap.keySet());
+        Assertions.assertEquals(
+                Set.of(
+                        CacheHeader.NEXT_REFRESH.value(),
+                        CacheHeader.BEST_BEFORE.value(),
+                        CacheHeader.BACKOFF.value()),
+                minioMetaDataMap.keySet());
+        Assertions.assertEquals(
+                new HashSet<>(azureMetaDataMap.values()), new HashSet<>(minioMetaDataMap.values()));
+    }
 }
