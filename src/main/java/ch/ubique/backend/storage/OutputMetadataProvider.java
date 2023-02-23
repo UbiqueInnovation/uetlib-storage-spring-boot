@@ -58,7 +58,9 @@ public final class OutputMetadataProvider {
         if (nextRefreshOffset != null) {
             outputMetaData.nextRefresh(now.plus(nextRefreshOffset));
         }
-        outputMetaData.backoff(backoff);
+        if (backoff != null) {
+            outputMetaData.backoff(backoff);
+        }
 
         return outputMetaData;
     }
