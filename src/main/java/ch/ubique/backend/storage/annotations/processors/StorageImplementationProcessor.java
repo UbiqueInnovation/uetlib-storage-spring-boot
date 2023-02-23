@@ -1,47 +1,44 @@
 package ch.ubique.backend.storage.annotations.processors;
 
-import static javax.lang.model.element.Modifier.FINAL;
-import static javax.lang.model.element.Modifier.PRIVATE;
-import static javax.lang.model.element.Modifier.PUBLIC;
-
+import ch.ubique.backend.core.file.ByteFile;
+import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.InputMapping;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.annotations.Storage;
-import ch.ubique.backend.storage.annotations.StorageObject;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.FileOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
 import ch.ubique.backend.storage.output.Output;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auto.service.AutoService;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.annotation.Annotation;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import javax.annotation.processing.Processor;
-import javax.annotation.processing.RoundEnvironment;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.ArrayType;
-import javax.lang.model.type.TypeKind;
+import com.squareup.javapoet.*;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
+
+import javax.annotation.processing.Processor;
+import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.ArrayType;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.annotation.Annotation;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static javax.lang.model.element.Modifier.*;
 
 @AutoService(Processor.class)
 public class StorageImplementationProcessor extends AbstractStorageAnnotationProcessor {
@@ -92,7 +89,8 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                                                     .map(
                                                             inputMapping ->
                                                                     createInputMappingMethod(
-                                                                            inputMapping,
+                                                                            (ExecutableElement)
+                                                                                    inputMapping,
                                                                             storageBasePath))
                                                     .toList()));
 
@@ -106,8 +104,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                                                             outputMapping ->
                                                                     createOutputMappingMethod(
                                                                             outputMapping,
-                                                                            storageBasePath,
-                                                                            injectObjectMapper))
+                                                                            storageBasePath))
                                                     .toList()));
 
             // Write class to filer, it will be available as generated source
@@ -129,26 +126,14 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
     private TypeSpec.Builder generateClass(
             final Element element, final boolean injectObjectMapper) {
         final var className = element.getSimpleName() + "Implementation";
-        final var classBuilder =
-                TypeSpec.classBuilder(className)
-                        .addModifiers(PUBLIC, FINAL)
-                        .addAnnotation(Service.class)
-                        .addSuperinterface(element.asType())
-                        .addField(
-                                FieldSpec.builder(
-                                                StorageClient.class,
-                                                "storageClient",
-                                                PRIVATE,
-                                                FINAL)
-                                        .build())
-                        .addMethod(createConstructor(element, injectObjectMapper));
 
-        if (injectObjectMapper) {
-            classBuilder.addField(
-                    FieldSpec.builder(ObjectMapper.class, "objectMapper", PRIVATE, FINAL).build());
-        }
-
-        return classBuilder;
+        return TypeSpec.classBuilder(className)
+                .addModifiers(PUBLIC, FINAL)
+                .addAnnotation(Service.class)
+                .addSuperinterface(element.asType())
+                .addField(StorageClient.class, "storageClient", PRIVATE, FINAL)
+                .addField(ObjectMapper.class, "objectMapper", PRIVATE, FINAL)
+                .addMethod(createConstructor(element, injectObjectMapper));
     }
 
     private MethodSpec createConstructor(
@@ -190,30 +175,65 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
             constructorBuilder
                     .addParameter(objectMapperParameterBuilder.build())
                     .addStatement("this.objectMapper = objectMapper");
+        } else {
+            constructorBuilder.addStatement("this.objectMapper = new $T()", ObjectMapper.class);
         }
 
         return constructorBuilder.build();
     }
 
     private MethodSpec createInputMappingMethod(
-            final Element method, final String storageBasePath) {
+            final ExecutableElement method, final String storageBasePath) {
+
         final var parameters = getParameters(method);
         final var pathTemplate =
                 getPathTemplate(storageBasePath, method.getAnnotation(InputMapping.class).path());
+        final var path = getPath(parameters, pathTemplate);
+
         return MethodSpec.methodBuilder(method.getSimpleName().toString())
                 .addModifiers(PUBLIC)
                 .addAnnotation(Override.class)
-                .returns(InputStream.class)
                 .addException(IOException.class)
                 .addParameters(parameters.stream().map(this::generateParameter).toList())
-                .addStatement("return storageClient.read($L)", getPath(parameters, pathTemplate))
+                .returns(TypeName.get(method.getReturnType()))
+                .addStatement("return $L", createInputMappingReturnValue(method, path))
                 .build();
     }
 
+    private CodeBlock createInputMappingReturnValue(
+            final ExecutableElement method, final CodeBlock path) {
+
+        final var returnType = method.getReturnType();
+        final var inputMapping = method.getAnnotation(InputMapping.class);
+
+        final var inputStream = CodeBlock.of("storageClient.read($L)", path);
+        final var bytes =
+                CodeBlock.of("$T.readBytesAndClose($L)", InputStreamUtils.class, inputStream);
+
+        if (typeUtils.isSameType(returnType, typeMirrorOf(InputStream.class))) {
+            return inputStream;
+        }
+        if (isByteArray(returnType)) {
+            return bytes;
+        }
+        if (typeUtils.isSameType(returnType, typeMirrorOf(ByteFile.class))) {
+            final var contentType = StringUtils.defaultIfBlank(inputMapping.contentType(), null);
+            final var fileName =
+                    CodeBlock.of("$T.of($L).getFileName().toString()", Path.class, path);
+            return CodeBlock.of(
+                    "$T.fromBytes(\n$>$L, \n$L, \n$S)$<",
+                    ByteFile.class,
+                    bytes,
+                    fileName,
+                    contentType);
+        }
+
+        final var objectMapper = getObjectMapper(getParameters(method));
+        return CodeBlock.of("$L.readValue($L, $T.class)", objectMapper, inputStream, returnType);
+    }
+
     private MethodSpec createOutputMappingMethod(
-            final Element method,
-            final String storageBasePath,
-            final boolean hasObjectMapperField) {
+            final Element method, final String storageBasePath) {
         final var annotation = method.getAnnotation(OutputMapping.class);
         final var parameters = getParameters(method);
         final var pathTemplate = getPathTemplate(storageBasePath, annotation.path());
@@ -223,7 +243,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                 .addParameters(parameters.stream().map(this::generateParameter).toList())
                 .addStatement(
                         "storageClient.write(\n$>$L,\n$L,\n$L)$<",
-                        getOutput(parameters, annotation, hasObjectMapperField),
+                        getOutput(parameters, annotation),
                         getPath(parameters, pathTemplate),
                         getMetadata(parameters))
                 .returns(void.class)
@@ -240,10 +260,8 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
     }
 
     private CodeBlock getOutput(
-            final List<? extends VariableElement> parameters,
-            final OutputMapping outputMapping,
-            final boolean hasObjectMapperField) {
-        final var inner = getInnerOutput(parameters, outputMapping, hasObjectMapperField);
+            final List<? extends VariableElement> parameters, final OutputMapping outputMapping) {
+        final var inner = getInnerOutput(parameters, outputMapping);
         if (outputMapping.gZip()) {
             return CodeBlock.of("$L$Z.gZip()", inner);
         }
@@ -251,9 +269,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
     }
 
     private CodeBlock getInnerOutput(
-            final List<? extends VariableElement> parameters,
-            final OutputMapping outputMapping,
-            final boolean hasObjectMapperField) {
+            final List<? extends VariableElement> parameters, final OutputMapping outputMapping) {
         final var storageObjectParameter = getStorageObjectParameter(parameters);
 
         final var outputType =
@@ -271,16 +287,14 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
         final var paramType = storageObjectParameter.asType();
         final var contentType = outputMapping.contentType();
 
-        if (typeUtils.isAssignable(
-                paramType, elementUtils.getTypeElement(File.class.getCanonicalName()).asType())) {
+        if (typeUtils.isAssignable(paramType, typeMirrorOf(File.class))) {
             if (StringUtils.isEmpty(contentType)) {
                 return CodeBlock.of("new $T($L)", FileOutput.class, paramName);
             }
             return CodeBlock.of("new $T($L, $S)", FileOutput.class, paramName, contentType);
         }
 
-        if (paramType.getKind() == TypeKind.ARRAY
-                && ((ArrayType) paramType).getComponentType().getKind() == TypeKind.BYTE) {
+        if (isByteArray(paramType)) {
             if (StringUtils.isEmpty(contentType)) {
                 return CodeBlock.of("new $T($L)", ByteOutput.class, paramName);
             }
@@ -288,14 +302,10 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
         }
 
         return CodeBlock.of(
-                "new $T<>($L, $L)",
-                JsonOutput.class,
-                paramName,
-                getObjectMapper(parameters, hasObjectMapperField));
+                "new $T<>($L, $L)", JsonOutput.class, paramName, getObjectMapper(parameters));
     }
 
-    private CodeBlock getObjectMapper(
-            final List<? extends VariableElement> parameters, final boolean hasObjectMapperField) {
+    private CodeBlock getObjectMapper(final List<? extends VariableElement> parameters) {
         final var objectMapperType =
                 elementUtils.getTypeElement(ObjectMapper.class.getCanonicalName()).asType();
 
@@ -305,17 +315,12 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                         .findFirst();
 
         // Object mapper was passed as method parameter, use it.
+        // noinspection OptionalIsPresent
         if (objectMapperParameter.isPresent()) {
             return CodeBlock.of("$L", objectMapperParameter.get().getSimpleName());
         }
 
-        // Is there an object mapper field in the generated class?
-        if (hasObjectMapperField) {
-            return CodeBlock.of("this.objectMapper");
-        }
-
-        // Fallback: instantiate new object mapper
-        return CodeBlock.of("new $T()", objectMapperType);
+        return CodeBlock.of("this.objectMapper");
     }
 
     private CodeBlock getPath(
@@ -345,5 +350,14 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
     private ParameterSpec generateParameter(final VariableElement parameter) {
         return ParameterSpec.builder(TypeName.get(parameter.asType()), parameter.toString(), FINAL)
                 .build();
+    }
+
+    private TypeMirror typeMirrorOf(final Class<?> cls) {
+        return elementUtils.getTypeElement(cls.getCanonicalName()).asType();
+    }
+
+    private static boolean isByteArray(final TypeMirror typeMirror) {
+        return typeMirror.getKind() == TypeKind.ARRAY
+                && ((ArrayType) typeMirror).getComponentType().getKind() == TypeKind.BYTE;
     }
 }

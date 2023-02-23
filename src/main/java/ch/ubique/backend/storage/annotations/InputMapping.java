@@ -10,5 +10,7 @@ import java.lang.annotation.Target;
 public @interface InputMapping {
     String path();
 
+    String contentType() default "";
+
     boolean generateDocumentation() default true;
 }
