@@ -16,13 +16,13 @@ public interface StorageClient {
     @NotNull
     default OutputMetaData resolveOutputMetaData(
             final OutputMetaData outputMetaData,
-            final OutputMetadataProvider outputMetadataProvider) {
+            final OutputMetaDataProvider outputMetaDataProvider) {
         if (outputMetaData != null) {
             return outputMetaData;
         }
 
-        if (outputMetadataProvider != null) {
-            return outputMetadataProvider.createOutputMetaData();
+        if (outputMetaDataProvider != null) {
+            return outputMetaDataProvider.createOutputMetaData();
         }
 
         return OutputMetaData.defaults();

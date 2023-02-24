@@ -7,7 +7,7 @@ import java.time.Instant;
 import java.util.Objects;
 import org.jetbrains.annotations.Contract;
 
-public final class OutputMetadataProvider {
+public final class OutputMetaDataProvider {
 
     private final Duration maxAge;
     private final Duration sMaxAge;
@@ -20,7 +20,7 @@ public final class OutputMetadataProvider {
      * @param sMaxAge Duration will be set to maxAge if null
      */
     @Contract("null, _ -> fail")
-    public OutputMetadataProvider(
+    public OutputMetaDataProvider(
             @NotNull final Duration maxAge, @Nullable final Duration sMaxAge) {
         Objects.requireNonNull(maxAge);
         this.maxAge = maxAge;
@@ -28,21 +28,21 @@ public final class OutputMetadataProvider {
     }
 
     @Contract("null -> fail")
-    public OutputMetadataProvider bestBeforeOffset(@NotNull final Duration bestBeforeOffset) {
+    public OutputMetaDataProvider bestBeforeOffset(@NotNull final Duration bestBeforeOffset) {
         Objects.requireNonNull(bestBeforeOffset);
         this.bestBeforeOffset = bestBeforeOffset;
         return this;
     }
 
     @Contract("null -> fail")
-    public OutputMetadataProvider nextRefreshOffset(@NotNull final Duration nextRefreshOffset) {
+    public OutputMetaDataProvider nextRefreshOffset(@NotNull final Duration nextRefreshOffset) {
         Objects.requireNonNull(nextRefreshOffset);
         this.nextRefreshOffset = nextRefreshOffset;
         return this;
     }
 
     @Contract("null -> fail")
-    public OutputMetadataProvider backoff(@NotNull final Duration backoff) {
+    public OutputMetaDataProvider backoff(@NotNull final Duration backoff) {
         Objects.requireNonNull(backoff);
         this.backoff = backoff;
         return this;
