@@ -1,7 +1,7 @@
 package ch.ubique.backend.storage.clients;
 
 import ch.ubique.backend.storage.OutputMetaData;
-import ch.ubique.backend.storage.OutputMetadataProvider;
+import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
 import com.azure.core.util.Context;
@@ -32,7 +32,7 @@ public class AzureBlobStorageClient implements StorageClient {
 
     private final String container;
     private final BlobServiceClient blobServiceClient;
-    @Nullable private final OutputMetadataProvider outputMetadataProvider;
+    @Nullable private final OutputMetaDataProvider outputMetaDataProvider;
 
     public AzureBlobStorageClient(final String container, final String connectionString) {
         this(container, connectionString, null);
@@ -41,14 +41,14 @@ public class AzureBlobStorageClient implements StorageClient {
     public AzureBlobStorageClient(
             final String container,
             final String connectionString,
-            final OutputMetadataProvider outputMetadataProvider) {
+            final OutputMetaDataProvider outputMetaDataProvider) {
         this.container = container;
         this.blobServiceClient =
                 new BlobServiceClientBuilder()
                         .connectionString(connectionString)
                         .retryOptions(new RequestRetryOptions())
                         .buildClient();
-        this.outputMetadataProvider = outputMetadataProvider;
+        this.outputMetaDataProvider = outputMetaDataProvider;
     }
 
     @NotNull
@@ -74,7 +74,7 @@ public class AzureBlobStorageClient implements StorageClient {
     public void write(
             final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws IOException {
-        final var metaData = resolveOutputMetaData(outputMetaData, outputMetadataProvider);
+        final var metaData = resolveOutputMetaData(outputMetaData, outputMetaDataProvider);
 
         try (final var inputStream = output.read()) {
 

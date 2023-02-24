@@ -1,7 +1,7 @@
 package ch.ubique.backend.storage.clients;
 
 import ch.ubique.backend.storage.OutputMetaData;
-import ch.ubique.backend.storage.OutputMetadataProvider;
+import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
 import com.pivovarit.function.exception.WrappedException;
@@ -41,7 +41,7 @@ public sealed class MinioStorageClient implements StorageClient
 
     private final String bucket;
     private final MinioClient minioClient;
-    @Nullable private final OutputMetadataProvider outputMetadataProvider;
+    @Nullable private final OutputMetaDataProvider outputMetaDataProvider;
 
     public MinioStorageClient(
             final String bucket,
@@ -49,9 +49,9 @@ public sealed class MinioStorageClient implements StorageClient
             final String accessKey,
             final String secretKey,
             final Duration timeout,
-            final OutputMetadataProvider outputMetadataProvider) {
+            final OutputMetaDataProvider outputMetaDataProvider) {
         this.bucket = bucket;
-        this.outputMetadataProvider = outputMetadataProvider;
+        this.outputMetaDataProvider = outputMetaDataProvider;
         final var timeoutOrDefault = Optional.ofNullable(timeout).orElse(Duration.ofSeconds(15));
         final var httpClient =
                 new OkHttpClient()
@@ -89,7 +89,7 @@ public sealed class MinioStorageClient implements StorageClient
     public final void write(
             final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws IOException {
-        final var metaData = resolveOutputMetaData(outputMetaData, outputMetadataProvider);
+        final var metaData = resolveOutputMetaData(outputMetaData, outputMetaDataProvider);
 
         try (final var inputStream = output.read()) {
 
