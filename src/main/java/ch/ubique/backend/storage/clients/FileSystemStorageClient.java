@@ -45,6 +45,7 @@ public class FileSystemStorageClient implements StorageClient {
                 }
             }
         }
+        logger.debug("writing output to {}", path);
         try (final var outputStream = new FileOutputStream(file)) {
             output.uncompressed().write(outputStream);
         }
@@ -53,11 +54,13 @@ public class FileSystemStorageClient implements StorageClient {
     @Override
     public InputStream read(final String path) throws IOException {
         final var file = new File(Path.of(basePath, path).toUri());
+        logger.debug("reading input from {}", path);
         return new FileInputStream(file);
     }
 
     @Override
     public boolean delete(final String path) throws IOException {
+        logger.debug("deleting from {}", path);
         return Files.deleteIfExists(Path.of(basePath, path));
     }
 
