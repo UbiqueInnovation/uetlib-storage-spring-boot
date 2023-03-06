@@ -45,7 +45,7 @@ public class FileSystemStorageClient implements StorageClient {
                 }
             }
         }
-        logger.debug("writing output to {}", path);
+        logger.trace("writing output to {}", path);
         try (final var outputStream = new FileOutputStream(file)) {
             output.uncompressed().write(outputStream);
         }
