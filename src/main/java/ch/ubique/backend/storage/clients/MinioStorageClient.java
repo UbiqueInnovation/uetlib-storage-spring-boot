@@ -52,7 +52,7 @@ public sealed class MinioStorageClient implements StorageClient
             final OutputMetaDataProvider outputMetaDataProvider) {
         this.bucket = bucket;
         this.outputMetaDataProvider = outputMetaDataProvider;
-        final var timeoutOrDefault = Optional.ofNullable(timeout).orElse(Duration.ofSeconds(15));
+        final var timeoutOrDefault = Objects.requireNonNullElse(timeout, Duration.ofSeconds(15));
         final var httpClient =
                 new OkHttpClient()
                         .newBuilder()
