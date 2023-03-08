@@ -4,7 +4,9 @@ import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
+import com.azure.core.http.HttpClient;
 import com.azure.core.util.Context;
+import com.azure.core.util.HttpClientOptions;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobHttpHeaders;
@@ -35,18 +37,27 @@ public class AzureBlobStorageClient implements StorageClient {
     @Nullable private final OutputMetaDataProvider outputMetaDataProvider;
 
     public AzureBlobStorageClient(final String container, final String connectionString) {
-        this(container, connectionString, null);
+        this(container, connectionString, null, null);
     }
 
     public AzureBlobStorageClient(
             final String container,
             final String connectionString,
+            final Duration timeout,
             final OutputMetaDataProvider outputMetaDataProvider) {
         this.container = container;
+        final var timeoutOrDefault = Objects.requireNonNullElse(timeout, Duration.ofSeconds(60));
+        final var httpClient =
+                HttpClient.createDefault(
+                        new HttpClientOptions()
+                                .setConnectTimeout(timeoutOrDefault)
+                                .setReadTimeout(timeoutOrDefault)
+                                .setWriteTimeout(timeoutOrDefault));
         this.blobServiceClient =
                 new BlobServiceClientBuilder()
                         .connectionString(connectionString)
                         .retryOptions(new RequestRetryOptions())
+                        .httpClient(httpClient)
                         .buildClient();
         this.outputMetaDataProvider = outputMetaDataProvider;
     }
@@ -89,11 +100,10 @@ public class AzureBlobStorageClient implements StorageClient {
                     new ParallelTransferOptions().setMaxConcurrency(100));
 
             // Upload
-            final var timeout = Duration.ofSeconds(60);
             blobServiceClient
                     .getBlobContainerClient(container)
                     .getBlobClient(path)
-                    .uploadWithResponse(uploadOptions, timeout, Context.NONE);
+                    .uploadWithResponse(uploadOptions, null, Context.NONE);
         }
     }
 

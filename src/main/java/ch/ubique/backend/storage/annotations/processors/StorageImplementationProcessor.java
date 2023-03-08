@@ -1,5 +1,9 @@
 package ch.ubique.backend.storage.annotations.processors;
 
+import static javax.lang.model.element.Modifier.FINAL;
+import static javax.lang.model.element.Modifier.PRIVATE;
+import static javax.lang.model.element.Modifier.PUBLIC;
+
 import ch.ubique.backend.core.file.ByteFile;
 import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
@@ -13,21 +17,12 @@ import ch.ubique.backend.storage.output.JsonOutput;
 import ch.ubique.backend.storage.output.Output;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auto.service.AutoService;
-import com.squareup.javapoet.*;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PathVariable;
-
-import javax.annotation.processing.Processor;
-import javax.annotation.processing.RoundEnvironment;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.ArrayType;
-import javax.lang.model.type.TypeKind;
-import javax.lang.model.type.TypeMirror;
+import com.squareup.javapoet.AnnotationSpec;
+import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeSpec;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,14 +32,30 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import static javax.lang.model.element.Modifier.*;
+import javax.annotation.processing.Processor;
+import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.ArrayType;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @AutoService(Processor.class)
 public class StorageImplementationProcessor extends AbstractStorageAnnotationProcessor {
 
     private static String getPathTemplate(final String basePath, final String path) {
         return basePath.isBlank() ? path : basePath + "/" + path;
+    }
+
+    private static boolean isByteArray(final TypeMirror typeMirror) {
+        return typeMirror.getKind() == TypeKind.ARRAY
+                && ((ArrayType) typeMirror).getComponentType().getKind() == TypeKind.BYTE;
     }
 
     @Override
@@ -354,10 +365,5 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
 
     private TypeMirror typeMirrorOf(final Class<?> cls) {
         return elementUtils.getTypeElement(cls.getCanonicalName()).asType();
-    }
-
-    private static boolean isByteArray(final TypeMirror typeMirror) {
-        return typeMirror.getKind() == TypeKind.ARRAY
-                && ((ArrayType) typeMirror).getComponentType().getKind() == TypeKind.BYTE;
     }
 }
