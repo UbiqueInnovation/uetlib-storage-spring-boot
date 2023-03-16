@@ -1,6 +1,7 @@
 package ch.ubique.backend.storage.clients;
 
 import ch.ubique.backend.storage.OutputMetaDataProvider;
+
 import java.time.Duration;
 
 public final class CloudflareR2StorageClient extends MinioStorageClient {

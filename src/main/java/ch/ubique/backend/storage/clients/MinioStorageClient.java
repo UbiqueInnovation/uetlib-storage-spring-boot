@@ -4,7 +4,9 @@ import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
+
 import com.pivovarit.function.exception.WrappedException;
+
 import io.minio.GetObjectArgs;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
@@ -17,8 +19,14 @@ import io.minio.errors.InvalidResponseException;
 import io.minio.errors.ServerException;
 import io.minio.errors.XmlParserException;
 import io.minio.http.Method;
+
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+
+import okhttp3.OkHttpClient;
+
+import org.apache.commons.lang3.NotImplementedException;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
@@ -29,8 +37,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import okhttp3.OkHttpClient;
-import org.apache.commons.lang3.NotImplementedException;
 
 /**
  * {@link ch.ubique.backend.storage.StorageClient } to perform bucket and object operations to any

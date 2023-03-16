@@ -3,15 +3,18 @@ package ch.ubique.backend.storage;
 import ch.ubique.backend.core.http.cache.CacheHeader;
 import ch.ubique.backend.core.http.cache.CacheHeaderUtil;
 import ch.ubique.backend.storage.annotations.OutputMapping;
+
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+
+import org.jetbrains.annotations.Contract;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import org.jetbrains.annotations.Contract;
 
 public final class OutputMetaData {
     @NotNull private final Duration maxAge;
