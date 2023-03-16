@@ -13,7 +13,12 @@ import ch.ubique.backend.storage.clients.AzureBlobStorageClient;
 import ch.ubique.backend.storage.images.ImageStorageService;
 import ch.ubique.backend.storage.images.ImageVariant;
 import ch.ubique.backend.storage.output.ByteOutput;
+
 import com.drew.imaging.ImageProcessingException;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -21,9 +26,8 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
+
 import javax.imageio.ImageIO;
-import org.junit.jupiter.api.Test;
-import org.springframework.http.MediaType;
 
 class ImageStorageServiceTest {
     private static final Function<Integer, Function<ImageVariant, String>> GENERATE_GENERATE_PATH =

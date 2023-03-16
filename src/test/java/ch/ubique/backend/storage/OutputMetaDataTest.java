@@ -1,13 +1,15 @@
 package ch.ubique.backend.storage;
 
 import ch.ubique.backend.core.http.cache.CacheHeader;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 
 class OutputMetaDataTest {
 

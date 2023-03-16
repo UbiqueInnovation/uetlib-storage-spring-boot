@@ -2,8 +2,10 @@ package ch.ubique.backend.storage.annotations.processors;
 
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.annotations.StorageObject;
+
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.annotation.Annotation;
@@ -11,6 +13,7 @@ import java.text.MessageFormat;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;

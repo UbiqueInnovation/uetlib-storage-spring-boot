@@ -5,8 +5,14 @@ import ch.ubique.backend.image.blurhash.BlurHashRepresentation;
 import ch.ubique.backend.image.util.ExifTransform;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.ByteOutput;
+
 import com.drew.imaging.ImageProcessingException;
+
 import jakarta.validation.constraints.NotNull;
+
+import org.imgscalr.Scalr;
+import org.springframework.http.MediaType;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -14,9 +20,8 @@ import java.io.InputStream;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.function.Function;
+
 import javax.imageio.ImageIO;
-import org.imgscalr.Scalr;
-import org.springframework.http.MediaType;
 
 /**
  * Saves images in multiple, resized variants and retrieve singed access urls to the uploaded

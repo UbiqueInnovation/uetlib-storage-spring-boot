@@ -2,10 +2,12 @@ package ch.ubique.backend.storage;
 
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+
+import org.jetbrains.annotations.Contract;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
-import org.jetbrains.annotations.Contract;
 
 public final class OutputMetaDataProvider {
 
