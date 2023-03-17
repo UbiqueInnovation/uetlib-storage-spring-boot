@@ -7,14 +7,17 @@ import ch.ubique.backend.storage.annotations.OutputMapping;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.Contract;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public final class OutputMetaData {
     @NotNull private final Duration maxAge;
@@ -23,6 +26,7 @@ public final class OutputMetaData {
     private Instant bestBefore;
     private Instant nextRefresh;
     private Duration backoff;
+    private Long contentLengthUncompressed;
 
     /**
      * @param maxAge Duration must not be null
@@ -67,6 +71,13 @@ public final class OutputMetaData {
         return this;
     }
 
+    @Contract("null -> fail")
+    public OutputMetaData contentLengthUncompressed(@NotNull final Long contentLengthUncompressed) {
+        Objects.requireNonNull(contentLengthUncompressed);
+        this.contentLengthUncompressed = contentLengthUncompressed;
+        return this;
+    }
+
     public String createCacheControl() {
         return String.join(
                 ", ",
@@ -74,43 +85,57 @@ public final class OutputMetaData {
                 CacheHeader.S_MAX_AGE.value() + "=" + sMaxAge.getSeconds());
     }
 
-    public Map<String, String> createMinioMetaDataMap() {
-        final var map = new HashMap<String, String>();
+    private List<Entry<CacheHeader, String>> createMetaDataMapEntries() {
+        final var entries = new ArrayList<Entry<CacheHeader, String>>();
 
         if (nextRefresh != null) {
-            map.put(
-                    CacheHeader.NEXT_REFRESH.value(),
-                    CacheHeaderUtil.formatHttpHeaderTimestamp(nextRefresh));
+            entries.add(
+                    Map.entry(
+                            CacheHeader.NEXT_REFRESH,
+                            CacheHeaderUtil.formatHttpHeaderTimestamp(nextRefresh)));
         }
         if (bestBefore != null) {
-            map.put(
-                    CacheHeader.BEST_BEFORE.value(),
-                    CacheHeaderUtil.formatHttpHeaderTimestamp(bestBefore));
+            entries.add(
+                    Map.entry(
+                            CacheHeader.BEST_BEFORE,
+                            CacheHeaderUtil.formatHttpHeaderTimestamp(bestBefore)));
         }
         if (backoff != null) {
-            map.put(CacheHeader.BACKOFF.value(), String.valueOf(backoff.getSeconds()));
+            entries.add(Map.entry(CacheHeader.BACKOFF, String.valueOf(backoff.getSeconds())));
+        }
+        if (contentLengthUncompressed != null) {
+            entries.add(
+                    Map.entry(
+                            CacheHeader.CONTENT_LENGTH_UNCOMPRESSED,
+                            String.valueOf(contentLengthUncompressed)));
         }
 
-        return Collections.unmodifiableMap(map);
+        return entries;
+    }
+
+    public Map<String, String> createMinioMetaDataMap() {
+        return createMetaDataMapEntries().stream()
+                .collect(
+                        Collectors.toUnmodifiableMap(
+                                entry -> entry.getKey().value(), Entry::getValue));
     }
 
     public Map<String, String> createAzureMetaDataMap() {
-        final var map = new HashMap<String, String>();
+        return createMetaDataMapEntries().stream()
+                .collect(
+                        Collectors.toUnmodifiableMap(
+                                entry -> entry.getKey().noDashesAzure(), Entry::getValue));
+    }
 
-        if (nextRefresh != null) {
-            map.put(
-                    CacheHeader.NEXT_REFRESH.noDashesAzure(),
-                    CacheHeaderUtil.formatHttpHeaderTimestamp(nextRefresh));
-        }
-        if (bestBefore != null) {
-            map.put(
-                    CacheHeader.BEST_BEFORE.noDashesAzure(),
-                    CacheHeaderUtil.formatHttpHeaderTimestamp(bestBefore));
-        }
-        if (backoff != null) {
-            map.put(CacheHeader.BACKOFF.noDashesAzure(), String.valueOf(backoff.getSeconds()));
-        }
-
-        return Collections.unmodifiableMap(map);
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this)
+                .append("maxAge", maxAge)
+                .append("sMaxAge", sMaxAge)
+                .append("bestBefore", bestBefore)
+                .append("nextRefresh", nextRefresh)
+                .append("backoff", backoff)
+                .append("contentLengthUncompressed", contentLengthUncompressed)
+                .toString();
     }
 }
