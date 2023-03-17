@@ -1,6 +1,6 @@
 package ch.ubique.backend.storage;
 
-import ch.ubique.backend.core.http.cache.CacheHeader;
+import ch.ubique.backend.core.http.cache.HttpHeader;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -43,15 +43,15 @@ class OutputMetaDataTest {
         final var minioMetaDataMap = metadata.createMinioMetaDataMap();
         Assertions.assertEquals(
                 Set.of(
-                        CacheHeader.NEXT_REFRESH.noDashesAzure(),
-                        CacheHeader.BEST_BEFORE.noDashesAzure(),
-                        CacheHeader.BACKOFF.noDashesAzure()),
+                        HttpHeader.NEXT_REFRESH.noDashesAzure(),
+                        HttpHeader.BEST_BEFORE.noDashesAzure(),
+                        HttpHeader.BACKOFF.noDashesAzure()),
                 azureMetaDataMap.keySet());
         Assertions.assertEquals(
                 Set.of(
-                        CacheHeader.NEXT_REFRESH.value(),
-                        CacheHeader.BEST_BEFORE.value(),
-                        CacheHeader.BACKOFF.value()),
+                        HttpHeader.NEXT_REFRESH.value(),
+                        HttpHeader.BEST_BEFORE.value(),
+                        HttpHeader.BACKOFF.value()),
                 minioMetaDataMap.keySet());
         Assertions.assertEquals(
                 new HashSet<>(azureMetaDataMap.values()), new HashSet<>(minioMetaDataMap.values()));
