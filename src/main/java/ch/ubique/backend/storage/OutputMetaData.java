@@ -1,6 +1,6 @@
 package ch.ubique.backend.storage;
 
-import ch.ubique.backend.core.http.cache.HttpHeader;
+import ch.ubique.backend.core.http.header.HttpHeader;
 import ch.ubique.backend.core.http.cache.CacheHeaderUtil;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 

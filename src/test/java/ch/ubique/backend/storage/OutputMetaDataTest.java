@@ -1,6 +1,6 @@
 package ch.ubique.backend.storage;
 
-import ch.ubique.backend.core.http.cache.HttpHeader;
+import ch.ubique.backend.core.http.header.HttpHeader;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
