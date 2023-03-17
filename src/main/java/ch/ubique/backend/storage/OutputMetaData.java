@@ -1,6 +1,6 @@
 package ch.ubique.backend.storage;
 
-import ch.ubique.backend.core.http.cache.CacheHeader;
+import ch.ubique.backend.core.http.cache.HttpHeader;
 import ch.ubique.backend.core.http.cache.CacheHeaderUtil;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 
@@ -81,32 +81,32 @@ public final class OutputMetaData {
     public String createCacheControl() {
         return String.join(
                 ", ",
-                CacheHeader.MAX_AGE.value() + "=" + maxAge.getSeconds(),
-                CacheHeader.S_MAX_AGE.value() + "=" + sMaxAge.getSeconds());
+                HttpHeader.MAX_AGE.value() + "=" + maxAge.getSeconds(),
+                HttpHeader.S_MAX_AGE.value() + "=" + sMaxAge.getSeconds());
     }
 
-    private List<Entry<CacheHeader, String>> createMetaDataMapEntries() {
-        final var entries = new ArrayList<Entry<CacheHeader, String>>();
+    private List<Entry<HttpHeader, String>> createMetaDataMapEntries() {
+        final var entries = new ArrayList<Entry<HttpHeader, String>>();
 
         if (nextRefresh != null) {
             entries.add(
                     Map.entry(
-                            CacheHeader.NEXT_REFRESH,
+                            HttpHeader.NEXT_REFRESH,
                             CacheHeaderUtil.formatHttpHeaderTimestamp(nextRefresh)));
         }
         if (bestBefore != null) {
             entries.add(
                     Map.entry(
-                            CacheHeader.BEST_BEFORE,
+                            HttpHeader.BEST_BEFORE,
                             CacheHeaderUtil.formatHttpHeaderTimestamp(bestBefore)));
         }
         if (backoff != null) {
-            entries.add(Map.entry(CacheHeader.BACKOFF, String.valueOf(backoff.getSeconds())));
+            entries.add(Map.entry(HttpHeader.BACKOFF, String.valueOf(backoff.getSeconds())));
         }
         if (contentLengthUncompressed != null) {
             entries.add(
                     Map.entry(
-                            CacheHeader.CONTENT_LENGTH_UNCOMPRESSED,
+                            HttpHeader.CONTENT_LENGTH_UNCOMPRESSED,
                             String.valueOf(contentLengthUncompressed)));
         }
 
