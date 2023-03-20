@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public final class FileOutput implements Output, OutputWithLength {
+public final class FileOutput implements Output {
 
     private final File file;
     private final String contentType;

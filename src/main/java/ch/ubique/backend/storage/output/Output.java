@@ -28,4 +28,6 @@ public sealed interface Output permits GZipOutput, ByteOutput, FileOutput, JsonO
     default Output uncompressed() {
         return this;
     }
+
+    long contentLength();
 }

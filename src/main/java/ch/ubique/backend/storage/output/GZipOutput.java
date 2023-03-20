@@ -55,6 +55,11 @@ public record GZipOutput(Output uncompressed) implements Output {
     }
 
     @Override
+    public long contentLength() {
+        return uncompressed.contentLength();
+    }
+
+    @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
                 .append("uncompressed", uncompressed)

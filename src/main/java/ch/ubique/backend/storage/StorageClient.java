@@ -1,7 +1,6 @@
 package ch.ubique.backend.storage;
 
 import ch.ubique.backend.storage.output.Output;
-import ch.ubique.backend.storage.output.OutputWithLength;
 
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
@@ -30,9 +29,7 @@ public interface StorageClient {
             resolvedOutputMetaData = OutputMetaData.defaults();
         }
 
-        if (output instanceof OutputWithLength outputWithLength) {
-            resolvedOutputMetaData.contentLengthUncompressed(outputWithLength.contentLength());
-        }
+        resolvedOutputMetaData.contentLengthUncompressed(output.contentLength());
 
         return resolvedOutputMetaData;
     }
