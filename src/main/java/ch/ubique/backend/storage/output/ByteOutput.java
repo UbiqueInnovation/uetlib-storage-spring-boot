@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public final class ByteOutput implements Output, OutputWithLength {
+public final class ByteOutput implements Output {
 
     private final byte[] value;
     private final String contentType;

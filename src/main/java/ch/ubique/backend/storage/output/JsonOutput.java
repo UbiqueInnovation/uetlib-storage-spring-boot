@@ -1,6 +1,8 @@
 package ch.ubique.backend.storage.output;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pivovarit.function.exception.WrappedException;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -15,6 +17,7 @@ import java.io.OutputStream;
 public final class JsonOutput<T> implements Output {
 
     private final T value;
+    private final byte[] byteValue;
     private final ObjectMapper objectMapper;
 
     public JsonOutput(final T value) {
@@ -23,22 +26,32 @@ public final class JsonOutput<T> implements Output {
 
     public JsonOutput(final T value, final ObjectMapper objectMapper) {
         this.value = value;
+        try {
+            this.byteValue = objectMapper.writeValueAsBytes(value);
+        } catch (JsonProcessingException e) {
+            throw new WrappedException(e);
+        }
         this.objectMapper = objectMapper;
     }
 
     @Override
     public void write(final OutputStream outputStream) throws IOException {
-        objectMapper.writeValue(outputStream, value);
+        outputStream.write(byteValue);
     }
 
     @Override
     public InputStream read() throws IOException {
-        return new ByteArrayInputStream(objectMapper.writeValueAsBytes(value));
+        return new ByteArrayInputStream(byteValue);
     }
 
     @Override
     public String contentType() {
         return "application/json";
+    }
+
+    @Override
+    public long contentLength() {
+        return byteValue.length;
     }
 
     @Override
