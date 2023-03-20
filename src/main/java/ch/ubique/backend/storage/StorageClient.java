@@ -1,6 +1,7 @@
 package ch.ubique.backend.storage;
 
 import ch.ubique.backend.storage.output.Output;
+import ch.ubique.backend.storage.output.OutputWithLength;
 
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
@@ -18,16 +19,22 @@ public interface StorageClient {
     @NotNull
     default OutputMetaData resolveOutputMetaData(
             final OutputMetaData outputMetaData,
-            final OutputMetaDataProvider outputMetaDataProvider) {
+            final OutputMetaDataProvider outputMetaDataProvider,
+            final Output output) {
+        final OutputMetaData resolvedOutputMetaData;
         if (outputMetaData != null) {
-            return outputMetaData;
+            resolvedOutputMetaData = outputMetaData;
+        } else if (outputMetaDataProvider != null) {
+            resolvedOutputMetaData = outputMetaDataProvider.createOutputMetaData();
+        } else {
+            resolvedOutputMetaData = OutputMetaData.defaults();
         }
 
-        if (outputMetaDataProvider != null) {
-            return outputMetaDataProvider.createOutputMetaData();
+        if (output instanceof OutputWithLength outputWithLength) {
+            resolvedOutputMetaData.contentLengthUncompressed(outputWithLength.contentLength());
         }
 
-        return OutputMetaData.defaults();
+        return resolvedOutputMetaData;
     }
 
     void write(Output output, String path, @Nullable OutputMetaData metaData) throws IOException;

@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public final class FileOutput implements Output {
+public final class FileOutput implements Output, OutputWithLength {
 
     private final File file;
     private final String contentType;
@@ -47,6 +47,11 @@ public final class FileOutput implements Output {
                 .append("contentType", contentType)
                 .append("file", file.getAbsolutePath())
                 .toString();
+    }
+
+    @Override
+    public long contentLength() {
+        return file.length();
     }
 
     @Override

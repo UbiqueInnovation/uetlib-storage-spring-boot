@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public final class ByteOutput implements Output {
+public final class ByteOutput implements Output, OutputWithLength {
 
     private final byte[] value;
     private final String contentType;
@@ -72,5 +72,10 @@ public final class ByteOutput implements Output {
     @Override
     public int hashCode() {
         return new HashCodeBuilder(17, 37).append(value).append(contentType).toHashCode();
+    }
+
+    @Override
+    public long contentLength() {
+        return value.length;
     }
 }
