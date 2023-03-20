@@ -95,7 +95,7 @@ public sealed class MinioStorageClient implements StorageClient
     public final void write(
             final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws IOException {
-        final var metaData = resolveOutputMetaData(outputMetaData, outputMetaDataProvider);
+        final var metaData = resolveOutputMetaData(outputMetaData, outputMetaDataProvider, output);
 
         try (final var inputStream = output.read()) {
 
