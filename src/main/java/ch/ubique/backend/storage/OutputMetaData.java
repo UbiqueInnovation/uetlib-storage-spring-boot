@@ -3,12 +3,15 @@ package ch.ubique.backend.storage;
 import ch.ubique.backend.core.http.header.HttpHeader;
 import ch.ubique.backend.core.http.header.HttpHeaderUtil;
 import ch.ubique.backend.storage.annotations.OutputMapping;
+import ch.ubique.backend.storage.output.Output;
 
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.Contract;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -20,6 +23,8 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public final class OutputMetaData {
+    private static final Logger logger = LoggerFactory.getLogger(OutputMetaData.class);
+
     @NotNull private final Duration maxAge;
     @NotNull private final Duration sMaxAge;
 
@@ -48,6 +53,35 @@ public final class OutputMetaData {
      */
     public static OutputMetaData defaults() {
         return new OutputMetaData(Duration.ofDays(1), Duration.ofDays(1));
+    }
+
+    @NotNull
+    @Contract(
+            "!null, _, _ -> param1; null, !null, _ -> new; null, null, !null -> new; null, null, null -> fail")
+    public static OutputMetaData resolveOutputMetaData(
+            final OutputMetaData outputMetaData,
+            final OutputMetaDataProvider outputMetaDataProvider,
+            @NotNull final Output output) {
+        final OutputMetaData resolvedOutputMetaData;
+        if (outputMetaData != null) {
+            resolvedOutputMetaData = outputMetaData;
+        } else if (outputMetaDataProvider != null) {
+            resolvedOutputMetaData = outputMetaDataProvider.createOutputMetaData();
+        } else {
+            resolvedOutputMetaData = OutputMetaData.defaults();
+        }
+
+        if (resolvedOutputMetaData.contentLengthUncompressed != null
+                && !resolvedOutputMetaData.contentLengthUncompressed.equals(
+                        output.contentLength())) {
+            logger.warn(
+                    "resolvedOutputMetaData.contentLengthUncompressed was already set to '{}' and is now overwritten with '{}'",
+                    resolvedOutputMetaData.contentLengthUncompressed,
+                    output.contentLength());
+        }
+        resolvedOutputMetaData.contentLengthUncompressed(output.contentLength());
+
+        return resolvedOutputMetaData;
     }
 
     @Contract("null -> fail")
