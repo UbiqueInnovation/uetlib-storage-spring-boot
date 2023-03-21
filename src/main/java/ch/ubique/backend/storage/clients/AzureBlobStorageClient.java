@@ -88,16 +88,16 @@ public class AzureBlobStorageClient implements StorageClient {
     public void write(
             final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws IOException {
-        final var metaData = resolveOutputMetaData(outputMetaData, outputMetaDataProvider, output);
+        final var metaData =
+                OutputMetaData.resolveOutputMetaData(
+                        outputMetaData, outputMetaDataProvider, output);
 
         try (final var inputStream = output.read()) {
 
             // Define upload
             final var uploadOptions = new BlobParallelUploadOptions(inputStream);
             uploadOptions.setHeaders(createHeaders(output, metaData));
-            Optional.ofNullable(metaData)
-                    .map(OutputMetaData::createAzureMetaDataMap)
-                    .ifPresent(uploadOptions::setMetadata);
+            uploadOptions.setMetadata(metaData.createAzureMetaDataMap());
             uploadOptions.setRequestConditions(new BlobRequestConditions());
             uploadOptions.setParallelTransferOptions(
                     new ParallelTransferOptions().setMaxConcurrency(100));
