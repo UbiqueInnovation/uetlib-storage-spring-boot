@@ -9,6 +9,4 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface DeleteMapping {
     String path();
-
-//    boolean generateDocumentation() default true;
 }
