@@ -8,6 +8,7 @@ import ch.ubique.backend.core.file.ByteFile;
 import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.annotations.DeleteMapping;
 import ch.ubique.backend.storage.annotations.InputMapping;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.annotations.Storage;
@@ -64,7 +65,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
 
     @Override
     protected Set<Class<? extends Annotation>> supportedAnnotations() {
-        return Set.of(Storage.class, OutputMapping.class, InputMapping.class);
+        return Set.of(Storage.class, OutputMapping.class, InputMapping.class, DeleteMapping.class);
     }
 
     @Override
@@ -119,6 +120,19 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                                                             outputMapping ->
                                                                     createOutputMappingMethod(
                                                                             outputMapping,
+                                                                            storageBasePath))
+                                                    .toList()));
+
+            // Generate methods for each element annotated with @DeleteMapping
+            Optional.ofNullable(annotatedElements.get(DeleteMapping.class).get(element))
+                    .ifPresent(
+                            deleteMappingElements ->
+                                    classBuilder.addMethods(
+                                            deleteMappingElements.stream()
+                                                    .map(
+                                                            deleteMapping ->
+                                                                    createDeleteMappingMethod(
+                                                                            deleteMapping,
                                                                             storageBasePath))
                                                     .toList()));
 
@@ -262,6 +276,21 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                         getPath(parameters, pathTemplate),
                         getMetadata(parameters))
                 .returns(void.class)
+                .addException(IOException.class)
+                .build();
+    }
+
+    private MethodSpec createDeleteMappingMethod(
+            final Element method, final String storageBasePath) {
+        final var annotation = method.getAnnotation(DeleteMapping.class);
+        final var parameters = getParameters(method);
+        final var pathTemplate = getPathTemplate(storageBasePath, annotation.path());
+        return MethodSpec.methodBuilder(method.getSimpleName().toString())
+                .addModifiers(PUBLIC)
+                .addAnnotation(Override.class)
+                .addParameters(parameters.stream().map(this::generateParameter).toList())
+                .addStatement("return storageClient.delete($L)", getPath(parameters, pathTemplate))
+                .returns(boolean.class)
                 .addException(IOException.class)
                 .build();
     }
