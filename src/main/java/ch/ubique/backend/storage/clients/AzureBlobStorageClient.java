@@ -8,7 +8,7 @@ import ch.ubique.backend.storage.output.Output;
 import com.azure.core.http.HttpClient;
 import com.azure.core.util.Context;
 import com.azure.core.util.HttpClientOptions;
-import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobHttpHeaders;
 import com.azure.storage.blob.models.BlobRequestConditions;
@@ -35,9 +35,9 @@ import java.util.Optional;
 
 public class AzureBlobStorageClient implements StorageClient {
 
-    private final String container;
-    private final BlobServiceClient blobServiceClient;
+    private final BlobContainerClient blobContainerClient;
     @Nullable private final OutputMetaDataProvider outputMetaDataProvider;
+    private final long blockSize;
 
     public AzureBlobStorageClient(final String container, final String connectionString) {
         this(container, connectionString, null, null);
@@ -47,8 +47,16 @@ public class AzureBlobStorageClient implements StorageClient {
             final String container,
             final String connectionString,
             final Duration timeout,
-            final OutputMetaDataProvider outputMetaDataProvider) {
-        this.container = container;
+            @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
+        this(container, connectionString, timeout, 1024L, outputMetaDataProvider);
+    }
+
+    public AzureBlobStorageClient(
+            final String container,
+            final String connectionString,
+            final Duration timeout,
+            final Long blockSize,
+            @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
         final var timeoutOrDefault = Objects.requireNonNullElse(timeout, Duration.ofSeconds(60));
         final var httpClient =
                 HttpClient.createDefault(
@@ -56,13 +64,15 @@ public class AzureBlobStorageClient implements StorageClient {
                                 .setConnectTimeout(timeoutOrDefault)
                                 .setReadTimeout(timeoutOrDefault)
                                 .setWriteTimeout(timeoutOrDefault));
-        this.blobServiceClient =
+        this.blobContainerClient =
                 new BlobServiceClientBuilder()
                         .connectionString(connectionString)
                         .retryOptions(new RequestRetryOptions())
                         .httpClient(httpClient)
-                        .buildClient();
+                        .buildClient()
+                        .getBlobContainerClient(container);
         this.outputMetaDataProvider = outputMetaDataProvider;
+        this.blockSize = blockSize;
     }
 
     @NotNull
@@ -100,11 +110,10 @@ public class AzureBlobStorageClient implements StorageClient {
             uploadOptions.setMetadata(metaData.createAzureMetaDataMap());
             uploadOptions.setRequestConditions(new BlobRequestConditions());
             uploadOptions.setParallelTransferOptions(
-                    new ParallelTransferOptions().setMaxConcurrency(100));
+                    new ParallelTransferOptions().setMaxConcurrency(4).setBlockSizeLong(blockSize));
 
             // Upload
-            blobServiceClient
-                    .getBlobContainerClient(container)
+            blobContainerClient
                     .getBlobClient(path)
                     .uploadWithResponse(uploadOptions, null, Context.NONE);
         }
@@ -114,10 +123,7 @@ public class AzureBlobStorageClient implements StorageClient {
     public InputStream read(final String path) throws IOException {
         final byte[] data;
         try (final var outputStream = new ByteArrayOutputStream()) {
-            blobServiceClient
-                    .getBlobContainerClient(container)
-                    .getBlobClient(path)
-                    .downloadStream(outputStream);
+            blobContainerClient.getBlobClient(path).downloadStream(outputStream);
             data = outputStream.toByteArray();
         }
         return new ByteArrayInputStream(data);
@@ -125,10 +131,7 @@ public class AzureBlobStorageClient implements StorageClient {
 
     @Override
     public boolean delete(final String path) {
-        return blobServiceClient
-                .getBlobContainerClient(container)
-                .getBlobClient(path)
-                .deleteIfExists();
+        return blobContainerClient.getBlobClient(path).deleteIfExists();
     }
 
     @Override
@@ -139,8 +142,7 @@ public class AzureBlobStorageClient implements StorageClient {
                         .setStartTime(OffsetDateTime.now());
 
         final var blobUrlEncoded = URLEncoder.encode(path, StandardCharsets.UTF_8);
-        final var blobClient =
-                blobServiceClient.getBlobContainerClient(container).getBlobClient(blobUrlEncoded);
+        final var blobClient = blobContainerClient.getBlobClient(blobUrlEncoded);
 
         return URLDecoder.decode(blobClient.getBlobUrl(), StandardCharsets.UTF_8)
                 + "?"
@@ -150,8 +152,7 @@ public class AzureBlobStorageClient implements StorageClient {
     @Override
     public String getUrl(final String path) {
         final var blobUrlEncoded = URLEncoder.encode(path, StandardCharsets.UTF_8);
-        final var blobClient =
-                blobServiceClient.getBlobContainerClient(container).getBlobClient(blobUrlEncoded);
+        final var blobClient = blobContainerClient.getBlobClient(blobUrlEncoded);
         return URLDecoder.decode(blobClient.getBlobUrl(), StandardCharsets.UTF_8);
     }
 }
