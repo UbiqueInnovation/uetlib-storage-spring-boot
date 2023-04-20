@@ -55,7 +55,7 @@ public class AzureBlobStorageClient implements StorageClient {
             final String container,
             final String connectionString,
             final Duration timeout,
-            final Long blockSize,
+            final long blockSize,
             @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
         final var timeoutOrDefault = Objects.requireNonNullElse(timeout, Duration.ofSeconds(60));
         final var httpClient =
