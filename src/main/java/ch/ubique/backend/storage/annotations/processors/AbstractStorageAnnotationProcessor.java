@@ -44,12 +44,11 @@ public abstract class AbstractStorageAnnotationProcessor extends AbstractProcess
                 .filter(param -> param.getAnnotation(StorageObject.class) != null)
                 .findFirst()
                 .orElseThrow(
-                        () -> {
-                            throw new IllegalArgumentException(
-                                    MessageFormat.format(
-                                            "Methods annotated with '@{0}' need to have either exactly one parameter or at least one parameter annotated with '@{1}' for the output",
-                                            OutputMapping.class, StorageObject.class));
-                        });
+                        () ->
+                                new IllegalArgumentException(
+                                        MessageFormat.format(
+                                                "Methods annotated with ''@{0}'' need to have either exactly one parameter or at least one parameter annotated with ''@{1}'' for the output",
+                                                OutputMapping.class, StorageObject.class)));
     }
 
     protected abstract Set<Class<? extends Annotation>> supportedAnnotations();
