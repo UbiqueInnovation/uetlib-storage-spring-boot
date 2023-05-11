@@ -24,7 +24,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
 
 import javax.imageio.ImageIO;
@@ -37,7 +36,7 @@ class ImageStorageServiceTest {
                     imageId -> variant -> String.format("sasImage/%d-%s.png", imageId, variant.key);
 
     private final AzureBlobStorageClient blobStorageService = mock(AzureBlobStorageClient.class);
-    private final Duration sasExpiry = Duration.of(3, ChronoUnit.DAYS);
+    private final Duration sasExpiry = Duration.ofDays(3);
     private final BlurHashClient blurHashClient = new BlurHashClient(10);
 
     private final ImageStorageService imageStorageService =
