@@ -2,7 +2,7 @@ package ch.ubique.backend.storage.images;
 
 import ch.ubique.backend.image.blurhash.BlurHashClient;
 import ch.ubique.backend.image.blurhash.BlurHashRepresentation;
-import ch.ubique.backend.image.util.ExifTransform;
+import ch.ubique.backend.image.util.ImageUtils;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.ByteOutput;
 
@@ -10,18 +10,13 @@ import com.drew.imaging.ImageProcessingException;
 
 import jakarta.validation.constraints.NotNull;
 
-import org.imgscalr.Scalr;
 import org.springframework.http.MediaType;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.function.Function;
-
-import javax.imageio.ImageIO;
 
 /**
  * Saves images in multiple, resized variants and retrieve singed access urls to the uploaded
@@ -72,39 +67,19 @@ public class ImageStorageService {
                 new ByteOutput(imageBytes, mediaType.toString()),
                 generatePath.apply(ImageVariant.ORIGINAL));
 
-        final var imageInfo = ExifTransform.readImageInformation(imageBytes);
-        final var imageStream = new ByteArrayInputStream(imageBytes);
-        final var bufferedImage =
-                ExifTransform.transformImage(
-                        ImageIO.read(imageStream),
-                        ExifTransform.getExifTransformation(imageInfo),
-                        imageInfo);
-        // ImageIO::read does not close the stream
-        imageStream.close();
-
-        final var hires = Scalr.resize(bufferedImage, 1200);
-        // Flush clears native references so the image can be GC-ed. See tip of Scalr::resize
-        bufferedImage.flush();
-        final var hiresOutput = new ByteArrayOutputStream();
-        ImageIO.write(hires, mediaType.getSubtype(), hiresOutput);
+        final var hires = ImageUtils.scaleAndFlush(ImageUtils.imageFromBytes(imageBytes), 1200);
         storageClient.write(
-                new ByteOutput(hiresOutput.toByteArray(), mediaType.toString()),
+                new ByteOutput(ImageUtils.imageToBytes(hires, mediaType), mediaType.toString()),
                 generatePath.apply(ImageVariant.HIRES));
-        // ByteArrayOutputStream::toByteArray does not close the stream
-        hiresOutput.close();
 
-        final var thumbnail = Scalr.resize(hires, 320);
-        // Flush clears native references so the image can be GC-ed. See tip of Scalr::resize
-        hires.flush();
-        final var thumbnailOutput = new ByteArrayOutputStream();
-        ImageIO.write(thumbnail, mediaType.getSubtype(), thumbnailOutput);
+        final var thumbnail = ImageUtils.scaleAndFlush(hires, 320);
+
         storageClient.write(
-                new ByteOutput(thumbnailOutput.toByteArray(), mediaType.toString()),
+                new ByteOutput(ImageUtils.imageToBytes(thumbnail, mediaType), mediaType.toString()),
                 generatePath.apply(ImageVariant.THUMBNAIL));
-        // ByteArrayOutputStream::toByteArray does not close the stream
-        thumbnailOutput.close();
 
-        final var blurHashRepresentation = blurHashClient.encodeToBlurHashRepresentationNoResize(thumbnail);
+        final var blurHashRepresentation =
+                blurHashClient.encodeToBlurHashRepresentationNoResize(thumbnail);
         // Flush clears native references so the image can be GC-ed. See tip of Scalr::resize
         thumbnail.flush();
         return blurHashRepresentation;
