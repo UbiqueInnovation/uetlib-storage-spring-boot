@@ -5,7 +5,12 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
 
 import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.DirectoryFileFilter;
+import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,6 +23,10 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
+import java.util.Collection;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @SuppressWarnings("unused")
 public class FileSystemStorageClient implements StorageClient {
@@ -32,9 +41,11 @@ public class FileSystemStorageClient implements StorageClient {
 
     @Override
     public void write(
-            final Output output, final String path, @Nullable final OutputMetaData metaData)
+            final @NotNull Output output,
+            final @NotNull String path,
+            @Nullable final OutputMetaData metaData)
             throws IOException {
-        final var file = new File(Path.of(basePath, path).toUri());
+        final var file = new File(getCompletePath(path).toUri());
         final var parent = file.getParentFile();
         if (!parent.exists()) {
             synchronized (this) {
@@ -55,25 +66,62 @@ public class FileSystemStorageClient implements StorageClient {
     }
 
     @Override
-    public InputStream read(final String path) throws IOException {
-        final var file = new File(Path.of(basePath, path).toUri());
+    public InputStream read(final @NotNull String path) throws IOException {
+        final var file = new File(getCompletePath(path).toUri());
         logger.debug("reading input from {}", path);
         return new FileInputStream(file);
     }
 
     @Override
-    public boolean delete(final String path) throws IOException {
+    public boolean delete(final @NotNull String path, final boolean recursive) throws IOException {
         logger.debug("deleting from {}", path);
-        return Files.deleteIfExists(Path.of(basePath, path));
+        if (recursive) {
+            return FileUtils.deleteQuietly(getCompletePath(path).toFile());
+        }
+        return Files.deleteIfExists(getCompletePath(path));
     }
 
     @Override
-    public String getSignedUrl(final String path, final OffsetDateTime expiry) {
+    public Collection<String> list(@NotNull final String path, final boolean recursive)
+            throws IOException {
+
+        final var completePath = getCompletePath(path);
+        if (recursive) {
+            final var files =
+                    FileUtils.listFiles(
+                            completePath.toFile(),
+                            TrueFileFilter.INSTANCE,
+                            DirectoryFileFilter.DIRECTORY);
+            return mapToRelativePaths(path, files.stream());
+        }
+
+        try (final var paths = Files.list(completePath)) {
+            return mapToRelativePaths(path, paths.map(Path::toFile));
+        }
+    }
+
+    private Set<String> mapToRelativePaths(final String path, final Stream<File> stream) {
+        return stream.map(file -> getCompletePath(path).toUri().relativize(file.toURI()).getPath())
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    @Override
+    public String getSignedUrl(final @NotNull String path, final @NotNull OffsetDateTime expiry) {
         return getUrl(path);
     }
 
     @Override
-    public String getUrl(final String path) {
-        return Path.of(basePath, path).toString();
+    public String getUrl(final @NotNull String path) {
+        return getCompletePath(path).toUri().toString();
+    }
+
+    @NotNull
+    private Path getCompletePath(@NotNull final String path) {
+        return Path.of(basePath, path);
+    }
+
+    public String basePath() {
+        return basePath;
     }
 }
