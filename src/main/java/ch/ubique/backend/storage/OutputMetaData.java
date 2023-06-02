@@ -56,8 +56,7 @@ public final class OutputMetaData {
     }
 
     @NotNull
-    @Contract(
-            "!null, _, _ -> param1; null, !null, _ -> new; null, null, !null -> new; null, null, null -> fail")
+    @Contract("!null, _, _ -> param1; null, !null, _ -> new")
     public static OutputMetaData resolveOutputMetaData(
             final OutputMetaData outputMetaData,
             final OutputMetaDataProvider outputMetaDataProvider,
@@ -75,7 +74,8 @@ public final class OutputMetaData {
                 && !resolvedOutputMetaData.contentLengthUncompressed.equals(
                         output.contentLength())) {
             logger.warn(
-                    "resolvedOutputMetaData.contentLengthUncompressed was already set to '{}' and is now overwritten with '{}'",
+                    "resolvedOutputMetaData.contentLengthUncompressed was already set to '{}' and"
+                            + " is now overwritten with '{}'",
                     resolvedOutputMetaData.contentLengthUncompressed,
                     output.contentLength());
         }
