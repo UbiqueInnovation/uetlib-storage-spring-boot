@@ -340,21 +340,21 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
         final var pathTemplate = getPathTemplate(storageBasePath, annotation.path());
         final var returnValueCollection =
                 CodeBlock.of(
-                        "return storageClient.list($L, $L)",
+                        "storageClient.list($L, $L)",
                         getPath(parameters, pathTemplate),
                         annotation.recursive());
 
         final var returnType = method.getReturnType();
 
-        if (typeUtils.isSameType(returnType, typeMirrorOf(Stream.class))) {
+        if (typeUtils.isSubtype(returnType, typeUtils.erasure(typeMirrorOf(Stream.class)))) {
             return CodeBlock.of("$L.stream()", returnValueCollection);
         }
 
-        if (typeUtils.isSameType(returnType, typeMirrorOf(List.class))) {
+        if (typeUtils.isSubtype(returnType, typeUtils.erasure(typeMirrorOf(List.class)))) {
             return CodeBlock.of("$L.stream().toList()", returnValueCollection);
         }
 
-        if (typeUtils.isSameType(returnType, typeMirrorOf(Set.class))) {
+        if (typeUtils.isSubtype(returnType, typeUtils.erasure(typeMirrorOf(Set.class)))) {
             return CodeBlock.of(
                     "$L.stream().collect($T.toUnmodifiableSet())",
                     returnValueCollection,
