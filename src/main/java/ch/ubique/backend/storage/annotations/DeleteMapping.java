@@ -9,4 +9,11 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface DeleteMapping {
     String path();
+
+    /**
+     * Useful for directories. If the directory is not empty, an exception will be thrown if
+     * recursive is set to {@code false}. If recursive is set to {@code true} all files in the
+     * directory will be deleted.
+     */
+    boolean recursive() default false;
 }
