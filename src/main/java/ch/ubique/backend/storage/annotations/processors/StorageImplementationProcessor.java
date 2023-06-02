@@ -8,10 +8,7 @@ import ch.ubique.backend.core.file.ByteFile;
 import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
-import ch.ubique.backend.storage.annotations.DeleteMapping;
-import ch.ubique.backend.storage.annotations.InputMapping;
-import ch.ubique.backend.storage.annotations.OutputMapping;
-import ch.ubique.backend.storage.annotations.Storage;
+import ch.ubique.backend.storage.annotations.*;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.FileOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
@@ -40,6 +37,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
@@ -65,7 +63,12 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
 
     @Override
     protected Set<Class<? extends Annotation>> supportedAnnotations() {
-        return Set.of(Storage.class, OutputMapping.class, InputMapping.class, DeleteMapping.class);
+        return Set.of(
+                Storage.class,
+                OutputMapping.class,
+                InputMapping.class,
+                DeleteMapping.class,
+                ListMapping.class);
     }
 
     @Override
@@ -133,6 +136,20 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                                                             deleteMapping ->
                                                                     createDeleteMappingMethod(
                                                                             deleteMapping,
+                                                                            storageBasePath))
+                                                    .toList()));
+
+            // Generate methods for each element annotated with @ListMapping
+            Optional.ofNullable(annotatedElements.get(ListMapping.class).get(element))
+                    .ifPresent(
+                            listMappingElements ->
+                                    classBuilder.addMethods(
+                                            listMappingElements.stream()
+                                                    .map(
+                                                            listMapping ->
+                                                                    createListMappingMethod(
+                                                                            (ExecutableElement)
+                                                                                    listMapping,
                                                                             storageBasePath))
                                                     .toList()));
 
@@ -289,10 +306,62 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                 .addModifiers(PUBLIC)
                 .addAnnotation(Override.class)
                 .addParameters(parameters.stream().map(this::generateParameter).toList())
-                .addStatement("return storageClient.delete($L)", getPath(parameters, pathTemplate))
+                .addStatement(
+                        "return storageClient.delete($L, $L)",
+                        getPath(parameters, pathTemplate),
+                        annotation.recursive())
                 .returns(boolean.class)
                 .addException(IOException.class)
                 .build();
+    }
+
+    private MethodSpec createListMappingMethod(
+            final ExecutableElement method, final String storageBasePath) {
+        final var parameters = getParameters(method);
+        return MethodSpec.methodBuilder(method.getSimpleName().toString())
+                .addModifiers(PUBLIC)
+                .addAnnotation(Override.class)
+                .addParameters(parameters.stream().map(this::generateParameter).toList())
+                .addStatement(
+                        "return $L",
+                        createListMappingReturnValue(method, storageBasePath, parameters))
+                .returns(TypeName.get(method.getReturnType()))
+                .addException(IOException.class)
+                .build();
+    }
+
+    private CodeBlock createListMappingReturnValue(
+            final ExecutableElement method,
+            final String storageBasePath,
+            final List<? extends VariableElement> parameters) {
+
+        final var annotation = method.getAnnotation(ListMapping.class);
+
+        final var pathTemplate = getPathTemplate(storageBasePath, annotation.path());
+        final var returnValueCollection =
+                CodeBlock.of(
+                        "return storageClient.list($L, $L)",
+                        getPath(parameters, pathTemplate),
+                        annotation.recursive());
+
+        final var returnType = method.getReturnType();
+
+        if (typeUtils.isSameType(returnType, typeMirrorOf(Stream.class))) {
+            return CodeBlock.of("$L.stream()", returnValueCollection);
+        }
+
+        if (typeUtils.isSameType(returnType, typeMirrorOf(List.class))) {
+            return CodeBlock.of("$L.stream().toList()", returnValueCollection);
+        }
+
+        if (typeUtils.isSameType(returnType, typeMirrorOf(Set.class))) {
+            return CodeBlock.of(
+                    "$L.stream().collect($T.toUnmodifiableSet())",
+                    returnValueCollection,
+                    Collectors.class);
+        }
+
+        return returnValueCollection;
     }
 
     private Object getMetadata(final List<? extends VariableElement> parameters) {
