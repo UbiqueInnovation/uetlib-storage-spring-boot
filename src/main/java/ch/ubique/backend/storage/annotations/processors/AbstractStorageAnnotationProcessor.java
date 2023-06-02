@@ -47,7 +47,10 @@ public abstract class AbstractStorageAnnotationProcessor extends AbstractProcess
                         () ->
                                 new IllegalArgumentException(
                                         MessageFormat.format(
-                                                "Methods annotated with ''@{0}'' need to have either exactly one parameter or at least one parameter annotated with ''@{1}'' for the output",
+                                                "Methods annotated with ''@{0}'' need to have"
+                                                    + " either exactly one parameter or at least"
+                                                    + " one parameter annotated with ''@{1}'' for"
+                                                    + " the output",
                                                 OutputMapping.class, StorageObject.class)));
     }
 
