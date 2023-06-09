@@ -92,16 +92,17 @@ public class FileSystemStorageClient implements StorageClient {
                             completePath.toFile(),
                             TrueFileFilter.INSTANCE,
                             DirectoryFileFilter.DIRECTORY);
-            return mapToRelativePaths(path, files.stream());
+            return mapToRelativePaths(files.stream());
         }
 
         try (final var paths = Files.list(completePath)) {
-            return mapToRelativePaths(path, paths.map(Path::toFile));
+            return mapToRelativePaths(paths.map(Path::toFile));
         }
     }
 
-    private Set<String> mapToRelativePaths(final String path, final Stream<File> stream) {
-        return stream.map(file -> getCompletePath(path).toUri().relativize(file.toURI()).getPath())
+    private Set<String> mapToRelativePaths(final Stream<File> stream) {
+        final var baseUri = Path.of(basePath).toUri();
+        return stream.map(file -> baseUri.relativize(file.toURI()).getPath())
                 .filter(StringUtils::isNotBlank)
                 .collect(Collectors.toUnmodifiableSet());
     }
