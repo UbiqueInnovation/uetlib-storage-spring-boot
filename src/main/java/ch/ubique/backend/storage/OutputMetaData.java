@@ -12,6 +12,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.Contract;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.CacheControl;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -113,10 +114,7 @@ public final class OutputMetaData {
     }
 
     public String createCacheControl() {
-        return String.join(
-                ", ",
-                HttpHeader.MAX_AGE.value() + "=" + maxAge.getSeconds(),
-                HttpHeader.S_MAX_AGE.value() + "=" + sMaxAge.getSeconds());
+        return CacheControl.maxAge(maxAge).sMaxAge(sMaxAge).getHeaderValue();
     }
 
     private List<Entry<HttpHeader, String>> createMetaDataMapEntries() {
