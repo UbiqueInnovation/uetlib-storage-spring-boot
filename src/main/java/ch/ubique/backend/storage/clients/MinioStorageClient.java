@@ -26,6 +26,7 @@ import jakarta.validation.constraints.NotNull;
 import okhttp3.OkHttpClient;
 
 import org.apache.commons.lang3.NotImplementedException;
+import org.springframework.http.HttpHeaders;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -86,7 +87,7 @@ public sealed class MinioStorageClient implements StorageClient
         // cacheControl
         Optional.ofNullable(metaData)
                 .map(OutputMetaData::createCacheControl)
-                .ifPresent(cacheControl -> headers.put("Cache-Control", cacheControl));
+                .ifPresent(cacheControl -> headers.put(HttpHeaders.CACHE_CONTROL, cacheControl));
 
         return headers;
     }
