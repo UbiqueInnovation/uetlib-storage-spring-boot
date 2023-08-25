@@ -283,18 +283,24 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
         final var annotation = method.getAnnotation(OutputMapping.class);
         final var parameters = getParameters(method);
         final var pathTemplate = getPathTemplate(storageBasePath, annotation.path());
-        return MethodSpec.methodBuilder(method.getSimpleName().toString())
-                .addModifiers(PUBLIC)
-                .addAnnotation(Override.class)
-                .addParameters(parameters.stream().map(this::generateParameter).toList())
-                .addStatement(
-                        "storageClient.write(\n$>$L,\n$L,\n$L)$<",
-                        getOutput(parameters, annotation),
-                        getPath(parameters, pathTemplate),
-                        getMetadata(parameters))
-                .returns(void.class)
-                .addException(IOException.class)
-                .build();
+        final var methodBuilder =
+                MethodSpec.methodBuilder(method.getSimpleName().toString())
+                        .addModifiers(PUBLIC)
+                        .addAnnotation(Override.class)
+                        .addParameters(parameters.stream().map(this::generateParameter).toList());
+
+        if (annotation.codeGenerationType().generateImplementationCode()) {
+            methodBuilder.addStatement(
+                    "storageClient.write(\n$>$L,\n$L,\n$L)$<",
+                    getOutput(parameters, annotation),
+                    getPath(parameters, pathTemplate),
+                    getMetadata(parameters));
+        } else {
+            methodBuilder.addStatement(
+                    "throw new IllegalCallerException(\"this storage method exists only to"
+                            + " document blob storage endpoints and must not be called\")");
+        }
+        return methodBuilder.returns(void.class).addException(IOException.class).build();
     }
 
     private MethodSpec createDeleteMappingMethod(
