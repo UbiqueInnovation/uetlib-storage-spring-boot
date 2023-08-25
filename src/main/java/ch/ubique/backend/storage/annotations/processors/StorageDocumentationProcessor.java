@@ -61,11 +61,15 @@ public class StorageDocumentationProcessor extends AbstractStorageAnnotationProc
                             classBuilder.addMethods(
                                     roundEnv.getElementsAnnotatedWith(OutputMapping.class).stream()
                                             .filter(
-                                                    outputMapping ->
-                                                            outputMapping
-                                                                    .getAnnotation(
-                                                                            OutputMapping.class)
-                                                                    .generateDocumentation())
+                                                    outputMapping -> {
+                                                        final var annotation =
+                                                                outputMapping.getAnnotation(
+                                                                        OutputMapping.class);
+                                                        return annotation.generateDocumentation()
+                                                                || annotation
+                                                                        .codeGenerationType()
+                                                                        .generateDocumentationCode();
+                                                    })
                                             .filter(
                                                     outputMapping ->
                                                             outputMapping
@@ -151,8 +155,8 @@ public class StorageDocumentationProcessor extends AbstractStorageAnnotationProc
                 .returns(returnType)
                 .addParameters(getMappingMethodParameters)
                 .addStatement(
-                        "throw new IllegalCallerException(\"this Controller method exists only to"
-                                + " document blob storage endpoints as must not be called\")")
+                        "throw new IllegalCallerException(\"this controller method exists only to"
+                                + " document blob storage endpoints and must not be called\")")
                 .build();
     }
 
