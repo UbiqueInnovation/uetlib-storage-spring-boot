@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.nio.file.Path;
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -53,7 +54,10 @@ import javax.lang.model.type.TypeMirror;
 public class StorageImplementationProcessor extends AbstractStorageAnnotationProcessor {
 
     private static String getPathTemplate(final String basePath, final String path) {
-        return basePath.isBlank() ? path : basePath + "/" + path;
+        // empty string if both are blank
+        return Stream.of(basePath, path)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.joining("/"));
     }
 
     private static boolean isByteArray(final TypeMirror typeMirror) {
@@ -166,7 +170,14 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
     }
 
     private String getStorageBasePath(final Element interfaceElement) {
-        return interfaceElement.getAnnotation(Storage.class).basePath();
+        final var basePath = interfaceElement.getAnnotation(Storage.class).basePath();
+        if (StringUtils.startsWith(basePath, "/")) {
+            throw new IllegalArgumentException(
+                    MessageFormat.format(
+                            "basePath ({0}) starts with '/' which would cause the blob storage to create a directory with empty name. This cannot be intended",
+                            basePath));
+        }
+        return basePath;
     }
 
     private TypeSpec.Builder generateClass(
