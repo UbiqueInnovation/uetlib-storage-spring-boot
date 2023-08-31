@@ -20,16 +20,15 @@ public final class AmazonS3StorageClient extends MinioStorageClient {
      */
     public AmazonS3StorageClient(
             final String bucket,
-            @Nullable final String endpoint,
+            @Nullable final String region,
             final String accessKey,
             final String secretKey) {
-        this(bucket, endpoint, accessKey, secretKey, null, null);
+        this(bucket, region, accessKey, secretKey, null, null);
     }
 
     /**
      * @param bucket The bucket name
-     * @param endpoint The endpoint URL of the S3 service. If null, the default endpoint. E.g.,
-     *     s3.eu-central-1.amazonaws.com
+     * @param region The endpoint URL of the S3 service. If null, the default endpoint, eu-central-1
      * @param accessKey The AWS auth access key
      * @param secretKey The AWS auth secret key
      * @param timeout Timeout for requests
@@ -37,14 +36,14 @@ public final class AmazonS3StorageClient extends MinioStorageClient {
      */
     public AmazonS3StorageClient(
             final String bucket,
-            @Nullable final String endpoint,
+            @Nullable final String region,
             final String accessKey,
             final String secretKey,
             final Duration timeout,
             final OutputMetaDataProvider outputMetaDataProvider) {
         super(
                 bucket,
-                endpoint == null ? "s3.eu-central-1.amazonaws.com" : endpoint,
+                "s3." + (region != null ? region : "eu-central-1") + ".amazonaws.com",
                 accessKey,
                 secretKey,
                 timeout,
