@@ -1,6 +1,7 @@
 package ch.ubique.backend.storage.clients;
 
 import ch.ubique.backend.storage.OutputMetaDataProvider;
+import jakarta.annotation.Nullable;
 
 import java.time.Duration;
 
@@ -19,7 +20,7 @@ public final class AmazonS3StorageClient extends MinioStorageClient {
      */
     public AmazonS3StorageClient(
             final String bucket,
-            final String endpoint,
+            @Nullable final String endpoint,
             final String accessKey,
             final String secretKey) {
         this(bucket, endpoint, accessKey, secretKey, null, null);
@@ -36,7 +37,7 @@ public final class AmazonS3StorageClient extends MinioStorageClient {
      */
     public AmazonS3StorageClient(
             final String bucket,
-            final String endpoint,
+            @Nullable final String endpoint,
             final String accessKey,
             final String secretKey,
             final Duration timeout,
