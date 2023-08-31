@@ -4,6 +4,7 @@ import ch.ubique.backend.storage.OutputMetaDataProvider;
 import jakarta.annotation.Nullable;
 
 import java.time.Duration;
+import java.util.Objects;
 
 public final class AmazonS3StorageClient extends MinioStorageClient {
 
@@ -43,7 +44,7 @@ public final class AmazonS3StorageClient extends MinioStorageClient {
             final OutputMetaDataProvider outputMetaDataProvider) {
         super(
                 bucket,
-                "s3." + (region != null ? region : "eu-central-1") + ".amazonaws.com",
+                "s3." + Objects.requireNonNullElse(region, "eu-central-1") + ".amazonaws.com",
                 accessKey,
                 secretKey,
                 timeout,
