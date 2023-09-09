@@ -153,7 +153,8 @@ public class AzureBlobStorageClient implements StorageClient {
 
             return inputStream;
         }
-    }
+
+}
 
     private BlobDownloadResponse downloadStreamWithResponse(
             @NotNull final String path, final ByteArrayOutputStream outputStream) {
