@@ -6,7 +6,6 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.annotations.Storage;
 
-import com.google.auto.service.AutoService;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
@@ -27,14 +26,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.MirroredTypeException;
 
-@AutoService(Processor.class)
+//@AutoService(Processor.class)
 public class StorageDocumentationProcessor extends AbstractStorageAnnotationProcessor {
 
     @Override

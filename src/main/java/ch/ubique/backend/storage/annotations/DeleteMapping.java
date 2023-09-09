@@ -7,6 +7,7 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
+@StorageMapping
 public @interface DeleteMapping {
     String path();
 
@@ -16,4 +17,6 @@ public @interface DeleteMapping {
      * directory will be deleted.
      */
     boolean recursive() default false;
+
+    CodeGenerationType codeGenerationType() default CodeGenerationType.IMPLEMENTATION;
 }

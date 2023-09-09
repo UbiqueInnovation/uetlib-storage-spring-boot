@@ -7,6 +7,7 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
+@StorageMapping
 public @interface InputMapping {
     String path();
 
@@ -14,5 +15,13 @@ public @interface InputMapping {
 
     boolean doUncompressIfNeeded() default true;
 
+    /**
+     * @deprecated since 1.5, use {@link #codeGenerationType}
+     *     <p>{@code generateDocumentation = false} corresponds to {@link #codeGenerationType} =
+     *     {@link CodeGenerationType#IMPLEMENTATION}
+     */
+    @Deprecated(since = "1.5", forRemoval = true)
     boolean generateDocumentation() default true;
+
+    CodeGenerationType codeGenerationType() default CodeGenerationType.ALL;
 }
