@@ -1,0 +1,511 @@
+package ch.ubique.backend.storage.annotations;
+
+import static org.springframework.beans.factory.config.AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR;
+import static org.springframework.core.annotation.MergedAnnotations.SearchStrategy.TYPE_HIERARCHY;
+
+import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.annotations.interceptors.DeleteMappingInterceptor;
+import ch.ubique.backend.storage.annotations.interceptors.InputMappingInterceptor;
+import ch.ubique.backend.storage.annotations.interceptors.ListMappingInterceptor;
+import ch.ubique.backend.storage.annotations.interceptors.OutputMappingInterceptor;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.CaseFormat;
+import com.google.common.collect.MoreCollectors;
+import com.pivovarit.function.exception.WrappedException;
+
+import jakarta.validation.constraints.NotNull;
+
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.description.annotation.AnnotationDescription;
+import net.bytebuddy.description.modifier.FieldManifestation;
+import net.bytebuddy.description.modifier.TypeManifestation;
+import net.bytebuddy.description.modifier.Visibility;
+import net.bytebuddy.dynamic.DynamicType;
+import net.bytebuddy.dynamic.DynamicType.Builder.MethodDefinition.ReceiverTypeDefinition;
+import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
+import net.bytebuddy.dynamic.scaffold.subclass.ConstructorStrategy;
+import net.bytebuddy.implementation.*;
+import net.bytebuddy.implementation.MethodCall.WithoutSpecifiedTarget;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.reflections.Reflections;
+import org.reflections.scanners.Scanners;
+import org.reflections.util.ConfigurationBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
+import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.context.EnvironmentAware;
+import org.springframework.context.ResourceLoaderAware;
+import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
+import org.springframework.core.annotation.MergedAnnotations;
+import org.springframework.core.env.Environment;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.type.AnnotationMetadata;
+import org.springframework.core.type.StandardAnnotationMetadata;
+import org.springframework.core.type.filter.AnnotationTypeFilter;
+import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
+import org.springframework.util.ClassUtils;
+
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class StorageRegistrar
+        implements BeanDefinitionRegistryPostProcessor, ResourceLoaderAware, EnvironmentAware {
+
+    private static final String STORAGE_CLIENT_PARAMETER = "storageClient";
+    private static final String OBJECT_MAPPER_PARAMETER = "objectMapper";
+    private static final Implementation ONLY_DOCUMENTATION_THROW_INTERCEPTOR =
+            ExceptionMethod.throwing(
+                    IllegalCallerException.class,
+                    "this storage method exists only to document blob storage endpoints and must not be called");
+
+    private static final Logger logger = LoggerFactory.getLogger(StorageRegistrar.class);
+    private ResourceLoader resourceLoader;
+    private Environment environment;
+
+    private static Map<Class<? extends Annotation>, List<StorageMethodInfo>>
+            getStorageMethodsByAnnotation(
+                    final Class<?> storageClass,
+                    final MergedAnnotations.Search mergedAnnotationsSearch) {
+        return Arrays.stream(storageClass.getDeclaredMethods())
+                .map(method -> Pair.of(method, mergedAnnotationsSearch.from(method)))
+                // only those meta-annotated by @StorageMapping
+                .filter(
+                        methodMethodAnnotationPair ->
+                                methodMethodAnnotationPair
+                                        .getRight()
+                                        .isPresent(StorageMapping.class))
+                // get the annotation of that method that is meta-annotated by @StorageMapping
+                .map(
+                        methodMethodAnnotationPair ->
+                                storageMethodInfo(
+                                        mergedAnnotationsSearch,
+                                        methodMethodAnnotationPair.getLeft(),
+                                        methodMethodAnnotationPair.getRight()))
+                .collect(Collectors.groupingBy(StorageMethodInfo::mappingAnnotationType));
+    }
+
+    private static StorageMethodInfo storageMethodInfo(
+            final MergedAnnotations.Search mergedAnnotationsSearch,
+            final Method method,
+            final MergedAnnotations methodAnnotation) {
+        return Arrays.stream(method.getAnnotations())
+                .map(
+                        annotation ->
+                                new StorageMethodInfo(
+                                        method, methodAnnotation, annotation.annotationType()))
+                // get the annotationType of the annotation that is
+                // meta-annotated by @StorageMapping
+                .filter(
+                        storageMethodInfo ->
+                                mergedAnnotationsSearch
+                                        .from(storageMethodInfo.mappingAnnotationType())
+                                        .isPresent(StorageMapping.class))
+                .collect(MoreCollectors.onlyElement());
+    }
+
+    @NotNull
+    private static Stream<String> getConstructorArgBeanNames(final Class<?> storageClass) {
+        final var constructor =
+                Arrays.stream(storageClass.getDeclaredConstructors())
+                        .findFirst()
+                        .orElseThrow()
+                        .getParameters();
+        return Arrays.stream(constructor)
+                .map(
+                        parameter ->
+                                // get the bean qualifier or the parameter name if the first is
+                                // blank
+                                Optional.ofNullable(parameter.getAnnotation(Qualifier.class))
+                                        .map(Qualifier::value)
+                                        .filter(StringUtils::isNotBlank)
+                                        .orElse(parameter.getName()));
+    }
+
+    private <T> ReceiverTypeDefinition<T> buildConstructor(
+            final DynamicType.Builder.FieldDefinition.Optional.Valuable<T> builder,
+            final Storage storageAnnotation) {
+        final var shouldInjectObjectMapper =
+                Boolean.parseBoolean(String.valueOf(storageAnnotation.injectObjectMapper()));
+
+        var constructorBuilder =
+                // the public constructor with arguments
+                builder.defineConstructor(Visibility.PUBLIC)
+                        // parameter 0: storageClient
+                        .withParameter(StorageClient.class, STORAGE_CLIENT_PARAMETER);
+        if (StringUtils.isNotBlank(storageAnnotation.clientQualifier())) {
+            constructorBuilder =
+                    constructorBuilder.annotateParameter(
+                            AnnotationDescription.Builder.ofType(Qualifier.class)
+                                    .define("value", storageAnnotation.clientQualifier())
+                                    .build());
+        }
+
+        if (shouldInjectObjectMapper) {
+            constructorBuilder =
+                    constructorBuilder
+                            // parameter 1: objectMapper iff shouldInjectObjectMapper == true
+                            .withParameter(ObjectMapper.class, OBJECT_MAPPER_PARAMETER);
+            if (StringUtils.isNotBlank(storageAnnotation.objectMapperQualifier())) {
+                constructorBuilder =
+                        constructorBuilder.annotateParameter(
+                                AnnotationDescription.Builder.ofType(Qualifier.class)
+                                        .define("value", storageAnnotation.objectMapperQualifier())
+                                        .build());
+            }
+        }
+
+        final WithoutSpecifiedTarget callSuperConstructor;
+        try {
+            callSuperConstructor = MethodCall.invoke(Object.class.getConstructor());
+        } catch (final NoSuchMethodException e) {
+            // fatal: no way to handle "Object" not having a constructor ;)
+            throw new WrappedException(e);
+        }
+
+        final var setStorageClient =
+                FieldAccessor.ofField(STORAGE_CLIENT_PARAMETER).setsArgumentAt(0);
+        final var objectMapperAccessor = FieldAccessor.ofField(OBJECT_MAPPER_PARAMETER);
+        final Implementation.Composable setObjectMapper;
+        if (shouldInjectObjectMapper) {
+            setObjectMapper = objectMapperAccessor.setsArgumentAt(1);
+        } else {
+            setObjectMapper = objectMapperAccessor.setsValue(new ObjectMapper());
+        }
+
+        return constructorBuilder.intercept(
+                callSuperConstructor.andThen(setStorageClient).andThen(setObjectMapper));
+    }
+
+    private <T> DynamicType.@NotNull Unloaded<T> generateClass(
+            final AnnotationMetadata annotationMetadata, final Class<T> storageClass) {
+        final var implementationClassName = annotationMetadata.getClassName() + "Impl";
+
+        final var mergedAnnotationsSearch =
+                MergedAnnotations.search(TYPE_HIERARCHY)
+                        .withEnclosingClasses(
+                                clazz ->
+                                        !ClassUtils.isInnerClass(clazz)
+                                                && !ClassUtils.isStaticClass(clazz));
+        final var mergedStorageClassAnnotations = mergedAnnotationsSearch.from(storageClass);
+        final var storageAnnotation = mergedStorageClassAnnotations.get(Storage.class).synthesize();
+        final var builderForConstructor =
+                new ByteBuddy()
+                        .subclass(storageClass, ConstructorStrategy.Default.NO_CONSTRUCTORS)
+                        .annotateType(AnnotationDescription.Builder.ofType(Service.class).build())
+                        .name(implementationClassName)
+                        .modifiers(Visibility.PUBLIC, TypeManifestation.FINAL)
+                        .defineField(
+                                STORAGE_CLIENT_PARAMETER,
+                                StorageClient.class,
+                                Visibility.PRIVATE,
+                                FieldManifestation.FINAL)
+                        .defineField(
+                                OBJECT_MAPPER_PARAMETER,
+                                ObjectMapper.class,
+                                Visibility.PRIVATE,
+                                FieldManifestation.FINAL);
+        final var builderForMethods = buildConstructor(builderForConstructor, storageAnnotation);
+        final var builder = buildMethods(builderForMethods, storageClass, mergedAnnotationsSearch);
+
+        // TODO Documentation class
+
+        final var cls = builder.make();
+        final var tempFile = Path.of("/tmp/bytebuddy");
+        try {
+            cls.saveIn(tempFile.toFile());
+        } catch (final IOException e) {
+            throw new WrappedException(e);
+        }
+        logger.info("saved at {}/{}.class", tempFile, cls.getTypeDescription().getName());
+
+        return cls;
+    }
+
+    private <T> ReceiverTypeDefinition<T> buildMethods(
+            final ReceiverTypeDefinition<T> b,
+            final Class<T> storageClass,
+            final MergedAnnotations.Search mergedAnnotationsSearch) {
+        final var annotatedMethodsByAnnotation =
+                getStorageMethodsByAnnotation(storageClass, mergedAnnotationsSearch);
+        var builder = b;
+        final var outputMethodInfos =
+                Objects.requireNonNullElse(
+                        annotatedMethodsByAnnotation.get(OutputMapping.class),
+                        List.<StorageMethodInfo>of());
+        final var inputMethodInfos =
+                Objects.requireNonNullElse(
+                        annotatedMethodsByAnnotation.get(InputMapping.class),
+                        List.<StorageMethodInfo>of());
+        final var deleteMethodInfos =
+                Objects.requireNonNullElse(
+                        annotatedMethodsByAnnotation.get(DeleteMapping.class),
+                        List.<StorageMethodInfo>of());
+        final var listMethodInfos =
+                Objects.requireNonNullElse(
+                        annotatedMethodsByAnnotation.get(ListMapping.class),
+                        List.<StorageMethodInfo>of());
+        for (final var outputMethodInfo : outputMethodInfos) {
+            builder = buildOutputMethod(builder, outputMethodInfo);
+        }
+        for (final var inputMethodInfo : inputMethodInfos) {
+            builder = buildInputMethod(builder, inputMethodInfo);
+        }
+        for (final var deleteMethodInfo : deleteMethodInfos) {
+            builder = buildDeleteMethod(builder, deleteMethodInfo);
+        }
+        for (final var listMethodInfo : listMethodInfos) {
+            builder = buildListMethod(builder, listMethodInfo);
+        }
+        return builder;
+    }
+
+    private <T> ReceiverTypeDefinition<T> buildOutputMethod(
+            final ReceiverTypeDefinition<T> builder, final StorageMethodInfo outputMethodInfo) {
+        final var outputMethod = outputMethodInfo.storageMethod();
+        final var parameters = Arrays.stream(outputMethod.getParameters()).toList();
+        final var parameterTypes =
+                parameters.stream().map(Parameter::getParameterizedType).toList();
+        final Implementation interceptor;
+        final var outputAnnotation =
+                outputMethodInfo.storageMethodAnnotations().get(OutputMapping.class).synthesize();
+        if (outputAnnotation.codeGenerationType().generateImplementationCode()) {
+            interceptor = MethodDelegation.to(OutputMappingInterceptor.class);
+        } else {
+            interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
+        }
+        return builder.defineMethod(
+                        outputMethod.getName(), outputMethod.getReturnType(), Visibility.PUBLIC)
+                .withParameters(parameterTypes)
+                .throwing(IOException.class)
+                .intercept(interceptor);
+    }
+
+    private <T> ReceiverTypeDefinition<T> buildInputMethod(
+            final ReceiverTypeDefinition<T> builder, final StorageMethodInfo inputMethodInfo) {
+        final var inputMethod = inputMethodInfo.storageMethod();
+        final var parameters = Arrays.stream(inputMethod.getParameters()).toList();
+        final var parameterTypes =
+                parameters.stream().map(Parameter::getParameterizedType).toList();
+        final Implementation interceptor;
+        final var inputAnnotation =
+                inputMethodInfo.storageMethodAnnotations().get(InputMapping.class).synthesize();
+        if (inputAnnotation.codeGenerationType().generateImplementationCode()) {
+            interceptor = MethodDelegation.to(InputMappingInterceptor.class);
+        } else {
+            interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
+        }
+        return builder.defineMethod(
+                        inputMethod.getName(), inputMethod.getReturnType(), Visibility.PUBLIC)
+                .withParameters(parameterTypes)
+                .throwing(IOException.class)
+                .intercept(interceptor);
+    }
+
+    private <T> ReceiverTypeDefinition<T> buildListMethod(
+            final ReceiverTypeDefinition<T> builder, final StorageMethodInfo listMethodInfo) {
+        final var listMethod = listMethodInfo.storageMethod();
+        final var parameters = Arrays.stream(listMethod.getParameters()).toList();
+        final var parameterTypes =
+                parameters.stream().map(Parameter::getParameterizedType).toList();
+        final Implementation interceptor;
+        final var listAnnotation =
+                listMethodInfo.storageMethodAnnotations().get(ListMapping.class).synthesize();
+        if (listAnnotation.codeGenerationType().generateImplementationCode()) {
+            interceptor = MethodDelegation.to(ListMappingInterceptor.class);
+        } else {
+            interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
+        }
+        return builder.defineMethod(
+                        listMethod.getName(), listMethod.getReturnType(), Visibility.PUBLIC)
+                .withParameters(parameterTypes)
+                .throwing(IOException.class)
+                .intercept(interceptor);
+    }
+
+    private <T> ReceiverTypeDefinition<T> buildDeleteMethod(
+            final ReceiverTypeDefinition<T> builder, final StorageMethodInfo deleteMethodInfo) {
+        final var deleteMethod = deleteMethodInfo.storageMethod();
+        final var parameters = Arrays.stream(deleteMethod.getParameters()).toList();
+        final var parameterTypes =
+                parameters.stream().map(Parameter::getParameterizedType).toList();
+        final Implementation interceptor;
+        final var deleteAnnotation =
+                deleteMethodInfo.storageMethodAnnotations().get(DeleteMapping.class).synthesize();
+        if (deleteAnnotation.codeGenerationType().generateImplementationCode()) {
+            interceptor = MethodDelegation.to(DeleteMappingInterceptor.class);
+        } else {
+            interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
+        }
+        return builder.defineMethod(
+                        deleteMethod.getName(), deleteMethod.getReturnType(), Visibility.PUBLIC)
+                .withParameters(parameterTypes)
+                .throwing(IOException.class)
+                .intercept(interceptor);
+    }
+
+    @Override
+    public void postProcessBeanDefinitionRegistry(final @NotNull BeanDefinitionRegistry registry)
+            throws BeansException {
+        registerStorageClients(registry);
+    }
+
+    @Override
+    public void postProcessBeanFactory(final @NotNull ConfigurableListableBeanFactory beanFactory)
+            throws BeansException {
+        // empty
+    }
+
+    public void registerStorageClients(final BeanDefinitionRegistry registry) {
+        final var enableStoragesClass = findEnableStoragesClass();
+        final var enableStoragesAnnotation =
+                enableStoragesClass.getAnnotation(EnableStorages.class);
+
+        final Set<BeanDefinition> candidateComponents;
+
+        final var clients = enableStoragesAnnotation.clients();
+        if (ArrayUtils.isEmpty(clients)) {
+            final var storageScanner = getScanner();
+            storageScanner.setResourceLoader(resourceLoader);
+            storageScanner.addIncludeFilter(new AnnotationTypeFilter(Storage.class));
+            candidateComponents =
+                    getBasePackages(enableStoragesAnnotation, enableStoragesClass.getSimpleName())
+                            .stream()
+                            .map(storageScanner::findCandidateComponents)
+                            .flatMap(Collection::stream)
+                            .collect(Collectors.toSet());
+        } else {
+            candidateComponents =
+                    Arrays.stream(clients)
+                            .map(AnnotatedGenericBeanDefinition::new)
+                            .collect(Collectors.toSet());
+        }
+
+        for (final var candidateComponent : candidateComponents) {
+            final var beanDefinition = (AnnotatedBeanDefinition) candidateComponent;
+            // verify annotated class is an interface
+            final var annotationMetadata =
+                    (StandardAnnotationMetadata) beanDefinition.getMetadata();
+            Assert.isTrue(
+                    annotationMetadata.isInterface(),
+                    "@Storage can only be specified on an interface");
+
+            final Class<?> storageClass;
+            try {
+                storageClass = Class.forName(annotationMetadata.getClassName());
+            } catch (final ClassNotFoundException e) {
+                throw new WrappedException(e);
+            }
+            registerStorageClient(registry, annotationMetadata, storageClass);
+        }
+    }
+
+    private Class<?> findEnableStoragesClass() {
+        return CollectionUtils.extractSingleton(
+                new Reflections(
+                                new ConfigurationBuilder()
+                                        .forPackage("")
+                                        .setScanners(Scanners.TypesAnnotated))
+                        .getTypesAnnotatedWith(EnableStorages.class));
+    }
+
+    private <T> void registerStorageClient(
+            final BeanDefinitionRegistry registry,
+            final StandardAnnotationMetadata annotationMetadata,
+            final Class<T> storageClass) {
+
+        try (final var generatedClass = generateClass(annotationMetadata, storageClass)) {
+            final var storageImplClass =
+                    generatedClass
+                            .load(
+                                    getClass().getClassLoader(),
+                                    ClassLoadingStrategy.Default.INJECTION)
+                            .getLoaded();
+            final var beanDefinitionBuilder =
+                    BeanDefinitionBuilder.rootBeanDefinition(storageImplClass)
+                            .setAutowireMode(AUTOWIRE_CONSTRUCTOR);
+            getConstructorArgBeanNames(storageImplClass)
+                    .forEach(
+                            beanName ->
+                                    beanDefinitionBuilder
+                                            .addConstructorArgReference(beanName)
+                                            .addDependsOn(beanName));
+            final var beanDefinition = beanDefinitionBuilder.getBeanDefinition();
+
+            final var beanName =
+                    CaseFormat.UPPER_CAMEL.to(
+                            CaseFormat.LOWER_CAMEL,
+                            annotationMetadata.getIntrospectedClass().getSimpleName());
+            final var beanFactory = (DefaultListableBeanFactory) registry;
+            beanFactory.registerBeanDefinition(beanName, beanDefinition);
+            logger.info(
+                    "Registered bean {} of class {} for storage class {}",
+                    beanName,
+                    storageImplClass.getCanonicalName(),
+                    storageClass.getCanonicalName());
+        }
+    }
+
+    protected Set<String> getBasePackages(
+            final EnableStorages enableStoragesAnnotation, final String enableStoragesClassName) {
+        final var basePackagesAttribute = enableStoragesAnnotation.basePackages();
+        final var basePackageClassesAttribute = enableStoragesAnnotation.basePackageClasses();
+
+        if (ArrayUtils.isEmpty(basePackagesAttribute)
+                && ArrayUtils.isEmpty(basePackageClassesAttribute)) {
+            // fallback to the package of the Annotation if none of the above attributes is set
+            return Set.of(ClassUtils.getPackageName(enableStoragesClassName));
+        }
+
+        return Stream.concat(
+                        Arrays.stream(basePackageClassesAttribute).map(ClassUtils::getPackageName),
+                        Arrays.stream(basePackagesAttribute).filter(StringUtils::isNotBlank))
+                .collect(Collectors.toSet());
+    }
+
+    protected ClassPathScanningCandidateComponentProvider getScanner() {
+        return new ClassPathScanningCandidateComponentProvider(false, environment) {
+            @Override
+            protected boolean isCandidateComponent(
+                    final @NotNull AnnotatedBeanDefinition beanDefinition) {
+                return beanDefinition.getMetadata().isIndependent()
+                        && !beanDefinition.getMetadata().isAnnotation();
+            }
+        };
+    }
+
+    @Override
+    public void setResourceLoader(final @NotNull ResourceLoader resourceLoader) {
+        this.resourceLoader = resourceLoader;
+    }
+
+    @Override
+    public void setEnvironment(final @NotNull Environment environment) {
+        this.environment = environment;
+    }
+
+    private record StorageMethodInfo(
+            Method storageMethod,
+            MergedAnnotations storageMethodAnnotations,
+            Class<? extends Annotation> mappingAnnotationType) {}
+}

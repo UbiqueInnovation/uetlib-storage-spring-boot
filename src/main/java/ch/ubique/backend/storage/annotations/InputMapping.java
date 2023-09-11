@@ -1,5 +1,7 @@
 package ch.ubique.backend.storage.annotations;
 
+import org.springframework.core.annotation.AliasFor;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -9,7 +11,14 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @StorageMapping
 public @interface InputMapping {
-    String path();
+
+    /** Alias for {@link StorageMapping#value}. */
+    @AliasFor(annotation = StorageMapping.class)
+    String value() default "";
+
+    /** Alias for {@link StorageMapping#path}. */
+    @AliasFor(annotation = StorageMapping.class)
+    String path() default "";
 
     String contentType() default "";
 
@@ -23,5 +32,7 @@ public @interface InputMapping {
     @Deprecated(since = "1.5", forRemoval = true)
     boolean generateDocumentation() default true;
 
-    CodeGenerationType codeGenerationType() default CodeGenerationType.ALL;
+    /** Alias for {@link StorageMapping#codeGenerationType}. */
+    @AliasFor(annotation = StorageMapping.class)
+    CodeGenerationType codeGenerationType() default CodeGenerationType.IMPLEMENTATION;
 }
