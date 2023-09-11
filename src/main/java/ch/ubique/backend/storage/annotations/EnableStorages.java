@@ -8,16 +8,23 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Documented
-@Import(StorageClientRegistrar.class)
+@Import(StorageRegistrar.class)
 public @interface EnableStorages {
+    /** Alias for {@link #basePackages} */
+    @AliasFor("basePackages")
+    String[] value() default {};
+
     /**
-     * Base packages to scan for annotated components.
+     * Alias for {@link #value}
+     *
+     * <p>Base packages to scan for annotated components.
      *
      * <p>Use {@link #basePackageClasses()} for a type-safe alternative to String-based package
      * names.
      *
      * @return the array of 'basePackages'.
      */
+    @AliasFor("value")
     String[] basePackages() default {};
 
     /**

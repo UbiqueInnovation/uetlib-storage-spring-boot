@@ -37,7 +37,7 @@
             <version>8.5.6</version>
         </dependency>
 
-        <!-- Annotation processing & code generation -->
+        <!-- Annotation processing & code generation  TODO remove -->
         <dependency>
             <groupId>com.google.auto.service</groupId>
             <artifactId>auto-service</artifactId>
@@ -48,6 +48,13 @@
             <groupId>com.squareup</groupId>
             <artifactId>javapoet</artifactId>
             <version>1.13.0</version>
+        </dependency>
+
+        <!-- Reflections -->
+        <dependency>
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
+            <version>0.10.2</version>
         </dependency>
 
         <!-- For testing storage clients -->
