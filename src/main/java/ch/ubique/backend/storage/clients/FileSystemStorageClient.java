@@ -8,6 +8,7 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.lang3.StringUtils;
@@ -28,7 +29,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "ClassCanBeRecord"})
 public class FileSystemStorageClient implements StorageClient {
 
     private static final Logger logger = LoggerFactory.getLogger(FileSystemStorageClient.class);
@@ -66,10 +67,20 @@ public class FileSystemStorageClient implements StorageClient {
     }
 
     @Override
-    public InputStream read(final @NotNull String path) throws IOException {
+    @SuppressWarnings("java:S2095")
+    public InputStream read(final @NotNull String path, final boolean doUncompress)
+            throws IOException {
         final var file = new File(getCompletePath(path).toUri());
         logger.debug("reading input from {}", path);
-        return new FileInputStream(file);
+        final var fileInputStream = new FileInputStream(file);
+
+        if (doUncompress) {
+            final var contentEncoding = FilenameUtils.getExtension(path);
+            logger.debug("uncompressing input from content-encoding {}", contentEncoding);
+            return doUncompress(contentEncoding, fileInputStream);
+        }
+
+        return fileInputStream;
     }
 
     @Override

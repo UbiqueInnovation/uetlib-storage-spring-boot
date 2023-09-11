@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.OffsetDateTime;
 import java.util.Collection;
+import java.util.zip.GZIPInputStream;
 
 public interface StorageClient {
 
@@ -20,7 +21,11 @@ public interface StorageClient {
     void write(@NotNull Output output, @NotNull String path, @Nullable OutputMetaData metaData)
             throws IOException;
 
-    InputStream read(@NotNull String path) throws IOException;
+    default InputStream read(@NotNull final String path) throws IOException {
+        return read(path, true);
+    }
+
+    InputStream read(@NotNull String path, boolean doUncompress) throws IOException;
 
     default boolean delete(@NotNull final String path) throws IOException {
         return delete(path, false);
@@ -45,4 +50,12 @@ public interface StorageClient {
     String getSignedUrl(@NotNull String path, @NotNull OffsetDateTime expiry);
 
     String getUrl(@NotNull String path);
+
+    default InputStream doUncompress(final String contentEncoding, final InputStream inputStream)
+            throws IOException {
+        if ("gzip".equals(contentEncoding)) {
+            return new GZIPInputStream(inputStream);
+        }
+        return inputStream;
+    }
 }
