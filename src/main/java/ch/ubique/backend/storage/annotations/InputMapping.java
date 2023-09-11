@@ -12,5 +12,7 @@ public @interface InputMapping {
 
     String contentType() default "";
 
+    boolean doUncompress() default true;
+
     boolean generateDocumentation() default true;
 }
