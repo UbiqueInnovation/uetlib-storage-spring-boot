@@ -1,11 +1,12 @@
 package ch.ubique.backend.storage.output;
 
+import ch.ubique.backend.core.utils.StreamUtils;
+
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,7 +17,7 @@ import java.util.zip.GZIPOutputStream;
 public record GZipOutput(Output uncompressed) implements Output {
 
     public GZipOutput(final Output uncompressed) {
-        if (uncompressed instanceof GZipOutput gZipOutput) {
+        if (uncompressed instanceof final GZipOutput gZipOutput) {
             this.uncompressed = gZipOutput.uncompressed;
         } else {
             this.uncompressed = uncompressed;
@@ -39,8 +40,7 @@ public record GZipOutput(Output uncompressed) implements Output {
     public InputStream read() throws IOException {
         try (final var outputStream = new ByteArrayOutputStream()) {
             write(outputStream);
-            final var bytes = outputStream.toByteArray();
-            return new ByteArrayInputStream(bytes);
+            return StreamUtils.pipeOutputToInputStream(outputStream);
         }
     }
 
@@ -68,9 +68,13 @@ public record GZipOutput(Output uncompressed) implements Output {
 
     @Override
     public boolean equals(final Object o) {
-        if (this == o) return true;
+        if (this == o) {
+            return true;
+        }
 
-        if (!(o instanceof GZipOutput that)) return false;
+        if (!(o instanceof final GZipOutput that)) {
+            return false;
+        }
 
         return new EqualsBuilder().append(uncompressed, that.uncompressed).isEquals();
     }
