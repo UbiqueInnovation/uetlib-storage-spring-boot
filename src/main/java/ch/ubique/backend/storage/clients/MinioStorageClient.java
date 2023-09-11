@@ -40,8 +40,8 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
- * {@link ch.ubique.backend.storage.StorageClient } to perform bucket and object operations to any
- * Amazon S3 compatible object storage service.
+ * {@link StorageClient} to perform bucket and object operations to any Amazon S3 / MinIO compatible
+ * object storage service.
  */
 public sealed class MinioStorageClient implements StorageClient
         permits AmazonS3StorageClient, CloudflareR2StorageClient {
@@ -82,7 +82,9 @@ public sealed class MinioStorageClient implements StorageClient
 
         // contentEncoding
         output.contentEncoding()
-                .ifPresent(contentEncoding -> headers.put("Content-Encoding", contentEncoding));
+                .ifPresent(
+                        contentEncoding ->
+                                headers.put(HttpHeaders.CONTENT_ENCODING, contentEncoding));
 
         // cacheControl
         Optional.ofNullable(metaData)
