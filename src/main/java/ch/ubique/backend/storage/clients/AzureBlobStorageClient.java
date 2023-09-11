@@ -1,13 +1,16 @@
 package ch.ubique.backend.storage.clients;
 
+import ch.ubique.backend.core.utils.StreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
 
 import com.azure.core.http.HttpClient;
+import com.azure.core.http.HttpHeaderName;
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.util.Context;
+import com.azure.core.util.Header;
 import com.azure.core.util.HttpClientOptions;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
@@ -21,7 +24,9 @@ import com.azure.storage.common.policy.RequestRetryOptions;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
-import java.io.ByteArrayInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,6 +42,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class AzureBlobStorageClient implements StorageClient {
+
+    private static final Logger logger = LoggerFactory.getLogger(AzureBlobStorageClient.class);
 
     private final BlobServiceClient blobServiceClient;
     private final BlobContainerClient blobContainerClient;
@@ -127,13 +134,34 @@ public class AzureBlobStorageClient implements StorageClient {
     }
 
     @Override
-    public InputStream read(final @NotNull String path) throws IOException {
-        final byte[] data;
+    public InputStream read(final @NotNull String path, final boolean doUncompress)
+            throws IOException {
         try (final var outputStream = new ByteArrayOutputStream()) {
-            blobContainerClient.getBlobClient(path).downloadStream(outputStream);
-            data = outputStream.toByteArray();
+            final var blobDownloadResponse = downloadStreamWithResponse(path, outputStream);
+            final var inputStream = StreamUtils.pipeOutputToInputStream(outputStream);
+
+            if (doUncompress) {
+                final var contentEncoding =
+                        Optional.ofNullable(
+                                        blobDownloadResponse
+                                                .getHeaders()
+                                                .get(HttpHeaderName.CONTENT_ENCODING))
+                                .map(Header::getValue)
+                                .orElse(null);
+                logger.debug("uncompressing input from content-encoding {}", contentEncoding);
+                return doUncompress(contentEncoding, inputStream);
+            }
+
+            return inputStream;
         }
-        return new ByteArrayInputStream(data);
+    }
+
+    private BlobDownloadResponse downloadStreamWithResponse(
+            @NotNull final String path, final ByteArrayOutputStream outputStream) {
+        return blobContainerClient
+                .getBlobClient(path)
+                .downloadStreamWithResponse(
+                        outputStream, null, null, null, false, null, Context.NONE);
     }
 
     @Override

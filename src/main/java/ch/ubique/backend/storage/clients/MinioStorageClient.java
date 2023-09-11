@@ -26,6 +26,8 @@ import jakarta.validation.constraints.NotNull;
 import okhttp3.OkHttpClient;
 
 import org.apache.commons.lang3.NotImplementedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 
 import java.io.IOException;
@@ -45,6 +47,8 @@ import java.util.stream.StreamSupport;
  */
 public sealed class MinioStorageClient implements StorageClient
         permits AmazonS3StorageClient, CloudflareR2StorageClient {
+
+    private static final Logger logger = LoggerFactory.getLogger(MinioStorageClient.class);
 
     private final String bucket;
     private final MinioClient minioClient;
@@ -130,10 +134,21 @@ public sealed class MinioStorageClient implements StorageClient
     }
 
     @Override
-    public final InputStream read(final @NotNull String path) throws IOException {
+    public final InputStream read(final @NotNull String path, final boolean doUncompress)
+            throws IOException {
         try {
-            return minioClient.getObject(
-                    GetObjectArgs.builder().bucket(bucket).object(path).build());
+            final var objectResponse =
+                    minioClient.getObject(
+                            GetObjectArgs.builder().bucket(bucket).object(path).build());
+
+            if (doUncompress) {
+                final var contentEncoding =
+                        objectResponse.headers().get(HttpHeaders.CONTENT_ENCODING);
+                logger.debug("uncompressing input from content-encoding {}", contentEncoding);
+                return doUncompress(contentEncoding, objectResponse);
+            }
+
+            return objectResponse;
         } catch (final ErrorResponseException
                 | InsufficientDataException
                 | InternalException
@@ -232,7 +247,7 @@ public sealed class MinioStorageClient implements StorageClient
                 | NoSuchAlgorithmException
                 | ServerException
                 | XmlParserException e) {
-            throw new RuntimeException(e);
+            throw new WrappedException(e);
         }
     }
 }
