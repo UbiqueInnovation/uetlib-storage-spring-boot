@@ -47,7 +47,7 @@ public class InputMappingInterceptor {
                         allArguments,
                         getPathTemplate(storageAnnotation.basePath(), inputMapping.path()));
 
-        final var inputStream = storageClient.read(path);
+        final var inputStream = storageClient.read(path, inputMapping.doUncompressIfNeeded());
         if (InputStream.class.isAssignableFrom(returnType)) {
             return inputStream;
         }
