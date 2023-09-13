@@ -1,6 +1,6 @@
 package ch.ubique.backend.storage.clients;
 
-import ch.ubique.backend.core.utils.StreamUtils;
+import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
@@ -138,7 +138,7 @@ public class AzureBlobStorageClient implements StorageClient {
             throws IOException {
         try (final var outputStream = new ByteArrayOutputStream()) {
             final var blobDownloadResponse = downloadStreamWithResponse(path, outputStream);
-            final var inputStream = StreamUtils.pipeOutputToInputStream(outputStream);
+            final var inputStream = InputStreamUtils.pipeOutputToInputStream(outputStream);
 
             if (doUncompress) {
                 final var contentEncoding =
