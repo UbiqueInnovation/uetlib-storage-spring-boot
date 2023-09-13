@@ -263,7 +263,9 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
         final var returnType = method.getReturnType();
         final var inputMapping = method.getAnnotation(InputMapping.class);
 
-        final var inputStream = CodeBlock.of("storageClient.read($L, $L)", path, inputMapping.doUncompress());
+        final var inputStream =
+                CodeBlock.of(
+                        "storageClient.read($L, $L)", path, inputMapping.doUncompressIfNeeded());
 
         if (typeUtils.isSameType(returnType, typeMirrorOf(InputStream.class))) {
             return inputStream;
