@@ -1,6 +1,6 @@
 package ch.ubique.backend.storage.output;
 
-import ch.ubique.backend.core.utils.StreamUtils;
+import ch.ubique.backend.core.utils.InputStreamUtils;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -40,7 +40,7 @@ public record GZipOutput(Output uncompressed) implements Output {
     public InputStream read() throws IOException {
         try (final var outputStream = new ByteArrayOutputStream()) {
             write(outputStream);
-            return StreamUtils.pipeOutputToInputStream(outputStream);
+            return InputStreamUtils.pipeOutputToInputStream(outputStream);
         }
     }
 
