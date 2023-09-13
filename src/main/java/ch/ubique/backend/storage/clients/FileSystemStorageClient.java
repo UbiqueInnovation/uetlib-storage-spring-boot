@@ -1,5 +1,6 @@
 package ch.ubique.backend.storage.clients;
 
+import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
@@ -8,7 +9,6 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.lang3.StringUtils;
@@ -68,16 +68,14 @@ public class FileSystemStorageClient implements StorageClient {
 
     @Override
     @SuppressWarnings("java:S2095")
-    public InputStream read(final @NotNull String path, final boolean doUncompress)
+    public InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
             throws IOException {
         final var file = new File(getCompletePath(path).toUri());
         logger.debug("reading input from {}", path);
         final var fileInputStream = new FileInputStream(file);
 
-        if (doUncompress) {
-            final var contentEncoding = FilenameUtils.getExtension(path);
-            logger.debug("uncompressing input from content-encoding {}", contentEncoding);
-            return doUncompress(contentEncoding, fileInputStream);
+        if (doUncompressIfNeeded) {
+            return InputStreamUtils.uncompress(fileInputStream);
         }
 
         return fileInputStream;

@@ -1,5 +1,6 @@
 package ch.ubique.backend.storage.clients;
 
+import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
@@ -134,18 +135,15 @@ public sealed class MinioStorageClient implements StorageClient
     }
 
     @Override
-    public final InputStream read(final @NotNull String path, final boolean doUncompress)
+    public final InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
             throws IOException {
         try {
             final var objectResponse =
                     minioClient.getObject(
                             GetObjectArgs.builder().bucket(bucket).object(path).build());
 
-            if (doUncompress) {
-                final var contentEncoding =
-                        objectResponse.headers().get(HttpHeaders.CONTENT_ENCODING);
-                logger.debug("uncompressing input from content-encoding {}", contentEncoding);
-                return doUncompress(contentEncoding, objectResponse);
+            if (doUncompressIfNeeded) {
+                return InputStreamUtils.uncompress(objectResponse);
             }
 
             return objectResponse;

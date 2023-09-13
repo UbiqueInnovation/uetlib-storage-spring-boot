@@ -25,7 +25,7 @@ public interface StorageClient {
         return read(path, true);
     }
 
-    InputStream read(@NotNull String path, boolean doUncompress) throws IOException;
+    InputStream read(@NotNull String path, boolean doUncompressIfNeeded) throws IOException;
 
     default boolean delete(@NotNull final String path) throws IOException {
         return delete(path, false);
@@ -50,12 +50,4 @@ public interface StorageClient {
     String getSignedUrl(@NotNull String path, @NotNull OffsetDateTime expiry);
 
     String getUrl(@NotNull String path);
-
-    default InputStream doUncompress(final String contentEncoding, final InputStream inputStream)
-            throws IOException {
-        if ("gzip".equals(contentEncoding)) {
-            return new GZIPInputStream(inputStream);
-        }
-        return inputStream;
-    }
 }
