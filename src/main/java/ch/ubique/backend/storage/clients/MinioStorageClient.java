@@ -143,7 +143,9 @@ public sealed class MinioStorageClient implements StorageClient
                             GetObjectArgs.builder().bucket(bucket).object(path).build());
 
             if (doUncompressIfNeeded) {
-                return InputStreamUtils.uncompress(objectResponse);
+                final var contentEncoding =
+                        objectResponse.headers().get(HttpHeaders.CONTENT_ENCODING);
+                return InputStreamUtils.uncompress(objectResponse, contentEncoding);
             }
 
             return objectResponse;
