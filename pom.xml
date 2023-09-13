@@ -52,8 +52,9 @@
 
         <!-- For testing storage clients -->
         <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
+            <groupId>ch.ubique</groupId>
+            <artifactId>backend-jvm-lib-testcontainers</artifactId>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -66,14 +67,6 @@
                 <type>pom</type>
                 <version>${spring-boot-version}</version>
                 <scope>import</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>testcontainers-bom</artifactId>
-                <version>1.19.0</version>
-                <type>pom</type>
-                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
