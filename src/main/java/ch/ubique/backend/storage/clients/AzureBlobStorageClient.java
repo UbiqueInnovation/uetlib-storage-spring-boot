@@ -7,8 +7,10 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
 
 import com.azure.core.http.HttpClient;
+import com.azure.core.http.HttpHeaderName;
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.util.Context;
+import com.azure.core.util.Header;
 import com.azure.core.util.HttpClientOptions;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
@@ -135,15 +137,30 @@ public class AzureBlobStorageClient implements StorageClient {
     public InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
             throws IOException {
         try (final var outputStream = new ByteArrayOutputStream()) {
-            blobContainerClient.getBlobClient(path).downloadStream(outputStream);
+            final var blobDownloadResponse = downloadStreamWithResponse(path, outputStream);
             final var inputStream = InputStreamUtils.pipeOutputToInputStream(outputStream);
 
             if (doUncompressIfNeeded) {
-                return InputStreamUtils.uncompress(inputStream);
+                final var contentEncoding =
+                        Optional.ofNullable(
+                                        blobDownloadResponse
+                                                .getHeaders()
+                                                .get(HttpHeaderName.CONTENT_ENCODING))
+                                .map(Header::getValue)
+                                .orElse(null);
+                return InputStreamUtils.uncompress(inputStream, contentEncoding);
             }
 
             return inputStream;
         }
+    }
+
+    private BlobDownloadResponse downloadStreamWithResponse(
+            @NotNull final String path, final ByteArrayOutputStream outputStream) {
+        return blobContainerClient
+                .getBlobClient(path)
+                .downloadStreamWithResponse(
+                        outputStream, null, null, null, false, null, Context.NONE);
     }
 
     @Override
