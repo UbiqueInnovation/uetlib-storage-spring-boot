@@ -7,10 +7,8 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
 
 import com.azure.core.http.HttpClient;
-import com.azure.core.http.HttpHeaderName;
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.util.Context;
-import com.azure.core.util.Header;
 import com.azure.core.util.HttpClientOptions;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
@@ -134,34 +132,18 @@ public class AzureBlobStorageClient implements StorageClient {
     }
 
     @Override
-    public InputStream read(final @NotNull String path, final boolean doUncompress)
+    public InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
             throws IOException {
         try (final var outputStream = new ByteArrayOutputStream()) {
-            final var blobDownloadResponse = downloadStreamWithResponse(path, outputStream);
+            blobContainerClient.getBlobClient(path).downloadStream(outputStream);
             final var inputStream = InputStreamUtils.pipeOutputToInputStream(outputStream);
 
-            if (doUncompress) {
-                final var contentEncoding =
-                        Optional.ofNullable(
-                                        blobDownloadResponse
-                                                .getHeaders()
-                                                .get(HttpHeaderName.CONTENT_ENCODING))
-                                .map(Header::getValue)
-                                .orElse(null);
-                logger.debug("uncompressing input from content-encoding {}", contentEncoding);
-                return doUncompress(contentEncoding, inputStream);
+            if (doUncompressIfNeeded) {
+                return InputStreamUtils.uncompress(inputStream);
             }
 
             return inputStream;
         }
-    }
-
-    private BlobDownloadResponse downloadStreamWithResponse(
-            @NotNull final String path, final ByteArrayOutputStream outputStream) {
-        return blobContainerClient
-                .getBlobClient(path)
-                .downloadStreamWithResponse(
-                        outputStream, null, null, null, false, null, Context.NONE);
     }
 
     @Override
