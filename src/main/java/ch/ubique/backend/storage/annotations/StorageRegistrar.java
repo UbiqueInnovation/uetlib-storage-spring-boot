@@ -124,25 +124,7 @@ public class StorageRegistrar
                 .collect(MoreCollectors.onlyElement());
     }
 
-    @NotNull
-    private static Stream<String> getConstructorArgBeanNames(final Class<?> storageClass) {
-        final var constructor =
-                Arrays.stream(storageClass.getDeclaredConstructors())
-                        .findFirst()
-                        .orElseThrow()
-                        .getParameters();
-        return Arrays.stream(constructor)
-                .map(
-                        parameter ->
-                                // get the bean qualifier or the parameter name if the first is
-                                // blank
-                                Optional.ofNullable(parameter.getAnnotation(Qualifier.class))
-                                        .map(Qualifier::value)
-                                        .filter(StringUtils::isNotBlank)
-                                        .orElse(parameter.getName()));
-    }
-
-    private <T> ReceiverTypeDefinition<T> buildConstructor(
+    private static <T> ReceiverTypeDefinition<T> buildConstructor(
             final DynamicType.Builder.FieldDefinition.Optional.Valuable<T> builder,
             final Storage storageAnnotation) {
         final var shouldInjectObjectMapper =
@@ -197,7 +179,7 @@ public class StorageRegistrar
                 callSuperConstructor.andThen(setStorageClient).andThen(setObjectMapper));
     }
 
-    private <T> DynamicType.@NotNull Unloaded<T> generateClass(
+    private static <T> DynamicType.@NotNull Unloaded<T> generateClass(
             final AnnotationMetadata annotationMetadata, final Class<T> storageClass) {
         final var implementationClassName = annotationMetadata.getClassName() + "Impl";
 
@@ -242,7 +224,7 @@ public class StorageRegistrar
         return cls;
     }
 
-    private <T> ReceiverTypeDefinition<T> buildMethods(
+    private static <T> ReceiverTypeDefinition<T> buildMethods(
             final ReceiverTypeDefinition<T> b,
             final Class<T> storageClass,
             final MergedAnnotations.Search mergedAnnotationsSearch) {
@@ -280,7 +262,7 @@ public class StorageRegistrar
         return builder;
     }
 
-    private <T> ReceiverTypeDefinition<T> buildOutputMethod(
+    private static <T> ReceiverTypeDefinition<T> buildOutputMethod(
             final ReceiverTypeDefinition<T> builder, final StorageMethodInfo outputMethodInfo) {
         final var outputMethod = outputMethodInfo.storageMethod();
         final var parameters = Arrays.stream(outputMethod.getParameters()).toList();
@@ -301,7 +283,7 @@ public class StorageRegistrar
                 .intercept(interceptor);
     }
 
-    private <T> ReceiverTypeDefinition<T> buildInputMethod(
+    private static <T> ReceiverTypeDefinition<T> buildInputMethod(
             final ReceiverTypeDefinition<T> builder, final StorageMethodInfo inputMethodInfo) {
         final var inputMethod = inputMethodInfo.storageMethod();
         final var parameters = Arrays.stream(inputMethod.getParameters()).toList();
@@ -322,7 +304,7 @@ public class StorageRegistrar
                 .intercept(interceptor);
     }
 
-    private <T> ReceiverTypeDefinition<T> buildListMethod(
+    private static <T> ReceiverTypeDefinition<T> buildListMethod(
             final ReceiverTypeDefinition<T> builder, final StorageMethodInfo listMethodInfo) {
         final var listMethod = listMethodInfo.storageMethod();
         final var parameters = Arrays.stream(listMethod.getParameters()).toList();
@@ -343,7 +325,7 @@ public class StorageRegistrar
                 .intercept(interceptor);
     }
 
-    private <T> ReceiverTypeDefinition<T> buildDeleteMethod(
+    private static <T> ReceiverTypeDefinition<T> buildDeleteMethod(
             final ReceiverTypeDefinition<T> builder, final StorageMethodInfo deleteMethodInfo) {
         final var deleteMethod = deleteMethodInfo.storageMethod();
         final var parameters = Arrays.stream(deleteMethod.getParameters()).toList();
@@ -362,6 +344,32 @@ public class StorageRegistrar
                 .withParameters(parameterTypes)
                 .throwing(IOException.class)
                 .intercept(interceptor);
+    }
+
+    private static Class<?> findEnableStoragesClass() {
+        return CollectionUtils.extractSingleton(
+                new Reflections(
+                                new ConfigurationBuilder()
+                                        .forPackage("")
+                                        .setScanners(Scanners.TypesAnnotated))
+                        .getTypesAnnotatedWith(EnableStorages.class));
+    }
+
+    protected static Set<String> getBasePackages(
+            final EnableStorages enableStoragesAnnotation, final String enableStoragesClassName) {
+        final var basePackagesAttribute = enableStoragesAnnotation.basePackages();
+        final var basePackageClassesAttribute = enableStoragesAnnotation.basePackageClasses();
+
+        if (ArrayUtils.isEmpty(basePackagesAttribute)
+                && ArrayUtils.isEmpty(basePackageClassesAttribute)) {
+            // fallback to the package of the Annotation if none of the above attributes is set
+            return Set.of(ClassUtils.getPackageName(enableStoragesClassName));
+        }
+
+        return Stream.concat(
+                        Arrays.stream(basePackageClassesAttribute).map(ClassUtils::getPackageName),
+                        Arrays.stream(basePackagesAttribute).filter(StringUtils::isNotBlank))
+                .collect(Collectors.toSet());
     }
 
     @Override
@@ -420,15 +428,6 @@ public class StorageRegistrar
         }
     }
 
-    private Class<?> findEnableStoragesClass() {
-        return CollectionUtils.extractSingleton(
-                new Reflections(
-                                new ConfigurationBuilder()
-                                        .forPackage("")
-                                        .setScanners(Scanners.TypesAnnotated))
-                        .getTypesAnnotatedWith(EnableStorages.class));
-    }
-
     private <T> void registerStorageClient(
             final BeanDefinitionRegistry registry,
             final StandardAnnotationMetadata annotationMetadata,
@@ -444,12 +443,6 @@ public class StorageRegistrar
             final var beanDefinitionBuilder =
                     BeanDefinitionBuilder.rootBeanDefinition(storageImplClass)
                             .setAutowireMode(AUTOWIRE_CONSTRUCTOR);
-            getConstructorArgBeanNames(storageImplClass)
-                    .forEach(
-                            beanName ->
-                                    beanDefinitionBuilder
-                                            .addConstructorArgReference(beanName)
-                                            .addDependsOn(beanName));
             final var beanDefinition = beanDefinitionBuilder.getBeanDefinition();
 
             final var beanName =
@@ -464,23 +457,6 @@ public class StorageRegistrar
                     storageImplClass.getCanonicalName(),
                     storageClass.getCanonicalName());
         }
-    }
-
-    protected Set<String> getBasePackages(
-            final EnableStorages enableStoragesAnnotation, final String enableStoragesClassName) {
-        final var basePackagesAttribute = enableStoragesAnnotation.basePackages();
-        final var basePackageClassesAttribute = enableStoragesAnnotation.basePackageClasses();
-
-        if (ArrayUtils.isEmpty(basePackagesAttribute)
-                && ArrayUtils.isEmpty(basePackageClassesAttribute)) {
-            // fallback to the package of the Annotation if none of the above attributes is set
-            return Set.of(ClassUtils.getPackageName(enableStoragesClassName));
-        }
-
-        return Stream.concat(
-                        Arrays.stream(basePackageClassesAttribute).map(ClassUtils::getPackageName),
-                        Arrays.stream(basePackagesAttribute).filter(StringUtils::isNotBlank))
-                .collect(Collectors.toSet());
     }
 
     protected ClassPathScanningCandidateComponentProvider getScanner() {
