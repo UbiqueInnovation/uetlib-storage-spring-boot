@@ -59,6 +59,7 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
@@ -179,18 +180,12 @@ public class StorageRegistrar
                 callSuperConstructor.andThen(setStorageClient).andThen(setObjectMapper));
     }
 
-    private static <T> DynamicType.@NotNull Unloaded<T> generateClass(
-            final AnnotationMetadata annotationMetadata, final Class<T> storageClass) {
-        final var implementationClassName = annotationMetadata.getClassName() + "Impl";
-
-        final var mergedAnnotationsSearch =
-                MergedAnnotations.search(TYPE_HIERARCHY)
-                        .withEnclosingClasses(
-                                clazz ->
-                                        !ClassUtils.isInnerClass(clazz)
-                                                && !ClassUtils.isStaticClass(clazz));
-        final var mergedStorageClassAnnotations = mergedAnnotationsSearch.from(storageClass);
-        final var storageAnnotation = mergedStorageClassAnnotations.get(Storage.class).synthesize();
+    private static <T> DynamicType.@NotNull Unloaded<T> generateImplementationClass(
+            final AnnotationMetadata annotationMetadata,
+            final Class<T> storageClass,
+            final MergedAnnotations.Search mergedAnnotationsSearch,
+            final Storage storageAnnotation) {
+        final var implementationClassName = annotationMetadata.getClassName() + "Implementation";
         final var builderForConstructor =
                 new ByteBuddy()
                         .subclass(storageClass, ConstructorStrategy.Default.NO_CONSTRUCTORS)
@@ -210,18 +205,25 @@ public class StorageRegistrar
         final var builderForMethods = buildConstructor(builderForConstructor, storageAnnotation);
         final var builder = buildMethods(builderForMethods, storageClass, mergedAnnotationsSearch);
 
-        // TODO Documentation class
+        return builder.make();
+    }
 
-        final var cls = builder.make();
-        final var tempFile = Path.of("/tmp/bytebuddy");
-        try {
-            cls.saveIn(tempFile.toFile());
-        } catch (final IOException e) {
-            throw new WrappedException(e);
-        }
-        logger.info("saved at {}/{}.class", tempFile, cls.getTypeDescription().getName());
-
-        return cls;
+    private static <T> DynamicType.@NotNull Unloaded<T> generateDocumentationClass(
+            final AnnotationMetadata annotationMetadata,
+            final Class<T> storageClass,
+            final MergedAnnotations.Search mergedAnnotationsSearch,
+            final Storage storageAnnotation) {
+        final var documentationClassName = annotationMetadata.getClassName() + "Documentation";
+        final var builder =
+                new ByteBuddy()
+                        .subclass(storageClass, ConstructorStrategy.Default.NO_CONSTRUCTORS)
+                        .annotateType(
+                                AnnotationDescription.Builder.ofType(RestController.class)
+                                        .define("value", storageAnnotation.basePath())
+                                        .build())
+                        .name(documentationClassName)
+                        .modifiers(Visibility.PUBLIC, TypeManifestation.FINAL);
+        return buildMethods(builder, storageClass, mergedAnnotationsSearch).make();
     }
 
     private static <T> ReceiverTypeDefinition<T> buildMethods(
@@ -375,7 +377,7 @@ public class StorageRegistrar
     @Override
     public void postProcessBeanDefinitionRegistry(final @NotNull BeanDefinitionRegistry registry)
             throws BeansException {
-        registerStorageClients(registry);
+        registerStorageClients((DefaultListableBeanFactory) registry);
     }
 
     @Override
@@ -384,7 +386,7 @@ public class StorageRegistrar
         // empty
     }
 
-    public void registerStorageClients(final BeanDefinitionRegistry registry) {
+    public void registerStorageClients(final DefaultListableBeanFactory beanFactory) {
         final var enableStoragesClass = findEnableStoragesClass();
         final var enableStoragesAnnotation =
                 enableStoragesClass.getAnnotation(EnableStorages.class);
@@ -424,39 +426,95 @@ public class StorageRegistrar
             } catch (final ClassNotFoundException e) {
                 throw new WrappedException(e);
             }
-            registerStorageClient(registry, annotationMetadata, storageClass);
+            registerStorageClient(beanFactory, annotationMetadata, storageClass);
         }
     }
 
     private <T> void registerStorageClient(
-            final BeanDefinitionRegistry registry,
+            final DefaultListableBeanFactory beanFactory,
             final StandardAnnotationMetadata annotationMetadata,
-            final Class<T> storageClass) {
+            final Class<T> storageInterface) {
 
-        try (final var generatedClass = generateClass(annotationMetadata, storageClass)) {
-            final var storageImplClass =
-                    generatedClass
-                            .load(
-                                    getClass().getClassLoader(),
-                                    ClassLoadingStrategy.Default.INJECTION)
-                            .getLoaded();
-            final var beanDefinitionBuilder =
-                    BeanDefinitionBuilder.rootBeanDefinition(storageImplClass)
-                            .setAutowireMode(AUTOWIRE_CONSTRUCTOR);
-            final var beanDefinition = beanDefinitionBuilder.getBeanDefinition();
+        final var mergedAnnotationsSearch =
+                MergedAnnotations.search(TYPE_HIERARCHY)
+                        .withEnclosingClasses(
+                                clazz ->
+                                        !ClassUtils.isInnerClass(clazz)
+                                                && !ClassUtils.isStaticClass(clazz));
+        final var mergedStorageClassAnnotations = mergedAnnotationsSearch.from(storageInterface);
+        final var storageAnnotation = mergedStorageClassAnnotations.get(Storage.class).synthesize();
 
-            final var beanName =
-                    CaseFormat.UPPER_CAMEL.to(
-                            CaseFormat.LOWER_CAMEL,
-                            annotationMetadata.getIntrospectedClass().getSimpleName());
-            final var beanFactory = (DefaultListableBeanFactory) registry;
-            beanFactory.registerBeanDefinition(beanName, beanDefinition);
-            logger.info(
-                    "Registered bean {} of class {} for storage class {}",
-                    beanName,
-                    storageImplClass.getCanonicalName(),
-                    storageClass.getCanonicalName());
+        if (storageAnnotation.codeGenerationType().generateImplementationCode()) {
+            try (final var generatedImplementationClass =
+                    generateImplementationClass(
+                            annotationMetadata,
+                            storageInterface,
+                            mergedAnnotationsSearch,
+                            storageAnnotation)) {
+                registerBeanForGeneratedClass(
+                        beanFactory,
+                        annotationMetadata,
+                        storageInterface,
+                        generatedImplementationClass,
+                        "implementation");
+            }
         }
+
+        if (storageAnnotation.codeGenerationType().generateDocumentationCode()) {
+            try (final var generatedDocumentationClass =
+                    generateDocumentationClass(
+                            annotationMetadata,
+                            storageInterface,
+                            mergedAnnotationsSearch,
+                            storageAnnotation)) {
+                registerBeanForGeneratedClass(
+                        beanFactory,
+                        annotationMetadata,
+                        storageInterface,
+                        generatedDocumentationClass,
+                        "documentation");
+            }
+        }
+    }
+
+    private <T> void registerBeanForGeneratedClass(
+            final DefaultListableBeanFactory beanFactory,
+            final StandardAnnotationMetadata annotationMetadata,
+            final Class<T> storageInterface,
+            final DynamicType.Unloaded<T> generatedClass,
+            final String storageBeanType) {
+
+        // TODO remove below, only for debugging purposes
+        final var tempFile = Path.of("/tmp/bytebuddy");
+        try {
+            generatedClass.saveIn(tempFile.toFile());
+        } catch (final IOException e) {
+            throw new WrappedException(e);
+        }
+        logger.info(
+                "saved at {}/{}.class", tempFile, generatedClass.getTypeDescription().getName());
+        // TODO remove above, only for debugging purposes
+
+        final var storageClass =
+                generatedClass
+                        .load(getClass().getClassLoader(), ClassLoadingStrategy.Default.INJECTION)
+                        .getLoaded();
+        final var beanDefinitionBuilder =
+                BeanDefinitionBuilder.rootBeanDefinition(storageClass)
+                        .setAutowireMode(AUTOWIRE_CONSTRUCTOR);
+        final var beanDefinition = beanDefinitionBuilder.getBeanDefinition();
+
+        final var beanName =
+                CaseFormat.UPPER_CAMEL.to(
+                        CaseFormat.LOWER_CAMEL,
+                        annotationMetadata.getIntrospectedClass().getSimpleName());
+        beanFactory.registerBeanDefinition(beanName, beanDefinition);
+        logger.info(
+                "Registered {} bean {} of class {} for storage class {}",
+                storageBeanType,
+                beanName,
+                storageClass.getCanonicalName(),
+                storageInterface.getCanonicalName());
     }
 
     protected ClassPathScanningCandidateComponentProvider getScanner() {
