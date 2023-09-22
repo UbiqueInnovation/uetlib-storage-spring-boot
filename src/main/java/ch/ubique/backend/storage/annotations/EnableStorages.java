@@ -5,6 +5,12 @@ import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.*;
 
+/**
+ * Place this annotation on any class in a package that matches (or is prefixed by) your maven
+ * artifact group id. This annotation is only discovered in a package below the group id.
+ *
+ * <p>The package 'ch.ubique.backend' is always included.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Documented
@@ -39,9 +45,10 @@ public @interface EnableStorages {
     Class<?>[] basePackageClasses() default {};
 
     /**
-     * List of classes annotated with @FeignClient. If not empty, disables classpath scanning.
+     * List of classes annotated with @{@link Storage}. If not empty, disables classpath
+     * scanning.
      *
      * @return array of FeignClient classes
      */
-    Class<?>[] clients() default {};
+    Class<?>[] storages() default {};
 }

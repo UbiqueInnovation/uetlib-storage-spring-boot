@@ -28,34 +28,24 @@ import net.bytebuddy.dynamic.scaffold.subclass.ConstructorStrategy;
 import net.bytebuddy.implementation.*;
 import net.bytebuddy.implementation.MethodCall.WithoutSpecifiedTarget;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.reflections.Reflections;
-import org.reflections.scanners.Scanners;
-import org.reflections.util.ConfigurationBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
-import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.context.EnvironmentAware;
-import org.springframework.context.ResourceLoaderAware;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.core.env.Environment;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.type.AnnotationMetadata;
-import org.springframework.core.type.StandardAnnotationMetadata;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
@@ -70,8 +60,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class StorageRegistrar
-        implements BeanDefinitionRegistryPostProcessor, ResourceLoaderAware, EnvironmentAware {
+public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor, EnvironmentAware {
 
     private static final String STORAGE_CLIENT_PARAMETER = "storageClient";
     private static final String OBJECT_MAPPER_PARAMETER = "objectMapper";
@@ -81,7 +70,7 @@ public class StorageRegistrar
                     "this storage method exists only to document blob storage endpoints and must not be called");
 
     private static final Logger logger = LoggerFactory.getLogger(StorageRegistrar.class);
-    private ResourceLoader resourceLoader;
+
     private Environment environment;
 
     private static Map<Class<? extends Annotation>, List<StorageMethodInfo>>
@@ -181,14 +170,13 @@ public class StorageRegistrar
     }
 
     private static <T> DynamicType.@NotNull Unloaded<T> generateImplementationClass(
-            final AnnotationMetadata annotationMetadata,
-            final Class<T> storageClass,
+            final Class<T> storageInterface,
             final MergedAnnotations.Search mergedAnnotationsSearch,
             final Storage storageAnnotation) {
-        final var implementationClassName = annotationMetadata.getClassName() + "Implementation";
+        final var implementationClassName = storageInterface.getSimpleName() + "Implementation";
         final var builderForConstructor =
                 new ByteBuddy()
-                        .subclass(storageClass, ConstructorStrategy.Default.NO_CONSTRUCTORS)
+                        .subclass(storageInterface, ConstructorStrategy.Default.NO_CONSTRUCTORS)
                         .annotateType(AnnotationDescription.Builder.ofType(Service.class).build())
                         .name(implementationClassName)
                         .modifiers(Visibility.PUBLIC, TypeManifestation.FINAL)
@@ -203,35 +191,36 @@ public class StorageRegistrar
                                 Visibility.PRIVATE,
                                 FieldManifestation.FINAL);
         final var builderForMethods = buildConstructor(builderForConstructor, storageAnnotation);
-        final var builder = buildMethods(builderForMethods, storageClass, mergedAnnotationsSearch);
 
-        return builder.make();
+        final var annotatedMethodsByAnnotation =
+                getStorageMethodsByAnnotation(storageInterface, mergedAnnotationsSearch);
+        return buildImplementationMethods(builderForMethods, annotatedMethodsByAnnotation).make();
     }
 
     private static <T> DynamicType.@NotNull Unloaded<T> generateDocumentationClass(
-            final AnnotationMetadata annotationMetadata,
-            final Class<T> storageClass,
+            final Class<T> storageInterface,
             final MergedAnnotations.Search mergedAnnotationsSearch,
             final Storage storageAnnotation) {
-        final var documentationClassName = annotationMetadata.getClassName() + "Documentation";
+        final var documentationClassName = storageInterface.getSimpleName() + "Documentation";
         final var builder =
                 new ByteBuddy()
-                        .subclass(storageClass, ConstructorStrategy.Default.NO_CONSTRUCTORS)
+                        .subclass(storageInterface, ConstructorStrategy.Default.NO_CONSTRUCTORS)
                         .annotateType(
                                 AnnotationDescription.Builder.ofType(RestController.class)
                                         .define("value", storageAnnotation.basePath())
                                         .build())
                         .name(documentationClassName)
                         .modifiers(Visibility.PUBLIC, TypeManifestation.FINAL);
-        return buildMethods(builder, storageClass, mergedAnnotationsSearch).make();
+
+        final var annotatedMethodsByAnnotation =
+                getStorageMethodsByAnnotation(storageInterface, mergedAnnotationsSearch);
+        return buildDocumentationMethods(builder, annotatedMethodsByAnnotation).make();
     }
 
-    private static <T> ReceiverTypeDefinition<T> buildMethods(
+    private static <T> ReceiverTypeDefinition<T> buildImplementationMethods(
             final ReceiverTypeDefinition<T> b,
-            final Class<T> storageClass,
-            final MergedAnnotations.Search mergedAnnotationsSearch) {
-        final var annotatedMethodsByAnnotation =
-                getStorageMethodsByAnnotation(storageClass, mergedAnnotationsSearch);
+            final Map<Class<? extends Annotation>, List<StorageMethodInfo>>
+                    annotatedMethodsByAnnotation) {
         var builder = b;
         final var outputMethodInfos =
                 Objects.requireNonNullElse(
@@ -250,21 +239,69 @@ public class StorageRegistrar
                         annotatedMethodsByAnnotation.get(ListMapping.class),
                         List.<StorageMethodInfo>of());
         for (final var outputMethodInfo : outputMethodInfos) {
-            builder = buildOutputMethod(builder, outputMethodInfo);
+            builder = buildImplementationOutputMethod(builder, outputMethodInfo);
         }
         for (final var inputMethodInfo : inputMethodInfos) {
-            builder = buildInputMethod(builder, inputMethodInfo);
+            builder = buildImplementationInputMethod(builder, inputMethodInfo);
         }
         for (final var deleteMethodInfo : deleteMethodInfos) {
-            builder = buildDeleteMethod(builder, deleteMethodInfo);
+            builder = buildImplementationDeleteMethod(builder, deleteMethodInfo);
         }
         for (final var listMethodInfo : listMethodInfos) {
-            builder = buildListMethod(builder, listMethodInfo);
+            builder = buildImplementationListMethod(builder, listMethodInfo);
         }
         return builder;
     }
 
-    private static <T> ReceiverTypeDefinition<T> buildOutputMethod(
+    private static <T> DynamicType.Builder<T> buildDocumentationMethods(
+            final DynamicType.Builder<T> b,
+            final Map<Class<? extends Annotation>, List<StorageMethodInfo>>
+                    annotatedMethodsByAnnotation) {
+        var builder = b;
+        final var outputMethodInfos =
+                Objects.requireNonNullElse(
+                        annotatedMethodsByAnnotation.get(OutputMapping.class),
+                        List.<StorageMethodInfo>of());
+        final var inputMethodInfos =
+                Objects.requireNonNullElse(
+                        annotatedMethodsByAnnotation.get(InputMapping.class),
+                        List.<StorageMethodInfo>of());
+        final var deleteMethodInfos =
+                Objects.requireNonNullElse(
+                        annotatedMethodsByAnnotation.get(DeleteMapping.class),
+                        List.<StorageMethodInfo>of());
+        final var listMethodInfos =
+                Objects.requireNonNullElse(
+                        annotatedMethodsByAnnotation.get(ListMapping.class),
+                        List.<StorageMethodInfo>of());
+        for (final var outputMethodInfo : outputMethodInfos) {
+            builder = buildDocumentationMethod(builder, outputMethodInfo);
+        }
+        for (final var inputMethodInfo : inputMethodInfos) {
+            builder = buildDocumentationMethod(builder, inputMethodInfo);
+        }
+        for (final var deleteMethodInfo : deleteMethodInfos) {
+            builder = buildDocumentationMethod(builder, deleteMethodInfo);
+        }
+        for (final var listMethodInfo : listMethodInfos) {
+            builder = buildDocumentationMethod(builder, listMethodInfo);
+        }
+        return builder;
+    }
+
+    private static <T> DynamicType.Builder<T> buildDocumentationMethod(
+            final DynamicType.Builder<T> builder, final StorageMethodInfo methodInfo) {
+        final var method = methodInfo.storageMethod();
+        final var parameters = Arrays.stream(method.getParameters()).toList();
+        final var parameterTypes =
+                parameters.stream().map(Parameter::getParameterizedType).toList();
+        return builder.defineMethod(method.getName(), method.getReturnType(), Visibility.PUBLIC)
+                .withParameters(parameterTypes)
+                .throwing(IOException.class)
+                .intercept(ONLY_DOCUMENTATION_THROW_INTERCEPTOR);
+    }
+
+    private static <T> ReceiverTypeDefinition<T> buildImplementationOutputMethod(
             final ReceiverTypeDefinition<T> builder, final StorageMethodInfo outputMethodInfo) {
         final var outputMethod = outputMethodInfo.storageMethod();
         final var parameters = Arrays.stream(outputMethod.getParameters()).toList();
@@ -285,7 +322,7 @@ public class StorageRegistrar
                 .intercept(interceptor);
     }
 
-    private static <T> ReceiverTypeDefinition<T> buildInputMethod(
+    private static <T> ReceiverTypeDefinition<T> buildImplementationInputMethod(
             final ReceiverTypeDefinition<T> builder, final StorageMethodInfo inputMethodInfo) {
         final var inputMethod = inputMethodInfo.storageMethod();
         final var parameters = Arrays.stream(inputMethod.getParameters()).toList();
@@ -306,7 +343,7 @@ public class StorageRegistrar
                 .intercept(interceptor);
     }
 
-    private static <T> ReceiverTypeDefinition<T> buildListMethod(
+    private static <T> ReceiverTypeDefinition<T> buildImplementationListMethod(
             final ReceiverTypeDefinition<T> builder, final StorageMethodInfo listMethodInfo) {
         final var listMethod = listMethodInfo.storageMethod();
         final var parameters = Arrays.stream(listMethod.getParameters()).toList();
@@ -327,7 +364,7 @@ public class StorageRegistrar
                 .intercept(interceptor);
     }
 
-    private static <T> ReceiverTypeDefinition<T> buildDeleteMethod(
+    private static <T> ReceiverTypeDefinition<T> buildImplementationDeleteMethod(
             final ReceiverTypeDefinition<T> builder, final StorageMethodInfo deleteMethodInfo) {
         final var deleteMethod = deleteMethodInfo.storageMethod();
         final var parameters = Arrays.stream(deleteMethod.getParameters()).toList();
@@ -348,15 +385,6 @@ public class StorageRegistrar
                 .intercept(interceptor);
     }
 
-    private static Class<?> findEnableStoragesClass() {
-        return CollectionUtils.extractSingleton(
-                new Reflections(
-                                new ConfigurationBuilder()
-                                        .forPackage("")
-                                        .setScanners(Scanners.TypesAnnotated))
-                        .getTypesAnnotatedWith(EnableStorages.class));
-    }
-
     protected static Set<String> getBasePackages(
             final EnableStorages enableStoragesAnnotation, final String enableStoragesClassName) {
         final var basePackagesAttribute = enableStoragesAnnotation.basePackages();
@@ -374,6 +402,18 @@ public class StorageRegistrar
                 .collect(Collectors.toSet());
     }
 
+    private static Set<Class<?>> findAllStorageClasses(final String buildPropertiesGroup) {
+        final var enableJobsClass =
+                EnableAnnotationUtils.findEnableClass(buildPropertiesGroup, EnableStorages.class);
+        final var enableJobsAnnotation = enableJobsClass.getAnnotation(EnableStorages.class);
+        return EnableAnnotationUtils.findAllClassesBy(
+                enableJobsAnnotation.storages(),
+                enableJobsAnnotation.basePackages(),
+                enableJobsAnnotation.basePackageClasses(),
+                enableJobsClass.getPackageName(),
+                Storage.class);
+    }
+
     @Override
     public void postProcessBeanDefinitionRegistry(final @NotNull BeanDefinitionRegistry registry)
             throws BeansException {
@@ -387,53 +427,19 @@ public class StorageRegistrar
     }
 
     public void registerStorageClients(final DefaultListableBeanFactory beanFactory) {
-        final var enableStoragesClass = findEnableStoragesClass();
-        final var enableStoragesAnnotation =
-                enableStoragesClass.getAnnotation(EnableStorages.class);
+        final var buildProperties = beanFactory.getBean(BuildProperties.class);
+        final var storageClasses = findAllStorageClasses(buildProperties.getGroup());
 
-        final Set<BeanDefinition> candidateComponents;
-
-        final var clients = enableStoragesAnnotation.clients();
-        if (ArrayUtils.isEmpty(clients)) {
-            final var storageScanner = getScanner();
-            storageScanner.setResourceLoader(resourceLoader);
-            storageScanner.addIncludeFilter(new AnnotationTypeFilter(Storage.class));
-            candidateComponents =
-                    getBasePackages(enableStoragesAnnotation, enableStoragesClass.getSimpleName())
-                            .stream()
-                            .map(storageScanner::findCandidateComponents)
-                            .flatMap(Collection::stream)
-                            .collect(Collectors.toSet());
-        } else {
-            candidateComponents =
-                    Arrays.stream(clients)
-                            .map(AnnotatedGenericBeanDefinition::new)
-                            .collect(Collectors.toSet());
-        }
-
-        for (final var candidateComponent : candidateComponents) {
-            final var beanDefinition = (AnnotatedBeanDefinition) candidateComponent;
-            // verify annotated class is an interface
-            final var annotationMetadata =
-                    (StandardAnnotationMetadata) beanDefinition.getMetadata();
+        for (final var storageClass : storageClasses) {
             Assert.isTrue(
-                    annotationMetadata.isInterface(),
-                    "@Storage can only be specified on an interface");
+                    storageClass.isInterface(), "@Storage can only be specified on an interface");
 
-            final Class<?> storageClass;
-            try {
-                storageClass = Class.forName(annotationMetadata.getClassName());
-            } catch (final ClassNotFoundException e) {
-                throw new WrappedException(e);
-            }
-            registerStorageClient(beanFactory, annotationMetadata, storageClass);
+            registerStorageClient(beanFactory, storageClass);
         }
     }
 
     private <T> void registerStorageClient(
-            final DefaultListableBeanFactory beanFactory,
-            final StandardAnnotationMetadata annotationMetadata,
-            final Class<T> storageInterface) {
+            final DefaultListableBeanFactory beanFactory, final Class<T> storageInterface) {
 
         final var mergedAnnotationsSearch =
                 MergedAnnotations.search(TYPE_HIERARCHY)
@@ -447,13 +453,9 @@ public class StorageRegistrar
         if (storageAnnotation.codeGenerationType().generateImplementationCode()) {
             try (final var generatedImplementationClass =
                     generateImplementationClass(
-                            annotationMetadata,
-                            storageInterface,
-                            mergedAnnotationsSearch,
-                            storageAnnotation)) {
+                            storageInterface, mergedAnnotationsSearch, storageAnnotation)) {
                 registerBeanForGeneratedClass(
                         beanFactory,
-                        annotationMetadata,
                         storageInterface,
                         generatedImplementationClass,
                         "implementation");
@@ -463,13 +465,9 @@ public class StorageRegistrar
         if (storageAnnotation.codeGenerationType().generateDocumentationCode()) {
             try (final var generatedDocumentationClass =
                     generateDocumentationClass(
-                            annotationMetadata,
-                            storageInterface,
-                            mergedAnnotationsSearch,
-                            storageAnnotation)) {
+                            storageInterface, mergedAnnotationsSearch, storageAnnotation)) {
                 registerBeanForGeneratedClass(
                         beanFactory,
-                        annotationMetadata,
                         storageInterface,
                         generatedDocumentationClass,
                         "documentation");
@@ -479,7 +477,6 @@ public class StorageRegistrar
 
     private <T> void registerBeanForGeneratedClass(
             final DefaultListableBeanFactory beanFactory,
-            final StandardAnnotationMetadata annotationMetadata,
             final Class<T> storageInterface,
             final DynamicType.Unloaded<T> generatedClass,
             final String storageBeanType) {
@@ -505,9 +502,7 @@ public class StorageRegistrar
         final var beanDefinition = beanDefinitionBuilder.getBeanDefinition();
 
         final var beanName =
-                CaseFormat.UPPER_CAMEL.to(
-                        CaseFormat.LOWER_CAMEL,
-                        annotationMetadata.getIntrospectedClass().getSimpleName());
+                CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, storageInterface.getSimpleName());
         beanFactory.registerBeanDefinition(beanName, beanDefinition);
         logger.info(
                 "Registered {} bean {} of class {} for storage class {}",
@@ -526,11 +521,6 @@ public class StorageRegistrar
                         && !beanDefinition.getMetadata().isAnnotation();
             }
         };
-    }
-
-    @Override
-    public void setResourceLoader(final @NotNull ResourceLoader resourceLoader) {
-        this.resourceLoader = resourceLoader;
     }
 
     @Override
