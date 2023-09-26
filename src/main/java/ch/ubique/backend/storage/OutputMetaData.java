@@ -5,6 +5,8 @@ import ch.ubique.backend.core.http.header.HttpHeader;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.output.Output;
 
+import io.minio.messages.CannedAcl;
+
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
@@ -34,7 +36,7 @@ public final class OutputMetaData {
     private Instant nextRefresh;
     private Duration backoff;
     private Long contentLengthUncompressed;
-    private HttpHeader.AwsS3AccessPolicy accessPolicy;
+    private CannedAcl accessPolicy;
     private String customAccessPolicy;
 
     /**
@@ -113,13 +115,17 @@ public final class OutputMetaData {
      * Set an access policy for the object. This is only used for AWS S3. To set a custom access
      * policy, use {@link #customAccessPolicy(String)}.
      *
-     * <p>It is not used when {@link #customAccessPolicy(String)} is set.
-     *
+     * @throws IllegalStateException if {@link #customAccessPolicy(String)} was already called
      * @param accessPolicy The access policy
      * @return this to allow chaining
      */
     @Contract("null -> fail")
-    public OutputMetaData accessPolicy(@NotNull final HttpHeader.AwsS3AccessPolicy accessPolicy) {
+    public OutputMetaData accessPolicy(@NotNull final CannedAcl accessPolicy)
+            throws IllegalStateException {
+        if (customAccessPolicy != null) {
+            throw new IllegalStateException(
+                    "Cannot set access policy and custom access policy at the same time");
+        }
         Objects.requireNonNull(accessPolicy);
         this.accessPolicy = accessPolicy;
         return this;
@@ -127,15 +133,20 @@ public final class OutputMetaData {
 
     /**
      * Set a custom access policy for the object. This is only used for AWS S3. To set a predefined
-     * access policy, use {@link #accessPolicy(HttpHeader.AwsS3AccessPolicy)}. This method allows
-     * every string value, thus the user is responsible for the correctness of the value. If set,
-     * overrides the {@link #accessPolicy(HttpHeader.AwsS3AccessPolicy)}.
+     * access policy, use {@link #accessPolicy(CannedAcl)}. This method allows every string value,
+     * thus the user is responsible for the correctness of the value.
      *
+     * @throws IllegalStateException if {@link #accessPolicy(CannedAcl)} was already called
      * @param customAccessPolicy The custom access policy
      * @return this to allow chaining
      */
     @Contract("null -> fail")
-    public OutputMetaData customAccessPolicy(@NotNull final String customAccessPolicy) {
+    public OutputMetaData customAccessPolicy(@NotNull final String customAccessPolicy)
+            throws IllegalStateException {
+        if (accessPolicy != null) {
+            throw new IllegalStateException(
+                    "Cannot set access policy and custom access policy at the same time");
+        }
         Objects.requireNonNull(customAccessPolicy);
         this.customAccessPolicy = customAccessPolicy;
         return this;
@@ -184,9 +195,9 @@ public final class OutputMetaData {
         final var entries = new ArrayList<Entry<HttpHeader, String>>();
 
         if (customAccessPolicy != null) {
-            entries.add(Map.entry(HttpHeader.ACL_ACCESS_POLICY, customAccessPolicy));
+            entries.add(Map.entry(HttpHeader.AMZ_ACL, customAccessPolicy));
         } else if (accessPolicy != null) {
-            entries.add(Map.entry(HttpHeader.ACL_ACCESS_POLICY, accessPolicy.value()));
+            entries.add(Map.entry(HttpHeader.AMZ_ACL, accessPolicy.toString()));
         }
 
         return entries;
