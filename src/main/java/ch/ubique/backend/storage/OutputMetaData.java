@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class OutputMetaData {
     private static final Logger logger = LoggerFactory.getLogger(OutputMetaData.class);
@@ -33,6 +34,8 @@ public final class OutputMetaData {
     private Instant nextRefresh;
     private Duration backoff;
     private Long contentLengthUncompressed;
+    private HttpHeader.AwsS3AccessPolicy accessPolicy;
+    private String customAccessPolicy;
 
     /**
      * @param maxAge Duration must not be null
@@ -106,6 +109,38 @@ public final class OutputMetaData {
         return this;
     }
 
+    /**
+     * Set an access policy for the object. This is only used for AWS S3. To set a custom access
+     * policy, use {@link #customAccessPolicy(String)}.
+     *
+     * <p>It is not used when {@link #customAccessPolicy(String)} is set.
+     *
+     * @param accessPolicy The access policy
+     * @return this to allow chaining
+     */
+    @Contract("null -> fail")
+    public OutputMetaData accessPolicy(@NotNull final HttpHeader.AwsS3AccessPolicy accessPolicy) {
+        Objects.requireNonNull(accessPolicy);
+        this.accessPolicy = accessPolicy;
+        return this;
+    }
+
+    /**
+     * Set a custom access policy for the object. This is only used for AWS S3. To set a predefined
+     * access policy, use {@link #accessPolicy(HttpHeader.AwsS3AccessPolicy)}. This method allows
+     * every string value, thus the user is responsible for the correctness of the value. If set,
+     * overrides the {@link #accessPolicy(HttpHeader.AwsS3AccessPolicy)}.
+     *
+     * @param customAccessPolicy The custom access policy
+     * @return this to allow chaining
+     */
+    @Contract("null -> fail")
+    public OutputMetaData customAccessPolicy(@NotNull final String customAccessPolicy) {
+        Objects.requireNonNull(customAccessPolicy);
+        this.customAccessPolicy = customAccessPolicy;
+        return this;
+    }
+
     @Contract("null -> fail")
     public OutputMetaData contentLengthUncompressed(@NotNull final Long contentLengthUncompressed) {
         Objects.requireNonNull(contentLengthUncompressed);
@@ -145,8 +180,22 @@ public final class OutputMetaData {
         return entries;
     }
 
+    private List<Entry<HttpHeader, String>> createMinioMetaDataMapEntries() {
+        final var entries = new ArrayList<Entry<HttpHeader, String>>();
+
+        if (customAccessPolicy != null) {
+            entries.add(Map.entry(HttpHeader.ACL_ACCESS_POLICY, customAccessPolicy));
+        } else if (accessPolicy != null) {
+            entries.add(Map.entry(HttpHeader.ACL_ACCESS_POLICY, accessPolicy.value()));
+        }
+
+        return entries;
+    }
+
     public Map<String, String> createMinioMetaDataMap() {
-        return createMetaDataMapEntries().stream()
+        return Stream.concat(
+                        createMetaDataMapEntries().stream(),
+                        createMinioMetaDataMapEntries().stream())
                 .collect(
                         Collectors.toUnmodifiableMap(
                                 entry -> entry.getKey().value(), Entry::getValue));
