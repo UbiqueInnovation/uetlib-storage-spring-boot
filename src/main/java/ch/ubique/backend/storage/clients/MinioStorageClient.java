@@ -99,7 +99,7 @@ public sealed class MinioStorageClient implements StorageClient
 
         // ACL (Access Control)
         Optional.ofNullable(metaData)
-                .map(OutputMetaData::createCannedAcl)
+                .flatMap(OutputMetaData::createCannedAcl)
                 .ifPresent(cannedAcl -> headers.put(HttpHeader.AMZ_ACL.value(), cannedAcl));
 
         return headers;
