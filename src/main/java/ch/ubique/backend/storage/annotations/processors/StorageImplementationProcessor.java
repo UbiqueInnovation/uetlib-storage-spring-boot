@@ -305,6 +305,13 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                         .addParameters(parameters.stream().map(this::generateParameter).toList());
 
         if (annotation.codeGenerationType().generateImplementationCode()) {
+            if (annotation.debugLogging()) {
+                methodBuilder.addStatement(
+                        "logger.debug(\"Outputting {} {} ({})\", $L, $L, $L)",
+                        annotation.documentedClass().getSimpleName(),
+                        storageBasePath + "/" + annotation.path(),
+                        annotation.contentType());
+            }
             methodBuilder.addStatement(
                     "storageClient.write(\n$>$L,\n$L,\n$L)$<",
                     getOutput(parameters, annotation),

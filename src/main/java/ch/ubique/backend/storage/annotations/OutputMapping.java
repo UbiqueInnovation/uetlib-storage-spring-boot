@@ -25,4 +25,6 @@ public @interface OutputMapping {
     boolean generateDocumentation() default true;
 
     CodeGenerationType codeGenerationType() default CodeGenerationType.ALL;
+
+    boolean debugLogging() default false;
 }
