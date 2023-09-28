@@ -161,9 +161,8 @@ public final class OutputMetaData {
     }
 
     public Optional<String> createCannedAcl() {
-        return customAccessPolicy != null
-                ? Optional.of(customAccessPolicy)
-                : Optional.ofNullable(accessPolicy).map(CannedAcl::toString);
+        return Optional.ofNullable(customAccessPolicy)
+                .or(() -> Optional.ofNullable(accessPolicy).map(CannedAcl::toString));
     }
 
     private List<Entry<HttpHeader, String>> createMetaDataMapEntries() {
