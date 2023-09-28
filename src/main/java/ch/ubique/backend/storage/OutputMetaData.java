@@ -20,6 +20,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public final class OutputMetaData {
@@ -194,17 +195,19 @@ public final class OutputMetaData {
     }
 
     public Map<String, String> createMinioMetaDataMap() {
-        return createMetaDataMapEntries().stream()
-                .collect(
-                        Collectors.toUnmodifiableMap(
-                                entry -> entry.getKey().value(), Entry::getValue));
+        return createMetaDataMapUsingHeaderMapper(HttpHeader::value);
     }
 
     public Map<String, String> createAzureMetaDataMap() {
+        return createMetaDataMapUsingHeaderMapper(HttpHeader::noDashesAzure);
+    }
+
+    private Map<String, String> createMetaDataMapUsingHeaderMapper(
+            final Function<HttpHeader, String> keyMapper) {
         return createMetaDataMapEntries().stream()
                 .collect(
                         Collectors.toUnmodifiableMap(
-                                entry -> entry.getKey().noDashesAzure(), Entry::getValue));
+                                entry -> keyMapper.apply(entry.getKey()), Entry::getValue));
     }
 
     @Override
