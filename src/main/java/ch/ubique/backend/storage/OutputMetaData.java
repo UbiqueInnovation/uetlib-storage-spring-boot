@@ -18,11 +18,8 @@ import org.springframework.http.CacheControl;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 public final class OutputMetaData {
@@ -162,8 +159,10 @@ public final class OutputMetaData {
         return CacheControl.maxAge(maxAge).sMaxAge(sMaxAge).getHeaderValue();
     }
 
-    public String createCannedAcl() {
-        return accessPolicy.toString();
+    public Optional<String> createCannedAcl() {
+        return customAccessPolicy != null
+                ? Optional.of(customAccessPolicy)
+                : Optional.ofNullable(accessPolicy).map(CannedAcl::toString);
     }
 
     private List<Entry<HttpHeader, String>> createMetaDataMapEntries() {
