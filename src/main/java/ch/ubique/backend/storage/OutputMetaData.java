@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public final class OutputMetaData {
     private static final Logger logger = LoggerFactory.getLogger(OutputMetaData.class);
@@ -163,6 +162,10 @@ public final class OutputMetaData {
         return CacheControl.maxAge(maxAge).sMaxAge(sMaxAge).getHeaderValue();
     }
 
+    public String createCannedAcl() {
+        return accessPolicy.toString();
+    }
+
     private List<Entry<HttpHeader, String>> createMetaDataMapEntries() {
         final var entries = new ArrayList<Entry<HttpHeader, String>>();
 
@@ -191,22 +194,8 @@ public final class OutputMetaData {
         return entries;
     }
 
-    private List<Entry<HttpHeader, String>> createMinioMetaDataMapEntries() {
-        final var entries = new ArrayList<Entry<HttpHeader, String>>();
-
-        if (customAccessPolicy != null) {
-            entries.add(Map.entry(HttpHeader.AMZ_ACL, customAccessPolicy));
-        } else if (accessPolicy != null) {
-            entries.add(Map.entry(HttpHeader.AMZ_ACL, accessPolicy.toString()));
-        }
-
-        return entries;
-    }
-
     public Map<String, String> createMinioMetaDataMap() {
-        return Stream.concat(
-                        createMetaDataMapEntries().stream(),
-                        createMinioMetaDataMapEntries().stream())
+        return createMetaDataMapEntries().stream()
                 .collect(
                         Collectors.toUnmodifiableMap(
                                 entry -> entry.getKey().value(), Entry::getValue));
