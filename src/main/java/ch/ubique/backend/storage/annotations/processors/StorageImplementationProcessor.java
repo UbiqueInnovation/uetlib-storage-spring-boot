@@ -191,7 +191,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                 .addAnnotation(Service.class)
                 .addSuperinterface(element.asType())
                 .addField(StorageClient.class, "storageClient", PRIVATE, FINAL)
-            .addField(ObjectMapper.class, "objectMapper", PRIVATE, FINAL)
+                .addField(ObjectMapper.class, "objectMapper", PRIVATE, FINAL)
                 .addField(Logger.class, "logger", PRIVATE, FINAL)
                 .addMethod(createConstructor(element, injectObjectMapper));
     }
@@ -238,7 +238,8 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
         } else {
             constructorBuilder.addStatement("this.objectMapper = new $T()", ObjectMapper.class);
         }
-        constructorBuilder.addStatement("this.logger = $T.getLogger(getClass())", LoggerFactory.class);
+        constructorBuilder.addStatement(
+                "this.logger = $T.getLogger(getClass())", LoggerFactory.class);
 
         return constructorBuilder.build();
     }
