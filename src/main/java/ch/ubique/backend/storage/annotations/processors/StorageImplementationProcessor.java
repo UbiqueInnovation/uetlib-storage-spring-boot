@@ -24,6 +24,8 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -189,7 +191,8 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
                 .addAnnotation(Service.class)
                 .addSuperinterface(element.asType())
                 .addField(StorageClient.class, "storageClient", PRIVATE, FINAL)
-                .addField(ObjectMapper.class, "objectMapper", PRIVATE, FINAL)
+            .addField(ObjectMapper.class, "objectMapper", PRIVATE, FINAL)
+                .addField(Logger.class, "logger", PRIVATE, FINAL)
                 .addMethod(createConstructor(element, injectObjectMapper));
     }
 
@@ -235,6 +238,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
         } else {
             constructorBuilder.addStatement("this.objectMapper = new $T()", ObjectMapper.class);
         }
+        constructorBuilder.addStatement("this.logger = $T.getLogger(getClass())", LoggerFactory.class);
 
         return constructorBuilder.build();
     }
@@ -307,8 +311,7 @@ public class StorageImplementationProcessor extends AbstractStorageAnnotationPro
         if (annotation.codeGenerationType().generateImplementationCode()) {
             if (annotation.debugLogging()) {
                 methodBuilder.addStatement(
-                        "logger.debug(\"Outputting {} {} ({}), file size: {}\", $L, $L, $L, $L)",
-                        annotation.documentedClass().getSimpleName(),
+                        "logger.debug(\n$>\"Outputting {} ({}), file size: {}\", \n$S, \n$S, \n$L)$<",
                         storageBasePath + "/" + annotation.path(),
                         annotation.contentType(),
                         CodeBlock.of("$L.contentLength()", getOutput(parameters, annotation)));
