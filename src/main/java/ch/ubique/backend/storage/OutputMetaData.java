@@ -18,13 +18,10 @@ import org.springframework.http.CacheControl;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public final class OutputMetaData {
     private static final Logger logger = LoggerFactory.getLogger(OutputMetaData.class);
@@ -163,6 +160,11 @@ public final class OutputMetaData {
         return CacheControl.maxAge(maxAge).sMaxAge(sMaxAge).getHeaderValue();
     }
 
+    public Optional<String> createCannedAcl() {
+        return Optional.ofNullable(customAccessPolicy)
+                .or(() -> Optional.ofNullable(accessPolicy).map(CannedAcl::toString));
+    }
+
     private List<Entry<HttpHeader, String>> createMetaDataMapEntries() {
         final var entries = new ArrayList<Entry<HttpHeader, String>>();
 
@@ -191,32 +193,20 @@ public final class OutputMetaData {
         return entries;
     }
 
-    private List<Entry<HttpHeader, String>> createMinioMetaDataMapEntries() {
-        final var entries = new ArrayList<Entry<HttpHeader, String>>();
-
-        if (customAccessPolicy != null) {
-            entries.add(Map.entry(HttpHeader.AMZ_ACL, customAccessPolicy));
-        } else if (accessPolicy != null) {
-            entries.add(Map.entry(HttpHeader.AMZ_ACL, accessPolicy.toString()));
-        }
-
-        return entries;
-    }
-
     public Map<String, String> createMinioMetaDataMap() {
-        return Stream.concat(
-                        createMetaDataMapEntries().stream(),
-                        createMinioMetaDataMapEntries().stream())
-                .collect(
-                        Collectors.toUnmodifiableMap(
-                                entry -> entry.getKey().value(), Entry::getValue));
+        return createMetaDataMapUsingHeaderMapper(HttpHeader::value);
     }
 
     public Map<String, String> createAzureMetaDataMap() {
+        return createMetaDataMapUsingHeaderMapper(HttpHeader::noDashesAzure);
+    }
+
+    private Map<String, String> createMetaDataMapUsingHeaderMapper(
+            final Function<HttpHeader, String> keyMapper) {
         return createMetaDataMapEntries().stream()
                 .collect(
                         Collectors.toUnmodifiableMap(
-                                entry -> entry.getKey().noDashesAzure(), Entry::getValue));
+                                entry -> keyMapper.apply(entry.getKey()), Entry::getValue));
     }
 
     @Override
