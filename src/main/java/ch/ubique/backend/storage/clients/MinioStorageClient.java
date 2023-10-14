@@ -1,5 +1,6 @@
 package ch.ubique.backend.storage.clients;
 
+import ch.ubique.backend.core.http.header.HttpHeader;
 import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
@@ -95,6 +96,11 @@ public sealed class MinioStorageClient implements StorageClient
         Optional.ofNullable(metaData)
                 .map(OutputMetaData::createCacheControl)
                 .ifPresent(cacheControl -> headers.put(HttpHeaders.CACHE_CONTROL, cacheControl));
+
+        // ACL (Access Control)
+        Optional.ofNullable(metaData)
+                .flatMap(OutputMetaData::createCannedAcl)
+                .ifPresent(cannedAcl -> headers.put(HttpHeader.AMZ_ACL.value(), cannedAcl));
 
         return headers;
     }

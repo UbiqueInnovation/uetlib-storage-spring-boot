@@ -37,4 +37,6 @@ public @interface OutputMapping {
     /** Alias for {@link StorageMapping#codeGenerationType}. */
     @AliasFor(annotation = StorageMapping.class)
     CodeGenerationType codeGenerationType() default CodeGenerationType.ALL;
+
+    boolean debugLogging() default false;
 }
