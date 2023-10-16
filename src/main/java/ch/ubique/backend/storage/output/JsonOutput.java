@@ -28,7 +28,7 @@ public final class JsonOutput<T> implements Output {
         this.value = value;
         try {
             this.byteValue = objectMapper.writeValueAsBytes(value);
-        } catch (JsonProcessingException e) {
+        } catch (final JsonProcessingException e) {
             throw new WrappedException(e);
         }
         this.objectMapper = objectMapper;
@@ -58,6 +58,7 @@ public final class JsonOutput<T> implements Output {
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
                 .append("value", value)
+                .append("objectMapper", objectMapper)
                 .toString();
     }
 
@@ -66,7 +67,7 @@ public final class JsonOutput<T> implements Output {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof JsonOutput<?> that)) {
+        if (!(o instanceof final JsonOutput<?> that)) {
             return false;
         }
         return new EqualsBuilder()

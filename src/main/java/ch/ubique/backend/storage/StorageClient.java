@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.OffsetDateTime;
 import java.util.Collection;
-import java.util.zip.GZIPInputStream;
 
 public interface StorageClient {
 
@@ -18,7 +17,8 @@ public interface StorageClient {
         write(output, path, null);
     }
 
-    void write(@NotNull Output output, @NotNull String path, @Nullable OutputMetaData metaData)
+    void write(
+            @NotNull Output output, @NotNull String path, @Nullable OutputMetaData outputMetaData)
             throws IOException;
 
     default InputStream read(@NotNull final String path) throws IOException {
