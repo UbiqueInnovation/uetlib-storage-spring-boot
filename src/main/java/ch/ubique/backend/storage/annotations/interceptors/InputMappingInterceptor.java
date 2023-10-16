@@ -24,20 +24,15 @@ public class InputMappingInterceptor {
     private InputMappingInterceptor() {}
 
     @RuntimeType
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "java:S3011"})
     public static Object intercept(
             @Origin final Method method,
             @This final Object thiz,
             @AllArguments final Object[] allArguments)
             throws IOException, NoSuchFieldException, IllegalAccessException {
-        final var storageClientObject = thiz.getClass().getDeclaredField("storageClient").get(thiz);
-        if (!(storageClientObject instanceof final StorageClient storageClient)) {
-            throw new IllegalStateException(
-                    "field storageClient is not instance of StorageClient.class, but rather: "
-                            + storageClientObject.getClass());
-        }
-        final var storageAnnotation = thiz.getClass().getAnnotation(Storage.class);
-        final var inputMapping = method.getAnnotation(InputMapping.class);
+        final var storageClient = getInaccessibleField(thiz, "storageClient", StorageClient.class);
+        final var storageAnnotation = findAnnotation(thiz.getClass(), Storage.class);
+        final var inputMapping = findAnnotation(method, InputMapping.class);
         final var parameterAnnotations = method.getParameterAnnotations();
 
         final var returnType = method.getReturnType();

@@ -10,6 +10,8 @@ import io.minio.messages.CannedAcl;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.Contract;
 import org.slf4j.Logger;
@@ -207,6 +209,42 @@ public final class OutputMetaData {
                 .collect(
                         Collectors.toUnmodifiableMap(
                                 entry -> keyMapper.apply(entry.getKey()), Entry::getValue));
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof final OutputMetaData that)) {
+            return false;
+        }
+
+        return new EqualsBuilder()
+                .append(maxAge, that.maxAge)
+                .append(sMaxAge, that.sMaxAge)
+                .append(bestBefore, that.bestBefore)
+                .append(nextRefresh, that.nextRefresh)
+                .append(backoff, that.backoff)
+                .append(contentLengthUncompressed, that.contentLengthUncompressed)
+                .append(accessPolicy, that.accessPolicy)
+                .append(customAccessPolicy, that.customAccessPolicy)
+                .isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 37)
+                .append(maxAge)
+                .append(sMaxAge)
+                .append(bestBefore)
+                .append(nextRefresh)
+                .append(backoff)
+                .append(contentLengthUncompressed)
+                .append(accessPolicy)
+                .append(customAccessPolicy)
+                .toHashCode();
     }
 
     @Override

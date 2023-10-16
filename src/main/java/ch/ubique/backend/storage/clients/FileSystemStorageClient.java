@@ -45,7 +45,7 @@ public class FileSystemStorageClient implements StorageClient {
     public void write(
             final @NotNull Output output,
             final @NotNull String path,
-            @Nullable final OutputMetaData metaData)
+            @Nullable final OutputMetaData outputMetaData)
             throws IOException {
         final var file = new File(getCompletePath(path).toUri());
         final var parent = file.getParentFile();

@@ -1,7 +1,6 @@
 package ch.ubique.backend.storage.annotations.interceptors;
 
-import static ch.ubique.backend.storage.annotations.interceptors.InterceptorUtil.getPath;
-import static ch.ubique.backend.storage.annotations.interceptors.InterceptorUtil.getPathTemplate;
+import static ch.ubique.backend.storage.annotations.interceptors.InterceptorUtil.*;
 
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.ListMapping;
@@ -31,23 +30,18 @@ public class ListMappingInterceptor {
             @This final Object thiz,
             @AllArguments final Object[] allArguments)
             throws IOException, NoSuchFieldException, IllegalAccessException {
-        final var storageClientObject = thiz.getClass().getDeclaredField("storageClient").get(thiz);
-        if (!(storageClientObject instanceof final StorageClient storageClient)) {
-            throw new IllegalStateException(
-                    "field storageClient is not instance of StorageClient.class, but rather: "
-                            + storageClientObject.getClass());
-        }
-        final var storageAnnotation = thiz.getClass().getAnnotation(Storage.class);
-        final var inputMapping = method.getAnnotation(ListMapping.class);
+        final var storageClient = getInaccessibleField(thiz, "storageClient", StorageClient.class);
+        final var storageAnnotation = findAnnotation(thiz.getClass(), Storage.class);
+        final var listMapping = findAnnotation(method,ListMapping.class);
 
         final var returnType = method.getReturnType();
         final var path =
                 getPath(
                         method.getParameters(),
                         allArguments,
-                        getPathTemplate(storageAnnotation.basePath(), inputMapping.path()));
+                        getPathTemplate(storageAnnotation.basePath(), listMapping.path()));
 
-        final var collection = storageClient.list(path, inputMapping.recursive());
+        final var collection = storageClient.list(path, listMapping.recursive());
 
         if (Collection.class.isAssignableFrom(returnType)) {
             return collection;

@@ -2,6 +2,7 @@ package ch.ubique.backend.storage.annotations.interceptors;
 
 import static ch.ubique.backend.storage.annotations.interceptors.InterceptorUtil.*;
 
+import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.annotations.Storage;
@@ -35,14 +36,9 @@ public final class OutputMappingInterceptor {
             @This final Object thiz,
             @AllArguments final Object[] allArguments)
             throws IOException, NoSuchFieldException, IllegalAccessException {
-        final var storageClientObject = thiz.getClass().getDeclaredField("storageClient").get(thiz);
-        if (!(storageClientObject instanceof final StorageClient storageClient)) {
-            throw new IllegalStateException(
-                    "field storageClient is not instance of StorageClient.class, but rather: "
-                            + storageClientObject.getClass());
-        }
-        final var storageAnnotation = thiz.getClass().getAnnotation(Storage.class);
-        final var outputMapping = method.getAnnotation(OutputMapping.class);
+        final var storageClient = getInaccessibleField(thiz, "storageClient", StorageClient.class);
+        final var storageAnnotation = findAnnotation(thiz.getClass(), Storage.class);
+        final var outputMapping = findAnnotation(method, OutputMapping.class);
         final var parameterAnnotations = method.getParameterAnnotations();
 
         final var output = getOutput(thiz, outputMapping, parameterAnnotations, allArguments);
@@ -51,7 +47,17 @@ public final class OutputMappingInterceptor {
                         method.getParameters(),
                         allArguments,
                         getPathTemplate(storageAnnotation.basePath(), outputMapping.path()));
-        storageClient.write(output, path, null);
+        final var outputMetaData = getOutputMetaData(allArguments);
+
+        storageClient.write(output, path, outputMetaData);
+    }
+
+    private static OutputMetaData getOutputMetaData(final Object[] allArguments) {
+        return Arrays.stream(allArguments)
+                .filter(OutputMetaData.class::isInstance)
+                .map(OutputMetaData.class::cast)
+                .findFirst()
+                .orElse(null);
     }
 
     private static Output getOutput(
