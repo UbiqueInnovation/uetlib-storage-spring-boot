@@ -1,15 +1,7 @@
 package ch.ubique.backend.storage.annotations;
 
-import static org.springframework.beans.factory.config.AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR;
-import static org.springframework.core.annotation.MergedAnnotations.SearchStrategy.TYPE_HIERARCHY;
-
-import static java.lang.reflect.Modifier.FINAL;
-
 import ch.ubique.backend.storage.StorageClient;
-import ch.ubique.backend.storage.annotations.interceptors.DeleteMappingInterceptor;
-import ch.ubique.backend.storage.annotations.interceptors.InputMappingInterceptor;
-import ch.ubique.backend.storage.annotations.interceptors.ListMappingInterceptor;
-import ch.ubique.backend.storage.annotations.interceptors.OutputMappingInterceptor;
+import ch.ubique.backend.storage.annotations.interceptors.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.CaseFormat;
@@ -23,6 +15,7 @@ import net.bytebuddy.description.annotation.AnnotationDescription;
 import net.bytebuddy.description.modifier.FieldManifestation;
 import net.bytebuddy.description.modifier.TypeManifestation;
 import net.bytebuddy.description.modifier.Visibility;
+import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.DynamicType.Builder.MethodDefinition.ReceiverTypeDefinition;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
@@ -36,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -43,17 +37,18 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProce
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.core.annotation.MergedAnnotations;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
+import java.lang.reflect.*;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -64,9 +59,7 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
     private static final String STORAGE_CLIENT_PARAMETER = "storageClient";
     private static final String OBJECT_MAPPER_PARAMETER = "objectMapper";
     private static final Implementation ONLY_DOCUMENTATION_THROW_INTERCEPTOR =
-            ExceptionMethod.throwing(
-                    IllegalCallerException.class,
-                    "this storage method exists only to document blob storage endpoints and must not be called");
+            MethodDelegation.to(OnlyDocumentationInterceptor.class);
 
     private static final Logger logger = LoggerFactory.getLogger(StorageRegistrar.class);
 
@@ -207,13 +200,15 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
         final var basePath =
                 Stream.of(storageAnnotation.baseUrl(), storageAnnotation.basePath())
                         .filter(StringUtils::isNotBlank)
-                        .collect(Collectors.joining(File.separator));
+                        .collect(Collectors.joining("/", "/", ""));
         final var builder =
                 new ByteBuddy()
                         .subclass(Object.class)
                         .annotateType(
-                                AnnotationDescription.Builder.ofType(RestController.class)
-                                        .define("value", basePath)
+                                AnnotationDescription.Builder.ofType(RestController.class).build())
+                        .annotateType(
+                                AnnotationDescription.Builder.ofType(RequestMapping.class)
+                                        .defineArray("value", basePath)
                                         .build())
                         .name(documentationClassName)
                         .modifiers(Visibility.PUBLIC, TypeManifestation.FINAL);
@@ -277,58 +272,78 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
     private static <T> DynamicType.Builder<T> buildDocumentationMethod(
             final DynamicType.Builder<T> builder, final StorageMethodInfo methodInfo) {
         final var method = methodInfo.storageMethod();
+        final var returnType =
+                TypeDescription.Generic.Builder.parameterizedType(
+                                ResponseEntity.class,
+                                methodInfo
+                                        .storageMethodAnnotations()
+                                        .get(OutputMapping.class)
+                                        .synthesize()
+                                        .documentedClass())
+                        .build();
+        final var parameters =
+                Arrays.stream(method.getParameters())
+                        .filter(parameter -> parameter.isAnnotationPresent(PathVariable.class))
+                        .toList();
         final var mappingPath =
                 methodInfo.storageMethodAnnotations().get(StorageMapping.class).synthesize().path();
         final var methodAnnotations =
                 List.of(
                         AnnotationDescription.Builder.ofType(GetMapping.class)
-                                .defineArray("value", mappingPath)
+                                .defineArray("value", "/" + mappingPath)
                                 .build());
-        final var parameters = Arrays.stream(method.getParameters()).toList();
 
         return buildMethod(
                 builder,
                 parameters,
                 method,
+                returnType,
                 ONLY_DOCUMENTATION_THROW_INTERCEPTOR,
                 methodAnnotations);
     }
 
-    private static <T> DynamicType.Builder<T> buildMethod(
+    private static <T> DynamicType.Builder<T> buildImplementationMethod(
             final DynamicType.Builder<T> builder,
             final List<Parameter> parameters,
             final Method method,
             final Implementation interceptor) {
-        return buildMethod(builder, parameters, method, interceptor, List.of());
+        final var returnType = TypeDescription.Generic.Builder.of(method.getReturnType()).build();
+        return buildMethod(
+                builder, parameters, method, returnType, interceptor, List.of());
     }
 
     private static <T> DynamicType.Builder<T> buildMethod(
             final DynamicType.Builder<T> builder,
             final List<Parameter> parameters,
             final Method method,
+            final TypeDescription.Generic returnType,
             final Implementation interceptor,
             final List<AnnotationDescription> methodAnnotations) {
         if (parameters.isEmpty()) {
-            return builder.defineMethod(method.getName(), method.getReturnType(), Visibility.PUBLIC)
+            return builder.defineMethod(method.getName(), returnType, Visibility.PUBLIC)
                     .throwing(IOException.class)
                     .intercept(interceptor);
         }
 
+        // need to create the first parameter first, then the others in a loop so the type of the
+        // builder works out
         final var firstParameter =
                 parameters.stream().limit(1).collect(MoreCollectors.onlyElement());
         var parametersBuilder =
-                builder.defineMethod(method.getName(), method.getReturnType(), Visibility.PUBLIC)
+                builder.defineMethod(method.getName(), returnType, Visibility.PUBLIC)
                         .withParameter(
                                 firstParameter.getParameterizedType(),
                                 firstParameter.getName(),
-                                FINAL)
+                                Modifier.FINAL)
                         .annotateParameter(firstParameter.getAnnotations());
 
         for (final var parameter : parameters.stream().skip(1).toList()) {
             parametersBuilder =
                     parametersBuilder
                             .withParameter(
-                                    parameter.getParameterizedType(), parameter.getName(), FINAL)
+                                    parameter.getParameterizedType(),
+                                    parameter.getName(),
+                                    Modifier.FINAL)
                             .annotateParameter(parameter.getAnnotations());
         }
         return parametersBuilder
@@ -351,7 +366,7 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
             interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
         }
 
-        return buildMethod(builder, parameters, outputMethod, interceptor);
+        return buildImplementationMethod(builder, parameters, outputMethod, interceptor);
     }
 
     private static <T> DynamicType.Builder<T> buildImplementationInputMethod(
@@ -368,7 +383,7 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
             interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
         }
 
-        return buildMethod(builder, parameters, inputMethod, interceptor);
+        return buildImplementationMethod(builder, parameters, inputMethod, interceptor);
     }
 
     private static <T> DynamicType.Builder<T> buildImplementationListMethod(
@@ -385,7 +400,7 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
             interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
         }
 
-        return buildMethod(builder, parameters, listMethod, interceptor);
+        return buildImplementationMethod(builder, parameters, listMethod, interceptor);
     }
 
     private static <T> DynamicType.Builder<T> buildImplementationDeleteMethod(
@@ -402,7 +417,7 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
             interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
         }
 
-        return buildMethod(builder, parameters, deleteMethod, interceptor);
+        return buildImplementationMethod(builder, parameters, deleteMethod, interceptor);
     }
 
     private static Set<Class<?>> findAllStorageClasses(final String buildPropertiesGroup) {
@@ -447,7 +462,7 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
             final DefaultListableBeanFactory beanFactory, final Class<T> storageInterface) {
 
         final var mergedAnnotationsSearch =
-                MergedAnnotations.search(TYPE_HIERARCHY)
+                MergedAnnotations.search(MergedAnnotations.SearchStrategy.TYPE_HIERARCHY)
                         .withEnclosingClasses(
                                 clazz ->
                                         !ClassUtils.isInnerClass(clazz)
@@ -506,7 +521,7 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
                         .getLoaded();
         final var beanDefinitionBuilder =
                 BeanDefinitionBuilder.rootBeanDefinition(storageClass)
-                        .setAutowireMode(AUTOWIRE_CONSTRUCTOR);
+                        .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR);
         final var beanDefinition = beanDefinitionBuilder.getBeanDefinition();
 
         final var baseBeanName =
