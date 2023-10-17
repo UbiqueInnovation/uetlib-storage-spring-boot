@@ -505,14 +505,14 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
             final StorageBeanType storageBeanType) {
 
         // comment in below, only for debugging purposes to write the generated class file
-        final var tempFile = Path.of("/tmp/bytebuddy");
-        try {
-            generatedClass.saveIn(tempFile.toFile());
-        } catch (final IOException e) {
-            throw new WrappedException(e);
-        }
-        logger.info(
-                "saved at {}/{}.class", tempFile, generatedClass.getTypeDescription().getName());
+//        final var tempFile = Path.of("/tmp/bytebuddy");
+//        try {
+//            generatedClass.saveIn(tempFile.toFile());
+//        } catch (final IOException e) {
+//            throw new WrappedException(e);
+//        }
+//        logger.info(
+//                "saved at {}/{}.class", tempFile, generatedClass.getTypeDescription().getName());
         // comment in above, only for debugging purposes to write the generated class file
 
         final var storageClass =
