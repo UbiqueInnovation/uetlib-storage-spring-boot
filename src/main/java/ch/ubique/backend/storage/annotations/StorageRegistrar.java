@@ -496,16 +496,16 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor, En
             final DynamicType.Unloaded<T> generatedClass,
             final StorageBeanType storageBeanType) {
 
-        // TODO remove below, only for debugging purposes
-        final var tempFile = Path.of("/tmp/bytebuddy");
-        try {
-            generatedClass.saveIn(tempFile.toFile());
-        } catch (final IOException e) {
-            throw new WrappedException(e);
-        }
-        logger.info(
-                "saved at {}/{}.class", tempFile, generatedClass.getTypeDescription().getName());
-        // TODO remove above, only for debugging purposes
+        // comment in below, only for debugging purposes to write the generated class file
+        // final var tempFile = Path.of("/tmp/bytebuddy");
+        // try {
+        //     generatedClass.saveIn(tempFile.toFile());
+        // } catch (final IOException e) {
+        //     throw new WrappedException(e);
+        // }
+        // logger.info(
+        //         "saved at {}/{}.class", tempFile, generatedClass.getTypeDescription().getName());
+        // comment in above, only for debugging purposes to write the generated class file
 
         final var storageClass =
                 generatedClass
