@@ -18,7 +18,6 @@ import net.bytebuddy.description.modifier.Visibility;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.DynamicType.Builder.MethodDefinition.ReceiverTypeDefinition;
-import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.dynamic.scaffold.subclass.ConstructorStrategy;
 import net.bytebuddy.implementation.*;
 import net.bytebuddy.implementation.MethodCall.WithoutSpecifiedTarget;
@@ -49,7 +48,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -308,8 +306,7 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
             final Method method,
             final Implementation interceptor) {
         final var returnType = TypeDescription.Generic.Builder.of(method.getReturnType()).build();
-        return buildMethod(
-                builder, parameters, method, returnType, interceptor, List.of());
+        return buildMethod(builder, parameters, method, returnType, interceptor, List.of());
     }
 
     private static <T> DynamicType.Builder<T> buildMethod(
@@ -505,20 +502,18 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
             final StorageBeanType storageBeanType) {
 
         // comment in below, only for debugging purposes to write the generated class file
-//        final var tempFile = Path.of("/tmp/bytebuddy");
-//        try {
-//            generatedClass.saveIn(tempFile.toFile());
-//        } catch (final IOException e) {
-//            throw new WrappedException(e);
-//        }
-//        logger.info(
-//                "saved at {}/{}.class", tempFile, generatedClass.getTypeDescription().getName());
+        // final var tempFile = Path.of("/tmp/bytebuddy");
+        // try {
+        //     generatedClass.saveIn(tempFile.toFile());
+        // } catch (final IOException e) {
+        //     throw new WrappedException(e);
+        // }
+        // logger.info(
+        //         "saved at {}/{}.class", tempFile, generatedClass.getTypeDescription().getName());
         // comment in above, only for debugging purposes to write the generated class file
 
         final var storageClass =
-                generatedClass
-                        .load(getClass().getClassLoader(), ClassLoadingStrategy.Default.INJECTION)
-                        .getLoaded();
+                generatedClass.load(ClassLoader.getSystemClassLoader()).getLoaded();
         final var beanDefinitionBuilder =
                 BeanDefinitionBuilder.rootBeanDefinition(storageClass)
                         .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR);
