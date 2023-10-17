@@ -1,6 +1,5 @@
 package ch.ubique.backend.storage.annotations;
 
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -52,10 +51,4 @@ public @interface Storage {
     boolean generateDocumentation() default true;
 
     CodeGenerationType codeGenerationType() default CodeGenerationType.ALL;
-
-    /**
-     * Package where the documentation controller is created. Defaults to
-     * `{package-of-annotated-class}.documentation`.
-     */
-    String documentationPackage() default "";
 }
