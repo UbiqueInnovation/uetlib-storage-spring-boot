@@ -14,7 +14,10 @@ public interface TestOutputStorage {
     void saveImage(@StorageObject byte[] data, @PathVariable final String fileId)
             throws IOException;
 
-    @OutputMapping(path = "files/{jsonId}.json", contentType = APPLICATION_JSON_VALUE)
+    @OutputMapping(
+            path = "files/{jsonId}.json",
+            contentType = APPLICATION_JSON_VALUE,
+            documentedClass = TestUser.class)
     void saveJson(
             @StorageObject TestUser json,
             @PathVariable final String jsonId,
