@@ -3,6 +3,8 @@ package ch.ubique.backend.storage.annotations;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.IMAGE_PNG_VALUE;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
@@ -15,18 +17,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.Resource;
+import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Set;
 
 @SpringBootTest(classes = EnableStoragesTestConfig.class)
+@AutoConfigureMockMvc
 class EnableStoragesTest {
 
     @SpyBean private ObjectMapper objectMapper;
@@ -179,5 +187,27 @@ class EnableStoragesTest {
                         "storage/files/61.png"),
                 testStorage.listFilesRecursive());
         verify(storageClient).list("storage/files/", true);
+    }
+
+    @Test
+    void testDocumentation() throws Exception {
+        assertDoesNotThrow(() -> applicationContext.getBean("annotatedTestStorageDocumentation"));
+        final var testStorageDocumentation =
+                applicationContext.getBean("annotatedTestStorageDocumentation");
+        assertNotNull(testStorageDocumentation);
+
+        mockMvc.perform(get("/documentation/storage/files/5.json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        result ->
+                                assertTrue(
+                                        result.getResolvedException()
+                                                instanceof IllegalArgumentException))
+                .andExpect(
+                        result ->
+                                assertEquals(
+                                        "internal error",
+                                        Objects.requireNonNull(result.getResolvedException())
+                                                .getMessage()));
     }
 }
