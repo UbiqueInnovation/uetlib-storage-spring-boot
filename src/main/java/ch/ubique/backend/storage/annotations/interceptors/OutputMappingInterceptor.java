@@ -78,7 +78,8 @@ public final class OutputMappingInterceptor {
                                                 "OutputMapping requires one argument to be annotated with '@StorageObject'"));
         final var storageObject = allArguments[storageObjectParameterIndex];
         final var contentType = outputMapping.contentType();
-        Output output;
+
+        final Output output;
         // TODO Java 21 switch case pattern matching
         if (storageObject instanceof final Output o) {
             // no wrapping if already of type Output
@@ -104,7 +105,7 @@ public final class OutputMappingInterceptor {
         }
 
         if (outputMapping.gZip()) {
-            output = output.gZip();
+            return output.gZip();
         }
         return output;
     }
