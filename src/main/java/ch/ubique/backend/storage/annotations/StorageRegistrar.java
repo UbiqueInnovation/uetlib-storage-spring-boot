@@ -3,6 +3,8 @@ package ch.ubique.backend.storage.annotations;
 import static org.springframework.beans.factory.config.AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR;
 import static org.springframework.core.annotation.MergedAnnotations.SearchStrategy.TYPE_HIERARCHY;
 
+import static java.lang.reflect.Modifier.FINAL;
+
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.interceptors.DeleteMappingInterceptor;
 import ch.ubique.backend.storage.annotations.interceptors.InputMappingInterceptor;
@@ -52,7 +54,6 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
@@ -144,14 +145,6 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor, En
             }
         }
 
-        final WithoutSpecifiedTarget callSuperConstructor;
-        try {
-            callSuperConstructor = MethodCall.invoke(Object.class.getConstructor());
-        } catch (final NoSuchMethodException e) {
-            // fatal: no way to handle "Object" not having a constructor ;)
-            throw new WrappedException(e);
-        }
-
         final var setStorageClient =
                 FieldAccessor.ofField(STORAGE_CLIENT_PARAMETER).setsArgumentAt(0);
         final var objectMapperAccessor = FieldAccessor.ofField(OBJECT_MAPPER_PARAMETER);
@@ -162,8 +155,21 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor, En
             setObjectMapper = objectMapperAccessor.setsValue(new ObjectMapper());
         }
 
+        final var callSuperConstructor = getCallSuperConstructor();
         return constructorBuilder.intercept(
                 callSuperConstructor.andThen(setStorageClient).andThen(setObjectMapper));
+    }
+
+    @NotNull
+    private static WithoutSpecifiedTarget getCallSuperConstructor() {
+        final WithoutSpecifiedTarget callSuperConstructor;
+        try {
+            callSuperConstructor = MethodCall.invoke(Object.class.getConstructor());
+        } catch (final NoSuchMethodException e) {
+            // fatal: no way to handle "Object" not having a constructor ;)
+            throw new WrappedException(e);
+        }
+        return callSuperConstructor;
     }
 
     private static <T> DynamicType.@NotNull Unloaded<T> generateImplementationClass(
@@ -201,27 +207,37 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor, En
         final var documentationClassName = storageInterface.getSimpleName() + "Documentation";
         final var builder =
                 new ByteBuddy()
-                        .subclass(Object.class)
+                        .subclass(Object.class, ConstructorStrategy.Default.NO_CONSTRUCTORS)
                         .annotateType(
                                 AnnotationDescription.Builder.ofType(RestController.class)
                                         .define("value", storageAnnotation.basePath())
                                         .build())
                         .name(documentationClassName)
-                        .modifiers(Visibility.PUBLIC, TypeManifestation.FINAL);
+                        .modifiers(Visibility.PUBLIC, TypeManifestation.FINAL)
+                        .defineConstructor()
+                        .intercept(getCallSuperConstructor());
 
         final var annotatedMethodsByAnnotation =
                 getStorageMethodsByAnnotation(storageInterface, mergedAnnotationsSearch);
         return buildDocumentationMethods(builder, annotatedMethodsByAnnotation).make();
     }
 
-    private static <T> T buildMethods(
-            final T b,
+    private static <T> ReceiverTypeDefinition<T> buildMethods(
+            final ReceiverTypeDefinition<T> b,
             final Map<Class<? extends Annotation>, List<StorageMethodInfo>>
                     annotatedMethodsByAnnotation,
-            final BiFunction<T, StorageMethodInfo, T> buildOutputMethod,
-            final BiFunction<T, StorageMethodInfo, T> buildInputMethod,
-            final BiFunction<T, StorageMethodInfo, T> buildDeleteMethod,
-            final BiFunction<T, StorageMethodInfo, T> buildListMethod) {
+            final BiFunction<
+                            ReceiverTypeDefinition<T>, StorageMethodInfo, ReceiverTypeDefinition<T>>
+                    buildOutputMethod,
+            final BiFunction<
+                            ReceiverTypeDefinition<T>, StorageMethodInfo, ReceiverTypeDefinition<T>>
+                    buildInputMethod,
+            final BiFunction<
+                            ReceiverTypeDefinition<T>, StorageMethodInfo, ReceiverTypeDefinition<T>>
+                    buildDeleteMethod,
+            final BiFunction<
+                            ReceiverTypeDefinition<T>, StorageMethodInfo, ReceiverTypeDefinition<T>>
+                    buildListMethod) {
         var builder = b;
         final var outputMethodInfos =
                 Objects.requireNonNullElse(
@@ -267,8 +283,8 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor, En
                 StorageRegistrar::buildImplementationListMethod);
     }
 
-    private static <T> DynamicType.Builder<T> buildDocumentationMethods(
-            final DynamicType.Builder<T> b,
+    private static <T> ReceiverTypeDefinition<T> buildDocumentationMethods(
+            final ReceiverTypeDefinition<T> b,
             final Map<Class<? extends Annotation>, List<StorageMethodInfo>>
                     annotatedMethodsByAnnotation) {
         return buildMethods(
@@ -280,8 +296,8 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor, En
                 StorageRegistrar::buildDocumentationMethod);
     }
 
-    private static <T> DynamicType.Builder<T> buildDocumentationMethod(
-            final DynamicType.Builder<T> builder, final StorageMethodInfo methodInfo) {
+    private static <T> ReceiverTypeDefinition<T> buildDocumentationMethod(
+            final ReceiverTypeDefinition<T> builder, final StorageMethodInfo methodInfo) {
         final var method = methodInfo.storageMethod();
         final var parameters = Arrays.stream(method.getParameters()).toList();
 
@@ -304,41 +320,16 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor, En
         var parametersBuilder =
                 builder.defineMethod(method.getName(), method.getReturnType(), Visibility.PUBLIC)
                         .withParameter(
-                                firstParameter.getParameterizedType(), firstParameter.getName())
+                                firstParameter.getParameterizedType(),
+                                firstParameter.getName(),
+                                FINAL)
                         .annotateParameter(firstParameter.getAnnotations());
 
         for (final var parameter : parameters.stream().skip(1).toList()) {
             parametersBuilder =
                     parametersBuilder
-                            .withParameter(parameter.getParameterizedType(), parameter.getName())
-                            .annotateParameter(parameter.getAnnotations());
-        }
-        return parametersBuilder.throwing(IOException.class).intercept(interceptor);
-    }
-
-    private static <T> ReceiverTypeDefinition<T> buildMethod(
-            final DynamicType.Builder<T> builder,
-            final List<Parameter> parameters,
-            final Method method,
-            final Implementation interceptor) {
-        if (parameters.isEmpty()) {
-            return builder.defineMethod(method.getName(), method.getReturnType(), Visibility.PUBLIC)
-                    .throwing(IOException.class)
-                    .intercept(interceptor);
-        }
-
-        final var firstParameter =
-                parameters.stream().limit(1).collect(MoreCollectors.onlyElement());
-        var parametersBuilder =
-                builder.defineMethod(method.getName(), method.getReturnType(), Visibility.PUBLIC)
-                        .withParameter(
-                                firstParameter.getParameterizedType(), firstParameter.getName())
-                        .annotateParameter(firstParameter.getAnnotations());
-
-        for (final var parameter : parameters.stream().skip(1).toList()) {
-            parametersBuilder =
-                    parametersBuilder
-                            .withParameter(parameter.getParameterizedType(), parameter.getName())
+                            .withParameter(
+                                    parameter.getParameterizedType(), parameter.getName(), FINAL)
                             .annotateParameter(parameter.getAnnotations());
         }
         return parametersBuilder.throwing(IOException.class).intercept(interceptor);
