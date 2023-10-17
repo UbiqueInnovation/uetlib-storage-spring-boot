@@ -519,7 +519,7 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor, En
         logger.info(
                 "Registered {} bean {} of class {} for storage class {}",
                 storageBeanType,
-                baseBeanName,
+                beanName,
                 storageClass.getCanonicalName(),
                 storageInterfaceCanonicalName);
     }
