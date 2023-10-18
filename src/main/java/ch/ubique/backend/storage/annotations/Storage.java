@@ -42,5 +42,9 @@ public @interface Storage {
      */
     String basePath() default "";
 
+    /**
+     * Set to {@link CodeGenerationType#IMPLEMENTATION} or {@link CodeGenerationType#DOCUMENTATION}
+     * to generate only implementation code or documentation code, respectively.
+     */
     CodeGenerationType codeGenerationType() default CodeGenerationType.ALL;
 }
