@@ -35,6 +35,8 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.boot.info.BuildProperties;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -52,7 +54,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
+public class StorageRegistrar
+        implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
     private static final String STORAGE_CLIENT_PARAMETER = "storageClient";
     private static final String OBJECT_MAPPER_PARAMETER = "objectMapper";
@@ -60,6 +63,8 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
             MethodDelegation.to(OnlyDocumentationInterceptor.class);
 
     private static final Logger logger = LoggerFactory.getLogger(StorageRegistrar.class);
+
+    private ApplicationContext applicationContext;
 
     private static Map<Class<? extends Annotation>, List<StorageMethodInfo>>
             getStorageMethodsByAnnotation(
@@ -440,7 +445,7 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
     }
 
     public void registerStorageClients(final DefaultListableBeanFactory beanFactory) {
-        final var buildProperties = beanFactory.getBean(BuildProperties.class);
+        final var buildProperties = applicationContext.getBean(BuildProperties.class);
         final var mergedAnnotationsSearch =
                 MergedAnnotations.search(MergedAnnotations.SearchStrategy.TYPE_HIERARCHY)
                         .withEnclosingClasses(
@@ -546,6 +551,12 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
                 beanName,
                 storageClass.getCanonicalName(),
                 storageInterfaceCanonicalName);
+    }
+
+    @Override
+    public void setApplicationContext(final @NotNull ApplicationContext applicationContext)
+            throws BeansException {
+        this.applicationContext = applicationContext;
     }
 
     private enum StorageBeanType {
