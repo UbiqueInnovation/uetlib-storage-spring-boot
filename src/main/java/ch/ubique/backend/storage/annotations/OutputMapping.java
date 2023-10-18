@@ -26,14 +26,6 @@ public @interface OutputMapping {
 
     Class<?> documentedClass() default Object.class;
 
-    /**
-     * @deprecated since 1.5, use {@link #codeGenerationType}
-     *     <p>{@code generateDocumentation = false} corresponds to {@link #codeGenerationType} =
-     *     {@link CodeGenerationType#IMPLEMENTATION}
-     */
-    @Deprecated(since = "1.5", forRemoval = true)
-    boolean generateDocumentation() default true;
-
     /** Alias for {@link StorageMapping#codeGenerationType}. */
     @AliasFor(annotation = StorageMapping.class)
     CodeGenerationType codeGenerationType() default CodeGenerationType.ALL;

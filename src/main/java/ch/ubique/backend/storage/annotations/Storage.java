@@ -42,13 +42,5 @@ public @interface Storage {
      */
     String basePath() default "";
 
-    /**
-     * @deprecated since 1.5, use {@link #codeGenerationType}
-     *     <p>{@code generateDocumentation = false} corresponds to {@link #codeGenerationType} =
-     *     {@link CodeGenerationType#IMPLEMENTATION}
-     */
-    @Deprecated(since = "1.5", forRemoval = true)
-    boolean generateDocumentation() default true;
-
     CodeGenerationType codeGenerationType() default CodeGenerationType.ALL;
 }
