@@ -417,11 +417,8 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
         return buildImplementationMethod(builder, parameters, deleteMethod, interceptor);
     }
 
-    private static Set<Class<?>> findAllStorageClasses(final String buildPropertiesGroup) {
-        final var enableStoragesClass =
-                EnableAnnotationUtils.findEnableClass(buildPropertiesGroup, EnableStorages.class);
-        final var enableStoragesAnnotation =
-                enableStoragesClass.getAnnotation(EnableStorages.class);
+    private static Set<Class<?>> findAllStorageClasses(
+            final Class<?> enableStoragesClass, final EnableStorages enableStoragesAnnotation) {
         return EnableAnnotationUtils.findAllClassesBy(
                 enableStoragesAnnotation.storages(),
                 enableStoragesAnnotation.basePackages(),
@@ -444,7 +441,18 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
 
     public void registerStorageClients(final DefaultListableBeanFactory beanFactory) {
         final var buildProperties = beanFactory.getBean(BuildProperties.class);
-        final var storageClasses = findAllStorageClasses(buildProperties.getGroup());
+        final var mergedAnnotationsSearch =
+                MergedAnnotations.search(MergedAnnotations.SearchStrategy.TYPE_HIERARCHY)
+                        .withEnclosingClasses(
+                                clazz ->
+                                        !ClassUtils.isInnerClass(clazz)
+                                        && !ClassUtils.isStaticClass(clazz));
+        final var enableStoragesClass =
+                EnableAnnotationUtils.findEnableClass(
+                        buildProperties.getGroup(), EnableStorages.class);
+        final var enableStoragesAnnotation = mergedAnnotationsSearch.from(enableStoragesClass).get(EnableStorages.class).synthesize();
+        final var storageClasses =
+                findAllStorageClasses(enableStoragesClass, enableStoragesAnnotation);
 
         for (final var storageClass : storageClasses) {
             Assert.isTrue(
@@ -452,19 +460,15 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
                     "@Storage can only be specified on an interface, but was specified on "
                             + storageClass);
 
-            registerStorageClient(beanFactory, storageClass);
+            registerStorageClient(beanFactory, mergedAnnotationsSearch, storageClass, enableStoragesAnnotation);
         }
     }
 
     private <T> void registerStorageClient(
-            final DefaultListableBeanFactory beanFactory, final Class<T> storageInterface) {
-
-        final var mergedAnnotationsSearch =
-                MergedAnnotations.search(MergedAnnotations.SearchStrategy.TYPE_HIERARCHY)
-                        .withEnclosingClasses(
-                                clazz ->
-                                        !ClassUtils.isInnerClass(clazz)
-                                                && !ClassUtils.isStaticClass(clazz));
+            final DefaultListableBeanFactory beanFactory,
+            final MergedAnnotations.Search mergedAnnotationsSearch,
+            final Class<T> storageInterface,
+            final EnableStorages enableStoragesAnnotation) {
         final var mergedStorageClassAnnotations = mergedAnnotationsSearch.from(storageInterface);
         final var storageAnnotation = mergedStorageClassAnnotations.get(Storage.class).synthesize();
 
