@@ -14,8 +14,8 @@ import java.util.stream.Stream;
 public final class EnableAnnotationUtils {
     private EnableAnnotationUtils() {}
 
-    public static Class<?> findEnableClass(
-            final String buildPropertiesGroup, final Class<? extends Annotation> clazz) {
+    public static <T extends Annotation> Class<?> findEnableClass(
+            final String buildPropertiesGroup, final Class<T> clazz) {
         return CollectionUtils.extractSingleton(
                 new Reflections(buildPropertiesGroup).getTypesAnnotatedWith(clazz));
     }
