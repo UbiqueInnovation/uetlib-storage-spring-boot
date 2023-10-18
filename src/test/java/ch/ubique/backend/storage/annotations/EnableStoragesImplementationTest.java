@@ -1,9 +1,11 @@
 package ch.ubique.backend.storage.annotations;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.IMAGE_PNG_VALUE;
 
+import ch.ubique.backend.core.utils.ArrayUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.config.implementation.EnableStoragesImplementationTestConfig;
@@ -15,10 +17,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.core.io.Resource;
 
 import java.io.IOException;
@@ -27,7 +32,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
 
+@SuppressWarnings("DataFlowIssue")
 @SpringBootTest(classes = EnableStoragesImplementationTestConfig.class)
+@ExtendWith(OutputCaptureExtension.class)
 class EnableStoragesImplementationTest {
 
     @SpyBean private ObjectMapper objectMapper;
@@ -37,7 +44,6 @@ class EnableStoragesImplementationTest {
 
     @Value("classpath:storage/files/2.png")
     private Resource png2;
-
 
     @BeforeEach
     void beforeEach() throws IOException {
@@ -53,25 +59,51 @@ class EnableStoragesImplementationTest {
     }
 
     @Test
-    void testInputStorage() throws IOException {
+    void testInputStorage(final CapturedOutput capturedOutput) throws IOException {
         assertNotNull(testStorage);
         assertNotNull(referenceImplementation);
 
         final var testUser = testStorage.getJson(17);
         assertEquals(new TestUser(17, "Professor", "Jaffe Presley"), testUser);
         verify(storageClient).read("storage/files/17.json", true);
-
-        final var image = testStorage.getImage(2);
-        assertArrayEquals(png2.getContentAsByteArray(), image);
-        verify(storageClient).read("storage/files/2.png", true);
+        // testStorage.getJson has log level to DEBUG, but the test logger is set to INFO, so
+        // correctly no log from AnnotatedTestStorage
+        assertThat(ArrayUtils.lastElement(capturedOutput.getOut().split("\n")))
+                .doesNotContain("AnnotatedTestStorage");
 
         final var imageCompressed = testStorage.getImageCompressed(2);
         assertArrayEquals(png2.getContentAsByteArray(), imageCompressed);
         verify(storageClient).read("storage/files/2.png", false);
+        // testStorage.getImageCompressed has log level null, so correctly no log from
+        // AnnotatedTestStorage
+        assertThat(ArrayUtils.lastElement(capturedOutput.getOut().split("\n")))
+                .doesNotContain("AnnotatedTestStorage");
+
+        final var image = testStorage.getImage(2);
+        assertArrayEquals(png2.getContentAsByteArray(), image);
+        verify(storageClient).read("storage/files/2.png", true);
+        final var outputGetImage = capturedOutput.getOut().split("\n");
+        final var thirdLastGetImage = outputGetImage[outputGetImage.length - 3];
+        final var secondLastGetImage = outputGetImage[outputGetImage.length - 2];
+        final var lastGetImage = ArrayUtils.lastElement(outputGetImage);
+        assertThat(thirdLastGetImage)
+                .containsSequence("INFO")
+                .containsSequence("AnnotatedTestStorage")
+                .endsWith(
+                        "reading content of type image/png from path storage/files/2.png with doUncompressIfNeeded=true");
+        assertThat(secondLastGetImage)
+                .containsSequence("INFO")
+                .containsSequence("InputStreamUtils")
+                .endsWith(
+                        "content encoding png not yet handled specifically, returning the stream as-is");
+        assertThat(lastGetImage)
+                .containsSequence("INFO")
+                .containsSequence("AnnotatedTestStorage")
+                .endsWith("by reading the input stream to a byte[]");
     }
 
     @Test
-    void testOutputStorage() throws IOException {
+    void testOutputStorage(final CapturedOutput capturedOutput) throws IOException {
         assertNotNull(testStorage);
         assertNotNull(referenceImplementation);
 
@@ -86,6 +118,10 @@ class EnableStoragesImplementationTest {
                 testUser,
                 objectMapper.readValue(
                         storageClient.read("storage/files/32.json", true), TestUser.class));
+        // testStorage.saveJson has log level TRACE, but the test logger is set to INFO, so
+        // correctly no log from AnnotatedTestStorage
+        assertThat(ArrayUtils.lastElement(capturedOutput.getOut().split("\n")))
+                .doesNotContain("AnnotatedTestStorage");
 
         final var outputMetaData =
                 new OutputMetaData(Duration.ofSeconds(48654), Duration.ofMillis(87623))
@@ -109,10 +145,15 @@ class EnableStoragesImplementationTest {
                                 new ByteOutput(png2.getContentAsByteArray(), IMAGE_PNG_VALUE)),
                         "storage/files/8.png",
                         null);
+        assertThat(ArrayUtils.lastElement(capturedOutput.getOut().split("\n")))
+                .containsSequence("WARN")
+                .containsSequence("AnnotatedTestStorage")
+                .endsWith(
+                        "writing content of type image/png to path storage/files/8.png with size 397742 and metadata null");
     }
 
     @Test
-    void testDeleteStorage() throws IOException {
+    void testDeleteStorage(final CapturedOutput capturedOutput) throws IOException {
         final var deleted62 = testStorage.deleteFile("62");
         verify(storageClient).delete("storage/files/62.png", false);
         assertFalse(deleted62);
@@ -154,10 +195,14 @@ class EnableStoragesImplementationTest {
         assertTrue(deletedFolder5);
         assertThrows(NoSuchFileException.class, () -> storageClient.list("storage/files/5/"));
         assertFalse(storageClient.list("storage/files/").contains("storage/files/5/"));
+        assertThat(ArrayUtils.lastElement(capturedOutput.getOut().split("\n")))
+                .containsSequence("ERROR")
+                .containsSequence("AnnotatedTestStorage")
+                .endsWith("deleting content from path storage/files/5 with recursive=true");
     }
 
     @Test
-    void testListStorage() throws IOException {
+    void testListStorage(final CapturedOutput capturedOutput) throws IOException {
         assertEquals(
                 Set.of(
                         "storage/files/2.png",
@@ -176,5 +221,9 @@ class EnableStoragesImplementationTest {
                         "storage/files/61.png"),
                 testStorage.listFilesRecursive());
         verify(storageClient).list("storage/files/", true);
+        assertThat(ArrayUtils.lastElement(capturedOutput.getOut().split("\n")))
+                .containsSequence("INFO")
+                .containsSequence("AnnotatedTestStorage")
+                .endsWith("listing files from path storage/files/ with recursive=true");
     }
 }

@@ -1,13 +1,13 @@
 package ch.ubique.backend.storage.annotations.interceptors;
 
 import static ch.ubique.backend.storage.annotations.interceptors.InterceptorUtil.*;
+import static ch.ubique.backend.storage.logger.LogAtNullableLevel.atLevel;
 
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.annotations.Storage;
 import ch.ubique.backend.storage.annotations.StorageObject;
-import ch.ubique.backend.storage.logger.LogAtNullableLevel;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.FileOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
@@ -118,7 +118,7 @@ public final class OutputMappingInterceptor {
                         getPathTemplate(storageAnnotation.basePath(), outputMapping.path()));
         final var outputMetaData = getOutputMetaData(allArguments);
 
-        LogAtNullableLevel.atLevel(logger, level)
+        atLevel(logger, level)
                 .log(
                         "writing content of type {} to path {} with size {} and metadata {}",
                         outputMapping.contentType(),
