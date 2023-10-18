@@ -418,14 +418,15 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
     }
 
     private static Set<Class<?>> findAllStorageClasses(final String buildPropertiesGroup) {
-        final var enableJobsClass =
+        final var enableStoragesClass =
                 EnableAnnotationUtils.findEnableClass(buildPropertiesGroup, EnableStorages.class);
-        final var enableJobsAnnotation = enableJobsClass.getAnnotation(EnableStorages.class);
+        final var enableStoragesAnnotation =
+                enableStoragesClass.getAnnotation(EnableStorages.class);
         return EnableAnnotationUtils.findAllClassesBy(
-                enableJobsAnnotation.storages(),
-                enableJobsAnnotation.basePackages(),
-                enableJobsAnnotation.basePackageClasses(),
-                enableJobsClass.getPackageName(),
+                enableStoragesAnnotation.storages(),
+                enableStoragesAnnotation.basePackages(),
+                enableStoragesAnnotation.basePackageClasses(),
+                enableStoragesClass.getPackageName(),
                 Storage.class);
     }
 
