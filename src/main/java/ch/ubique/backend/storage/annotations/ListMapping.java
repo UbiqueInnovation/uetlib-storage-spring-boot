@@ -1,5 +1,6 @@
 package ch.ubique.backend.storage.annotations;
 
+import org.slf4j.event.Level;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.ElementType;
@@ -26,4 +27,8 @@ public @interface ListMapping {
     /** Alias for {@link StorageMapping#codeGenerationType}. */
     @AliasFor(annotation = StorageMapping.class)
     CodeGenerationType codeGenerationType() default CodeGenerationType.IMPLEMENTATION;
+
+    /** Alias for {@link StorageMapping#logLevel}. */
+    @AliasFor(annotation = StorageMapping.class)
+    Level[] logLevel() default {};
 }

@@ -1,5 +1,6 @@
 package ch.ubique.backend.storage.annotations;
 
+import org.slf4j.event.Level;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.*;
@@ -36,4 +37,11 @@ public @interface StorageMapping {
      * to generate only implementation code or documentation code, respectively.
      */
     CodeGenerationType codeGenerationType() default CodeGenerationType.ALL;
+
+    /**
+     * Specify the log level as a single-element array. We use an array to have {@code {}} emulate
+     * null. Passing an array with more than one element results in an exception at application
+     * startup.
+     */
+    Level[] logLevel() default {};
 }

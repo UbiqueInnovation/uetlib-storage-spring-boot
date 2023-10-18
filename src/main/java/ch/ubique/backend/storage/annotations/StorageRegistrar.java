@@ -1,5 +1,6 @@
 package ch.ubique.backend.storage.annotations;
 
+import ch.ubique.backend.core.utils.ArrayUtils;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.interceptors.*;
 
@@ -192,7 +193,9 @@ public class StorageRegistrar
 
         final var annotatedMethodsByAnnotation =
                 getStorageMethodsByAnnotation(storageInterface, mergedAnnotationsSearch);
-        return buildImplementationMethods(builderForMethods, annotatedMethodsByAnnotation).make();
+        return buildImplementationMethods(
+                        builderForMethods, annotatedMethodsByAnnotation, storageInterface)
+                .make();
     }
 
     private static <T> DynamicType.@NotNull Unloaded<Object> generateDocumentationClass(
@@ -224,7 +227,11 @@ public class StorageRegistrar
     private static <T> DynamicType.Builder<T> buildImplementationMethods(
             final DynamicType.Builder<T> b,
             final Map<Class<? extends Annotation>, List<StorageMethodInfo>>
-                    annotatedMethodsByAnnotation) {
+                    annotatedMethodsByAnnotation,
+            final Class<T> storageInterface) {
+
+        final var storageClassLogger = LoggerFactory.getLogger(storageInterface);
+
         var builder = b;
         final var outputMethodInfos =
                 Objects.requireNonNullElse(
@@ -243,16 +250,18 @@ public class StorageRegistrar
                         annotatedMethodsByAnnotation.get(ListMapping.class),
                         List.<StorageMethodInfo>of());
         for (final var outputMethodInfo : outputMethodInfos) {
-            builder = buildImplementationOutputMethod(builder, outputMethodInfo);
+            builder =
+                    buildImplementationOutputMethod(builder, outputMethodInfo, storageClassLogger);
         }
         for (final var inputMethodInfo : inputMethodInfos) {
-            builder = buildImplementationInputMethod(builder, inputMethodInfo);
+            builder = buildImplementationInputMethod(builder, inputMethodInfo, storageClassLogger);
         }
         for (final var deleteMethodInfo : deleteMethodInfos) {
-            builder = buildImplementationDeleteMethod(builder, deleteMethodInfo);
+            builder =
+                    buildImplementationDeleteMethod(builder, deleteMethodInfo, storageClassLogger);
         }
         for (final var listMethodInfo : listMethodInfos) {
-            builder = buildImplementationListMethod(builder, listMethodInfo);
+            builder = buildImplementationListMethod(builder, listMethodInfo, storageClassLogger);
         }
         return builder;
     }
@@ -355,7 +364,9 @@ public class StorageRegistrar
     }
 
     private static <T> DynamicType.Builder<T> buildImplementationOutputMethod(
-            final DynamicType.Builder<T> builder, final StorageMethodInfo outputMethodInfo) {
+            final DynamicType.Builder<T> builder,
+            final StorageMethodInfo outputMethodInfo,
+            final Logger storageClassLogger) {
         final var outputMethod = outputMethodInfo.storageMethod();
         final var parameters = Arrays.stream(outputMethod.getParameters()).toList();
 
@@ -363,7 +374,9 @@ public class StorageRegistrar
         final var outputAnnotation =
                 outputMethodInfo.storageMethodAnnotations().get(OutputMapping.class).synthesize();
         if (outputAnnotation.codeGenerationType().generateImplementationCode()) {
-            interceptor = MethodDelegation.to(OutputMappingInterceptor.class);
+            final var level = ArrayUtils.singletonOrNull(outputAnnotation.logLevel());
+            interceptor =
+                    MethodDelegation.to(new OutputMappingInterceptor(storageClassLogger, level));
         } else {
             interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
         }
@@ -372,7 +385,9 @@ public class StorageRegistrar
     }
 
     private static <T> DynamicType.Builder<T> buildImplementationInputMethod(
-            final DynamicType.Builder<T> builder, final StorageMethodInfo inputMethodInfo) {
+            final DynamicType.Builder<T> builder,
+            final StorageMethodInfo inputMethodInfo,
+            final Logger storageClassLogger) {
         final var inputMethod = inputMethodInfo.storageMethod();
         final var parameters = Arrays.stream(inputMethod.getParameters()).toList();
 
@@ -380,7 +395,9 @@ public class StorageRegistrar
         final var inputAnnotation =
                 inputMethodInfo.storageMethodAnnotations().get(InputMapping.class).synthesize();
         if (inputAnnotation.codeGenerationType().generateImplementationCode()) {
-            interceptor = MethodDelegation.to(InputMappingInterceptor.class);
+            final var level = ArrayUtils.singletonOrNull(inputAnnotation.logLevel());
+            interceptor =
+                    MethodDelegation.to(new InputMappingInterceptor(storageClassLogger, level));
         } else {
             interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
         }
@@ -389,7 +406,9 @@ public class StorageRegistrar
     }
 
     private static <T> DynamicType.Builder<T> buildImplementationListMethod(
-            final DynamicType.Builder<T> builder, final StorageMethodInfo listMethodInfo) {
+            final DynamicType.Builder<T> builder,
+            final StorageMethodInfo listMethodInfo,
+            final Logger storageClassLogger) {
         final var listMethod = listMethodInfo.storageMethod();
         final var parameters = Arrays.stream(listMethod.getParameters()).toList();
 
@@ -397,7 +416,9 @@ public class StorageRegistrar
         final var listAnnotation =
                 listMethodInfo.storageMethodAnnotations().get(ListMapping.class).synthesize();
         if (listAnnotation.codeGenerationType().generateImplementationCode()) {
-            interceptor = MethodDelegation.to(ListMappingInterceptor.class);
+            final var level = ArrayUtils.singletonOrNull(listAnnotation.logLevel());
+            interceptor =
+                    MethodDelegation.to(new ListMappingInterceptor(storageClassLogger, level));
         } else {
             interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
         }
@@ -406,7 +427,9 @@ public class StorageRegistrar
     }
 
     private static <T> DynamicType.Builder<T> buildImplementationDeleteMethod(
-            final DynamicType.Builder<T> builder, final StorageMethodInfo deleteMethodInfo) {
+            final DynamicType.Builder<T> builder,
+            final StorageMethodInfo deleteMethodInfo,
+            final Logger storageClassLogger) {
         final var deleteMethod = deleteMethodInfo.storageMethod();
         final var parameters = Arrays.stream(deleteMethod.getParameters()).toList();
 
@@ -414,7 +437,9 @@ public class StorageRegistrar
         final var deleteAnnotation =
                 deleteMethodInfo.storageMethodAnnotations().get(DeleteMapping.class).synthesize();
         if (deleteAnnotation.codeGenerationType().generateImplementationCode()) {
-            interceptor = MethodDelegation.to(DeleteMappingInterceptor.class);
+            final var level = ArrayUtils.singletonOrNull(deleteAnnotation.logLevel());
+            interceptor =
+                    MethodDelegation.to(new DeleteMappingInterceptor(storageClassLogger, level));
         } else {
             interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
         }
@@ -518,16 +543,16 @@ public class StorageRegistrar
             final DynamicType.Unloaded<T> generatedClass,
             final StorageBeanType storageBeanType) {
 
-        // comment in below, only for debugging purposes to write the generated class file
-        // final var tempFile = Path.of("/tmp/bytebuddy");
-        // try {
-        //     generatedClass.saveIn(tempFile.toFile());
-        // } catch (final IOException e) {
-        //     throw new WrappedException(e);
-        // }
-        // logger.info(
-        //         "saved at {}/{}.class", tempFile, generatedClass.getTypeDescription().getName());
-        // comment in above, only for debugging purposes to write the generated class file
+        //         comment in below, only for debugging purposes to write the generated class file
+        //         final var tempFile = java.nio.file.Path.of("/tmp/bytebuddy");
+        //         try {
+        //             generatedClass.saveIn(tempFile.toFile());
+        //         } catch (final IOException e) {
+        //             throw new WrappedException(e);
+        //         }
+        //         logger.info(
+        //                 "saved at {}/{}.class", tempFile, generatedClass.getTypeDescription().getName());
+        //         comment in above, only for debugging purposes to write the generated class file
 
         final var storageClass =
                 generatedClass.load(ClassLoader.getSystemClassLoader()).getLoaded();

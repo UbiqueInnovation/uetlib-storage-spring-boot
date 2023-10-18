@@ -5,21 +5,32 @@ import static ch.ubique.backend.storage.annotations.interceptors.InterceptorUtil
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.DeleteMapping;
 import ch.ubique.backend.storage.annotations.Storage;
+import ch.ubique.backend.storage.logger.LogAtNullableLevel;
 
 import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.implementation.bind.annotation.Origin;
 import net.bytebuddy.implementation.bind.annotation.RuntimeType;
 import net.bytebuddy.implementation.bind.annotation.This;
 
+import org.slf4j.Logger;
+import org.slf4j.event.Level;
+
 import java.io.IOException;
 import java.lang.reflect.Method;
 
-public class DeleteMappingInterceptor {
-    private DeleteMappingInterceptor() {}
+public final class DeleteMappingInterceptor {
+
+    private final Logger logger;
+    private final Level level;
+
+    public DeleteMappingInterceptor(final Logger logger, final Level level) {
+        this.logger = logger;
+        this.level = level;
+    }
 
     @RuntimeType
     @SuppressWarnings("unused")
-    public static Object intercept(
+    public Object intercept(
             @Origin final Method method,
             @This final Object thiz,
             @AllArguments final Object[] allArguments)
@@ -35,6 +46,11 @@ public class DeleteMappingInterceptor {
                         allArguments,
                         getPathTemplate(storageAnnotation.basePath(), deleteMapping.path()));
 
+        LogAtNullableLevel.atLevel(logger, level)
+                .log(
+                        "deleting content from path {} with recursive={}",
+                        path,
+                        deleteMapping.recursive());
         return storageClient.delete(path, deleteMapping.recursive());
     }
 }

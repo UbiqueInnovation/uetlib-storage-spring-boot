@@ -7,6 +7,7 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.annotations.Storage;
 import ch.ubique.backend.storage.annotations.StorageObject;
+import ch.ubique.backend.storage.logger.LogAtNullableLevel;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.FileOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
@@ -18,6 +19,8 @@ import net.bytebuddy.implementation.bind.annotation.RuntimeType;
 import net.bytebuddy.implementation.bind.annotation.This;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.event.Level;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,29 +30,13 @@ import java.util.Arrays;
 import java.util.stream.IntStream;
 
 public final class OutputMappingInterceptor {
-    private OutputMappingInterceptor() {}
 
-    @RuntimeType
-    @SuppressWarnings("unused")
-    public static void intercept(
-            @Origin final Method method,
-            @This final Object thiz,
-            @AllArguments final Object[] allArguments)
-            throws IOException, NoSuchFieldException, IllegalAccessException {
-        final var storageClient = getInaccessibleField(thiz, "storageClient", StorageClient.class);
-        final var storageAnnotation = findAnnotation(thiz.getClass(), Storage.class);
-        final var outputMapping = findAnnotation(method, OutputMapping.class);
-        final var parameterAnnotations = method.getParameterAnnotations();
+    private final Logger logger;
+    private final Level level;
 
-        final var output = getOutput(thiz, outputMapping, parameterAnnotations, allArguments);
-        final var path =
-                getPath(
-                        method.getParameters(),
-                        allArguments,
-                        getPathTemplate(storageAnnotation.basePath(), outputMapping.path()));
-        final var outputMetaData = getOutputMetaData(allArguments);
-
-        storageClient.write(output, path, outputMetaData);
+    public OutputMappingInterceptor(final Logger logger, final Level level) {
+        this.logger = logger;
+        this.level = level;
     }
 
     private static OutputMetaData getOutputMetaData(final Object[] allArguments) {
@@ -108,5 +95,36 @@ public final class OutputMappingInterceptor {
             return output.gZip();
         }
         return output;
+    }
+
+    @RuntimeType
+    @SuppressWarnings("unused")
+    public void intercept(
+            @Origin final Method method,
+            @This final Object thiz,
+            @AllArguments final Object[] allArguments)
+            throws IOException, NoSuchFieldException, IllegalAccessException {
+
+        final var storageClient = getInaccessibleField(thiz, "storageClient", StorageClient.class);
+        final var storageAnnotation = findAnnotation(thiz.getClass(), Storage.class);
+        final var outputMapping = findAnnotation(method, OutputMapping.class);
+        final var parameterAnnotations = method.getParameterAnnotations();
+
+        final var output = getOutput(thiz, outputMapping, parameterAnnotations, allArguments);
+        final var path =
+                getPath(
+                        method.getParameters(),
+                        allArguments,
+                        getPathTemplate(storageAnnotation.basePath(), outputMapping.path()));
+        final var outputMetaData = getOutputMetaData(allArguments);
+
+        LogAtNullableLevel.atLevel(logger, level)
+                .log(
+                        "writing content of type {} to path {} with size {} and metadata {}",
+                        outputMapping.contentType(),
+                        path,
+                        output.contentLength(),
+                        outputMetaData);
+        storageClient.write(output, path, outputMetaData);
     }
 }
