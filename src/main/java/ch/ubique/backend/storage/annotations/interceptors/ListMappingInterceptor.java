@@ -1,11 +1,11 @@
 package ch.ubique.backend.storage.annotations.interceptors;
 
 import static ch.ubique.backend.storage.annotations.interceptors.InterceptorUtil.*;
+import static ch.ubique.backend.storage.logger.LogAtNullableLevel.atLevel;
 
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.ListMapping;
 import ch.ubique.backend.storage.annotations.Storage;
-import ch.ubique.backend.storage.logger.LogAtNullableLevel;
 
 import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.implementation.bind.annotation.Origin;
@@ -55,7 +55,7 @@ public final class ListMappingInterceptor {
         final var collection = storageClient.list(path, listMapping.recursive());
 
         if (Collection.class.isAssignableFrom(returnType)) {
-            LogAtNullableLevel.atLevel(logger, level)
+            atLevel(logger, level)
                     .log(
                             "listing files from path {} with recursive={}",
                             path,
@@ -64,7 +64,7 @@ public final class ListMappingInterceptor {
         }
 
         if (Stream.class.isAssignableFrom(returnType)) {
-            LogAtNullableLevel.atLevel(logger, level)
+            atLevel(logger, level)
                     .log(
                             "listing files from path {} with recursive={} and returning as a stream",
                             path,
@@ -73,7 +73,7 @@ public final class ListMappingInterceptor {
         }
 
         if (List.class.isAssignableFrom(returnType)) {
-            LogAtNullableLevel.atLevel(logger, level)
+            atLevel(logger, level)
                     .log(
                             "listing files from path {} with recursive={} and returning as a list",
                             path,
@@ -82,7 +82,7 @@ public final class ListMappingInterceptor {
         }
 
         if (Set.class.isAssignableFrom(returnType)) {
-            LogAtNullableLevel.atLevel(logger, level)
+            atLevel(logger, level)
                     .log(
                             "listing files from path {} with recursive={} and returning as a set",
                             path,

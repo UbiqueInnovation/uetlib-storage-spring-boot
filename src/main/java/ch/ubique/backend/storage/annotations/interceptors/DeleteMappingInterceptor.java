@@ -1,11 +1,11 @@
 package ch.ubique.backend.storage.annotations.interceptors;
 
 import static ch.ubique.backend.storage.annotations.interceptors.InterceptorUtil.*;
+import static ch.ubique.backend.storage.logger.LogAtNullableLevel.atLevel;
 
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.DeleteMapping;
 import ch.ubique.backend.storage.annotations.Storage;
-import ch.ubique.backend.storage.logger.LogAtNullableLevel;
 
 import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.implementation.bind.annotation.Origin;
@@ -46,7 +46,7 @@ public final class DeleteMappingInterceptor {
                         allArguments,
                         getPathTemplate(storageAnnotation.basePath(), deleteMapping.path()));
 
-        LogAtNullableLevel.atLevel(logger, level)
+        atLevel(logger, level)
                 .log(
                         "deleting content from path {} with recursive={}",
                         path,

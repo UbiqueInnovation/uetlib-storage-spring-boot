@@ -1,13 +1,13 @@
 package ch.ubique.backend.storage.annotations.interceptors;
 
 import static ch.ubique.backend.storage.annotations.interceptors.InterceptorUtil.*;
+import static ch.ubique.backend.storage.logger.LogAtNullableLevel.atLevel;
 
 import ch.ubique.backend.core.file.ByteFile;
 import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.InputMapping;
 import ch.ubique.backend.storage.annotations.Storage;
-import ch.ubique.backend.storage.logger.LogAtNullableLevel;
 
 import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.implementation.bind.annotation.Origin;
@@ -51,32 +51,26 @@ public final class InputMappingInterceptor {
                         method.getParameters(),
                         allArguments,
                         getPathTemplate(storageAnnotation.basePath(), inputMapping.path()));
+        atLevel(logger, level)
+                .log(
+                        "reading content of type {} from path {} with doUncompressIfNeeded={}",
+                        inputMapping.contentType(),
+                        path,
+                        inputMapping.doUncompressIfNeeded());
         final var inputStream = storageClient.read(path, inputMapping.doUncompressIfNeeded());
 
         if (InputStream.class.isAssignableFrom(returnType)) {
-            LogAtNullableLevel.atLevel(logger, level)
-                    .log(
-                            "reading content of type {} from path {}",
-                            inputMapping.contentType(),
-                            path);
+            atLevel(logger, level).log("and returning the resulting stream as-is");
             return inputStream;
         }
 
         if (byte[].class.isAssignableFrom(returnType)) {
-            LogAtNullableLevel.atLevel(logger, level)
-                    .log(
-                            "reading content of type {} from path {} by reading the input stream to a byte[]",
-                            inputMapping.contentType(),
-                            path);
+            atLevel(logger, level).log("by reading the input stream to a byte[]");
             return InputStreamUtils.readBytesAndClose(inputStream);
         }
 
         if (ByteFile.class.isAssignableFrom(returnType)) {
-            LogAtNullableLevel.atLevel(logger, level)
-                    .log(
-                            "reading content of type {} from path {} by reading the input stream to a ByteFile",
-                            inputMapping.contentType(),
-                            path);
+            atLevel(logger, level).log(" by reading the input stream to a ByteFile");
             final var bytes = InputStreamUtils.readBytesAndClose(inputStream);
             final var fileName = Path.of(path).getFileName().toString();
             final var contentType = StringUtils.defaultIfBlank(inputMapping.contentType(), null);
@@ -84,6 +78,12 @@ public final class InputMappingInterceptor {
         }
 
         final var objectMapper = getObjectMapper(thiz, allArguments);
+        atLevel(logger, level)
+                .log(
+                        "reading content of type {} from path {} and parsing it to type {} using the supplied object mapper",
+                        inputMapping.contentType(),
+                        path,
+                        returnType);
         return objectMapper.readValue(inputStream, returnType);
     }
 }
