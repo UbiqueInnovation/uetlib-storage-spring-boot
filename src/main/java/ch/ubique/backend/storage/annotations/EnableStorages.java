@@ -45,10 +45,15 @@ public @interface EnableStorages {
     Class<?>[] basePackageClasses() default {};
 
     /**
-     * List of classes annotated with @{@link Storage}. If not empty, disables classpath
-     * scanning.
+     * List of classes annotated with @{@link Storage}. If not empty, disables classpath scanning.
      *
      * @return array of FeignClient classes
      */
     Class<?>[] storages() default {};
+
+    /**
+     * Set to {@link CodeGenerationType#IMPLEMENTATION} or {@link CodeGenerationType#DOCUMENTATION}
+     * to generate only implementation code or documentation code, respectively.
+     */
+    CodeGenerationType codeGenerationType() default CodeGenerationType.ALL;
 }

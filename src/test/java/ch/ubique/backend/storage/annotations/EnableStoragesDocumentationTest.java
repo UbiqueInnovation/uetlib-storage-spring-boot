@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.ubique.backend.storage.config.implementation.EnableStoragesImplementationTestConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -20,7 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.RestController;
 
 @WebMvcTest
-@ContextConfiguration(classes = EnableStoragesTestConfig.class)
+@ContextConfiguration(classes = EnableStoragesImplementationTestConfig.class)
 @AutoConfigureMockMvc
 class EnableStoragesDocumentationTest {
 
