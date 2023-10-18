@@ -446,11 +446,15 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
                         .withEnclosingClasses(
                                 clazz ->
                                         !ClassUtils.isInnerClass(clazz)
-                                        && !ClassUtils.isStaticClass(clazz));
+                                                && !ClassUtils.isStaticClass(clazz));
         final var enableStoragesClass =
                 EnableAnnotationUtils.findEnableClass(
                         buildProperties.getGroup(), EnableStorages.class);
-        final var enableStoragesAnnotation = mergedAnnotationsSearch.from(enableStoragesClass).get(EnableStorages.class).synthesize();
+        final var enableStoragesAnnotation =
+                mergedAnnotationsSearch
+                        .from(enableStoragesClass)
+                        .get(EnableStorages.class)
+                        .synthesize();
         final var storageClasses =
                 findAllStorageClasses(enableStoragesClass, enableStoragesAnnotation);
 
@@ -460,7 +464,8 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
                     "@Storage can only be specified on an interface, but was specified on "
                             + storageClass);
 
-            registerStorageClient(beanFactory, mergedAnnotationsSearch, storageClass, enableStoragesAnnotation);
+            registerStorageClient(
+                    beanFactory, mergedAnnotationsSearch, storageClass, enableStoragesAnnotation);
         }
     }
 
@@ -472,7 +477,8 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
         final var mergedStorageClassAnnotations = mergedAnnotationsSearch.from(storageInterface);
         final var storageAnnotation = mergedStorageClassAnnotations.get(Storage.class).synthesize();
 
-        if (storageAnnotation.codeGenerationType().generateImplementationCode()) {
+        if (enableStoragesAnnotation.codeGenerationType().generateImplementationCode()
+                && storageAnnotation.codeGenerationType().generateImplementationCode()) {
             try (final var generatedImplementationClass =
                     generateImplementationClass(
                             storageInterface, mergedAnnotationsSearch, storageAnnotation)) {
@@ -485,7 +491,8 @@ public class StorageRegistrar implements BeanDefinitionRegistryPostProcessor {
             }
         }
 
-        if (storageAnnotation.codeGenerationType().generateDocumentationCode()) {
+        if (enableStoragesAnnotation.codeGenerationType().generateDocumentationCode()
+                && storageAnnotation.codeGenerationType().generateDocumentationCode()) {
             try (final var generatedDocumentationClass =
                     generateDocumentationClass(
                             storageInterface, mergedAnnotationsSearch, storageAnnotation)) {

@@ -1,7 +1,8 @@
-package ch.ubique.backend.storage.annotations;
+package ch.ubique.backend.storage.config.implementation;
 
 import ch.ubique.backend.core.jackson.ObjectMapperUtils;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.annotations.EnableStorages;
 import ch.ubique.backend.storage.clients.FileSystemStorageClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,7 +15,7 @@ import java.nio.file.Files;
 import java.util.Properties;
 
 @EnableStorages(basePackages = "ch.ubique.backend.storage.annotations")
-public class EnableStoragesTestConfig {
+public class EnableStoragesImplementationTestConfig {
 
     @Bean
     StorageClient storageClient() throws IOException {
@@ -29,7 +30,7 @@ public class EnableStoragesTestConfig {
     @Bean
     BuildProperties buildProperties() {
         final var properties = new Properties();
-        properties.setProperty("group", "ch.ubique.backend.storage");
+        properties.setProperty("group", "ch.ubique.backend.storage.config.implementation");
         return new BuildProperties(properties);
     }
 }
