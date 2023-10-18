@@ -7,6 +7,7 @@ import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.InputMapping;
 import ch.ubique.backend.storage.annotations.Storage;
+import ch.ubique.backend.storage.logger.LogAtNullableLevel;
 
 import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.implementation.bind.annotation.Origin;
@@ -14,18 +15,27 @@ import net.bytebuddy.implementation.bind.annotation.RuntimeType;
 import net.bytebuddy.implementation.bind.annotation.This;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
 
-public class InputMappingInterceptor {
-    private InputMappingInterceptor() {}
+public final class InputMappingInterceptor {
+
+    private final Logger logger;
+    private final Level level;
+
+    public InputMappingInterceptor(final Logger logger, final Level level) {
+        this.logger = logger;
+        this.level = level;
+    }
 
     @RuntimeType
     @SuppressWarnings({"unused", "java:S3011"})
-    public static Object intercept(
+    public Object intercept(
             @Origin final Method method,
             @This final Object thiz,
             @AllArguments final Object[] allArguments)
@@ -41,17 +51,32 @@ public class InputMappingInterceptor {
                         method.getParameters(),
                         allArguments,
                         getPathTemplate(storageAnnotation.basePath(), inputMapping.path()));
-
         final var inputStream = storageClient.read(path, inputMapping.doUncompressIfNeeded());
+
         if (InputStream.class.isAssignableFrom(returnType)) {
+            LogAtNullableLevel.atLevel(logger, level)
+                    .log(
+                            "reading content of type {} from path {}",
+                            inputMapping.contentType(),
+                            path);
             return inputStream;
         }
 
         if (byte[].class.isAssignableFrom(returnType)) {
+            LogAtNullableLevel.atLevel(logger, level)
+                    .log(
+                            "reading content of type {} from path {} by reading the input stream to a byte[]",
+                            inputMapping.contentType(),
+                            path);
             return InputStreamUtils.readBytesAndClose(inputStream);
         }
 
         if (ByteFile.class.isAssignableFrom(returnType)) {
+            LogAtNullableLevel.atLevel(logger, level)
+                    .log(
+                            "reading content of type {} from path {} by reading the input stream to a ByteFile",
+                            inputMapping.contentType(),
+                            path);
             final var bytes = InputStreamUtils.readBytesAndClose(inputStream);
             final var fileName = Path.of(path).getFileName().toString();
             final var contentType = StringUtils.defaultIfBlank(inputMapping.contentType(), null);
