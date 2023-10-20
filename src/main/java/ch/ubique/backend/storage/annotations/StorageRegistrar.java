@@ -460,7 +460,8 @@ public class StorageRegistrar
     @Override
     public void postProcessBeanDefinitionRegistry(final @NotNull BeanDefinitionRegistry registry)
             throws BeansException {
-        registerStorageClients((DefaultListableBeanFactory) registry);
+        final var buildProperties = StorageRegistrarUtils.loadBuildProperties();
+        registerStorageClients((DefaultListableBeanFactory) registry, buildProperties);
     }
 
     @Override
@@ -469,8 +470,8 @@ public class StorageRegistrar
         // empty
     }
 
-    public void registerStorageClients(final DefaultListableBeanFactory beanFactory) {
-        final var buildProperties = applicationContext.getBean(BuildProperties.class);
+    public void registerStorageClients(
+            final DefaultListableBeanFactory beanFactory, final BuildProperties buildProperties) {
         final var mergedAnnotationsSearch =
                 MergedAnnotations.search(MergedAnnotations.SearchStrategy.TYPE_HIERARCHY)
                         .withEnclosingClasses(
@@ -551,7 +552,8 @@ public class StorageRegistrar
         //             throw new WrappedException(e);
         //         }
         //         logger.info(
-        //                 "saved at {}/{}.class", tempFile, generatedClass.getTypeDescription().getName());
+        //                 "saved at {}/{}.class", tempFile,
+        // generatedClass.getTypeDescription().getName());
         //         comment in above, only for debugging purposes to write the generated class file
 
         final var storageClass =
