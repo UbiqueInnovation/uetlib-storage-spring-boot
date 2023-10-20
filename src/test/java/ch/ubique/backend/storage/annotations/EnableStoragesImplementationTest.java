@@ -15,6 +15,8 @@ import ch.ubique.backend.storage.output.JsonOutput;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,10 +34,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
 
-@SuppressWarnings("DataFlowIssue")
 @SpringBootTest(classes = EnableStoragesImplementationTestConfig.class)
 @ExtendWith(OutputCaptureExtension.class)
 class EnableStoragesImplementationTest {
+
+    private static MockedStatic<StorageRegistrarUtils> mockedStorageRegistrarUtils;
 
     @SpyBean private ObjectMapper objectMapper;
     @SpyBean private StorageClient storageClient;
@@ -44,6 +47,19 @@ class EnableStoragesImplementationTest {
 
     @Value("classpath:storage/files/2.png")
     private Resource png2;
+
+    @BeforeAll
+    static void beforeAll() {
+        mockedStorageRegistrarUtils = Mockito.mockStatic(StorageRegistrarUtils.class);
+        mockedStorageRegistrarUtils
+                .when(StorageRegistrarUtils::loadBuildProperties)
+                .thenReturn(MockedStorageRegistrarUtils.loadBuildProperties());
+    }
+
+    @AfterAll
+    public static void close() {
+        mockedStorageRegistrarUtils.close();
+    }
 
     @BeforeEach
     void beforeEach() throws IOException {
