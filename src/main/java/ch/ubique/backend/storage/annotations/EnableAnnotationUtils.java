@@ -1,30 +1,67 @@
 package ch.ubique.backend.storage.annotations;
 
-import org.apache.commons.collections4.CollectionUtils;
+import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
+
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.reflections.Reflections;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.annotation.Annotation;
+import java.text.MessageFormat;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public final class EnableAnnotationUtils {
 
+    private static final Logger logger = LoggerFactory.getLogger(EnableAnnotationUtils.class);
 
     private EnableAnnotationUtils() {}
 
-    public static <T extends Annotation> Class<?> findEnableClass(
+    @Nullable
+    public static <T extends Annotation> Class<?> findSingletonNullableEnableClass(
             final String buildPropertiesGroup, final Class<T> clazz) {
-        return CollectionUtils.extractSingleton(
-                new Reflections(buildPropertiesGroup).getTypesAnnotatedWith(clazz));
+        return findEnableClasses(buildPropertiesGroup, clazz)
+                .orElseGet(
+                        () -> {
+                            logger.debug(
+                                    "No class with annotation {} found in package {}",
+                                    clazz,
+                                    buildPropertiesGroup);
+                            return null;
+                        });
     }
 
-    public static <T extends Annotation> Set<Class<?>> findEnableClasses(
+    @NotNull
+    public static <T extends Annotation> Class<?> findSingletonEnableClass(
             final String buildPropertiesGroup, final Class<T> clazz) {
-        return new Reflections(buildPropertiesGroup).getTypesAnnotatedWith(clazz);
+        return findEnableClasses(buildPropertiesGroup, clazz)
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        MessageFormat.format(
+                                                "Expected one class annotated with {0} in package {1}, found none.",
+                                                clazz, buildPropertiesGroup)));
+    }
+
+    public static <T extends Annotation> Optional<Class<?>> findEnableClasses(
+            final String buildPropertiesGroup, final Class<T> clazz) {
+        final var enableClasses =
+                new Reflections(buildPropertiesGroup).getTypesAnnotatedWith(clazz);
+
+        if (enableClasses.size() <= 1) {
+            return enableClasses.stream().findFirst();
+        }
+
+        throw new IllegalStateException(
+                MessageFormat.format(
+                        "Expected at most one class annotated with {0} in package {1}. Found: {2}",
+                        clazz, buildPropertiesGroup, enableClasses));
     }
 
     public static Set<Class<?>> findAllClassesBy(
