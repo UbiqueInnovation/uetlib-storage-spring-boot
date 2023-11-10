@@ -1,4 +1,8 @@
 package ch.ubique.backend.storage.annotations;
 
-@Storage(clientQualifier = "storageClient", baseUrl = "documentation", basePath = "storage")
+@Storage(
+        clientQualifier = "testStorageClient",
+        baseUrl = "documentation",
+        basePath = "storage",
+        objectMapperQualifier = "testObjectMapper")
 public interface AnnotatedTestStorage extends TestStorage {}
