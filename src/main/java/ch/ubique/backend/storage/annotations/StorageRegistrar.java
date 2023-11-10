@@ -30,11 +30,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.support.BeanDefinitionBuilder;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.beans.factory.support.*;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -51,6 +49,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -479,8 +478,17 @@ public class StorageRegistrar
                                         !ClassUtils.isInnerClass(clazz)
                                                 && !ClassUtils.isStaticClass(clazz));
         final var enableStoragesClass =
-                EnableAnnotationUtils.findEnableClass(
+                EnableAnnotationUtils.findSingletonNullableEnableClass(
                         buildProperties.getGroup(), EnableStorages.class);
+
+        if (enableStoragesClass == null) {
+            logger.info(
+                    "No {} annotation found, not registering any {} beans.",
+                    EnableStorages.class,
+                    Storage.class);
+            return;
+        }
+
         final var enableStoragesAnnotation =
                 mergedAnnotationsSearch
                         .from(enableStoragesClass)
@@ -544,40 +552,59 @@ public class StorageRegistrar
             final DynamicType.Unloaded<T> generatedClass,
             final StorageBeanType storageBeanType) {
 
-        //         comment in below, only for debugging purposes to write the generated class file
-        //         final var tempFile = java.nio.file.Path.of("/tmp/bytebuddy");
-        //         try {
-        //             generatedClass.saveIn(tempFile.toFile());
-        //         } catch (final IOException e) {
-        //             throw new WrappedException(e);
-        //         }
-        //         logger.info(
-        //                 "saved at {}/{}.class", tempFile,
-        // generatedClass.getTypeDescription().getName());
-        //         comment in above, only for debugging purposes to write the generated class file
+        // log the classes to the filesystem of trace logging is enabled :D
+        if (logger.isTraceEnabled()) {
+            writeClassToFileSystem(generatedClass);
+        }
 
-        final var storageClass =
-                generatedClass.load(ClassLoader.getSystemClassLoader()).getLoaded();
+        final var storageClass = generatedClass.load(beanFactory.getBeanClassLoader()).getLoaded();
         final var beanDefinitionBuilder =
-                BeanDefinitionBuilder.rootBeanDefinition(storageClass)
+                BeanDefinitionBuilder.genericBeanDefinition(storageClass)
                         .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR);
+
         final var beanDefinition = beanDefinitionBuilder.getBeanDefinition();
 
-        final var baseBeanName =
-                CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, storageInterfaceSimpleName);
         final var beanName =
-                switch (storageBeanType) {
-                    case IMPLEMENTATION -> baseBeanName;
-                    case DOCUMENTATION -> baseBeanName + "Documentation";
-                };
+                CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, storageInterfaceSimpleName);
 
-        beanFactory.registerBeanDefinition(beanName, beanDefinition);
+        if (storageBeanType == StorageBeanType.IMPLEMENTATION) {
+            final var holder = new BeanDefinitionHolder(beanDefinition, beanName);
+            BeanDefinitionReaderUtils.registerBeanDefinition(holder, beanFactory);
+
+            logger.info(
+                    "Registered storage bean {} of class {} for storage class {}",
+                    beanName,
+                    storageClass.getCanonicalName(),
+                    storageInterfaceCanonicalName);
+
+            return;
+        }
+
+        final var documentationBeanName =
+                beanName
+                        + CaseFormat.UPPER_UNDERSCORE.to(
+                                CaseFormat.UPPER_CAMEL, StorageBeanType.DOCUMENTATION.name());
+        final var documentationBean = beanFactory.createBean(beanDefinition.getBeanClass());
+        beanFactory.registerSingleton(documentationBeanName, documentationBean);
         logger.info(
-                "Registered {} bean {} of class {} for storage class {}",
-                storageBeanType,
-                beanName,
+                "Registered singleton documentation bean {} of class {} for storage class {}",
+                documentationBeanName,
                 storageClass.getCanonicalName(),
                 storageInterfaceCanonicalName);
+    }
+
+    private <T> void writeClassToFileSystem(final DynamicType.Unloaded<T> generatedClass) {
+        final var springApplicationName =
+                Objects.requireNonNull(
+                        applicationContext.getEnvironment().getProperty("spring.application.name"));
+        final var tempFile = Path.of("/tmp/bytebuddy/").resolve(springApplicationName);
+        try {
+            generatedClass.saveIn(tempFile.toFile());
+        } catch (final IOException e) {
+            throw new WrappedException(e);
+        }
+        logger.trace(
+                "saved at {}/{}.class", tempFile, generatedClass.getTypeDescription().getName());
     }
 
     @Override

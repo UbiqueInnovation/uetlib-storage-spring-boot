@@ -85,14 +85,22 @@ public final class EnableAnnotationUtils {
                             enableClassPackageName);
         }
 
-        final var reflections =
-                basePackages.stream()
-                        .map(Reflections::new)
-                        .reduce(new Reflections("ch.ubique.backend"), Reflections::merge);
+        final Stream<Class<?>> typesAnnotatedWithStream;
+        if (basePackages.isEmpty()) {
+            typesAnnotatedWithStream = Stream.of();
+        } else {
+            final var firstReflections =
+                    new Reflections(basePackages.stream().limit(1).findFirst().orElseThrow());
+            final var reflections =
+                    basePackages.stream()
+                            .skip(1)
+                            .map(Reflections::new)
+                            .reduce(firstReflections, Reflections::merge);
+            typesAnnotatedWithStream =
+                    reflections.getTypesAnnotatedWith(annotationClassToFind).stream();
+        }
 
-        return Stream.concat(
-                        jobClassesFromAnnotation.stream(),
-                        reflections.getTypesAnnotatedWith(annotationClassToFind).stream())
+        return Stream.concat(jobClassesFromAnnotation.stream(), typesAnnotatedWithStream)
                 .collect(Collectors.toSet());
     }
 

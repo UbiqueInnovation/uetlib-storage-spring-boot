@@ -47,7 +47,7 @@ public @interface EnableStorages {
     /**
      * List of classes annotated with @{@link Storage}. If not empty, disables classpath scanning.
      *
-     * @return array of FeignClient classes
+     * @return array of Storage classes
      */
     Class<?>[] storages() default {};
 
