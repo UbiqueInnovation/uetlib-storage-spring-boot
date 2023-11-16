@@ -587,7 +587,7 @@ public class StorageRegistrar
         final var documentationBean = beanFactory.createBean(beanDefinition.getBeanClass());
         beanFactory.registerSingleton(documentationBeanName, documentationBean);
         logger.info(
-                "Registered singleton documentation bean {} of class {} for storage class {}",
+                "Registered documentation bean {} of class {} for storage class {}",
                 documentationBeanName,
                 storageClass.getCanonicalName(),
                 storageInterfaceCanonicalName);
