@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.reflections.Reflections;
+import org.reflections.util.ConfigurationBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +23,10 @@ public final class EnableAnnotationUtils {
     private static final Logger logger = LoggerFactory.getLogger(EnableAnnotationUtils.class);
 
     private EnableAnnotationUtils() {}
+
+    private static Reflections getReflectionsForPackages(final String[] packages) {
+        return new Reflections(new ConfigurationBuilder().forPackages(packages));
+    }
 
     @Nullable
     public static <T extends Annotation> Class<?> findSingletonNullableEnableClass(
@@ -52,7 +57,8 @@ public final class EnableAnnotationUtils {
     public static <T extends Annotation> Optional<Class<?>> findEnableClasses(
             final String buildPropertiesGroup, final Class<T> clazz) {
         final var enableClasses =
-                new Reflections(buildPropertiesGroup).getTypesAnnotatedWith(clazz);
+                getReflectionsForPackages(new String[] {buildPropertiesGroup})
+                        .getTypesAnnotatedWith(clazz);
 
         if (enableClasses.size() <= 1) {
             return enableClasses.stream().findFirst();
@@ -90,7 +96,10 @@ public final class EnableAnnotationUtils {
             typesAnnotatedWithStream = Stream.of();
         } else {
             final var firstReflections =
-                    new Reflections(basePackages.stream().limit(1).findFirst().orElseThrow());
+                    getReflectionsForPackages(
+                            new String[] {
+                                basePackages.stream().limit(1).findFirst().orElseThrow()
+                            });
             final var reflections =
                     basePackages.stream()
                             .skip(1)
