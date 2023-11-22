@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.annotation.Annotation;
 import java.text.MessageFormat;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -24,8 +25,8 @@ public final class EnableAnnotationUtils {
 
     private EnableAnnotationUtils() {}
 
-    private static Reflections getReflectionsForPackages(final String[] packages) {
-        return new Reflections(new ConfigurationBuilder().forPackages(packages));
+    private static Reflections getReflectionsForPackages(final String packageIdentifier) {
+        return new Reflections(new ConfigurationBuilder().forPackages(packageIdentifier));
     }
 
     @Nullable
@@ -57,8 +58,7 @@ public final class EnableAnnotationUtils {
     public static <T extends Annotation> Optional<Class<?>> findEnableClasses(
             final String buildPropertiesGroup, final Class<T> clazz) {
         final var enableClasses =
-                getReflectionsForPackages(new String[] {buildPropertiesGroup})
-                        .getTypesAnnotatedWith(clazz);
+                getReflectionsForPackages(buildPropertiesGroup).getTypesAnnotatedWith(clazz);
 
         if (enableClasses.size() <= 1) {
             return enableClasses.stream().findFirst();
@@ -97,20 +97,28 @@ public final class EnableAnnotationUtils {
         } else {
             final var firstReflections =
                     getReflectionsForPackages(
-                            new String[] {
-                                basePackages.stream().limit(1).findFirst().orElseThrow()
-                            });
+                            basePackages.stream().limit(1).findFirst().orElseThrow());
             final var reflections =
                     basePackages.stream()
                             .skip(1)
-                            .map(Reflections::new)
+                            .map(EnableAnnotationUtils::getReflectionsForPackages)
                             .reduce(firstReflections, Reflections::merge);
             typesAnnotatedWithStream =
-                    reflections.getTypesAnnotatedWith(annotationClassToFind).stream();
+                    reflections.getTypesAnnotatedWith(annotationClassToFind).stream()
+                            .filter(cls -> isPartOfAnyPackage(cls, basePackages));
         }
 
         return Stream.concat(jobClassesFromAnnotation.stream(), typesAnnotatedWithStream)
                 .collect(Collectors.toSet());
+    }
+
+    private static boolean isPartOfAnyPackage(
+            final Class<?> cls, final Collection<String> basePackages) {
+        return basePackages.stream().anyMatch(basePackage -> isPartOfPackage(cls, basePackage));
+    }
+
+    private static boolean isPartOfPackage(final Class<?> cls, final String basePackage) {
+        return cls.getPackageName().startsWith(basePackage);
     }
 
     private static Set<String> getBasePackages(
