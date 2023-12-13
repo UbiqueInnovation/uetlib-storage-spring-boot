@@ -9,13 +9,11 @@ import org.reflections.Reflections;
 import org.reflections.util.ConfigurationBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationContext;
 
 import java.lang.annotation.Annotation;
 import java.text.MessageFormat;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -31,43 +29,47 @@ public final class EnableAnnotationUtils {
 
     @Nullable
     public static <T extends Annotation> Class<?> findSingletonNullableEnableClass(
-            final String buildPropertiesGroup, final Class<T> clazz) {
-        return findEnableClasses(buildPropertiesGroup, clazz)
-                .orElseGet(
-                        () -> {
-                            logger.debug(
-                                    "No class with annotation {} found in package {}",
-                                    clazz,
-                                    buildPropertiesGroup);
-                            return null;
-                        });
+            final ApplicationContext applicationContext, final Class<T> clazz) {
+        final var enableClass = findEnableClasses(applicationContext, clazz);
+
+        if (enableClass != null) {
+            logger.debug("No bean class annotated with {} found in application context", clazz);
+        }
+
+        return enableClass;
     }
 
     @NotNull
     public static <T extends Annotation> Class<?> findSingletonEnableClass(
-            final String buildPropertiesGroup, final Class<T> clazz) {
-        return findEnableClasses(buildPropertiesGroup, clazz)
-                .orElseThrow(
-                        () ->
-                                new IllegalStateException(
-                                        MessageFormat.format(
-                                                "Expected one class annotated with {0} in package {1}, found none.",
-                                                clazz, buildPropertiesGroup)));
-    }
+            final ApplicationContext applicationContext, final Class<T> clazz) {
+        final var enableClass = findEnableClasses(applicationContext, clazz);
 
-    public static <T extends Annotation> Optional<Class<?>> findEnableClasses(
-            final String buildPropertiesGroup, final Class<T> clazz) {
-        final var enableClasses =
-                getReflectionsForPackages(buildPropertiesGroup).getTypesAnnotatedWith(clazz);
-
-        if (enableClasses.size() <= 1) {
-            return enableClasses.stream().findFirst();
+        if (enableClass != null) {
+            return enableClass;
         }
 
         throw new IllegalStateException(
                 MessageFormat.format(
-                        "Expected at most one class annotated with {0} in package {1}. Found: {2}",
-                        clazz, buildPropertiesGroup, enableClasses));
+                        "Expected one bean class annotated with {0} in the application context, found none.",
+                        clazz));
+    }
+
+    @Nullable
+    private static <T extends Annotation> Class<?> findEnableClasses(
+            final ApplicationContext applicationContext, final Class<T> clazz) {
+        final var enableClasses =
+                applicationContext.getBeansWithAnnotation(clazz).values().stream()
+                        .map(Object::getClass)
+                        .toList();
+
+        if (enableClasses.size() <= 1) {
+            return enableClasses.stream().findFirst().orElse(null);
+        }
+
+        throw new IllegalStateException(
+                MessageFormat.format(
+                        "Expected at most one bean class annotated with {0} in the application context. Found: {1}",
+                        clazz, enableClasses));
     }
 
     public static Set<Class<?>> findAllClassesBy(

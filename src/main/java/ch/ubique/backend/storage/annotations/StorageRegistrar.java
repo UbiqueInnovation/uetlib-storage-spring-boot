@@ -33,7 +33,6 @@ import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.*;
-import org.springframework.boot.info.BuildProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.annotation.MergedAnnotations;
@@ -459,8 +458,7 @@ public class StorageRegistrar
     @Override
     public void postProcessBeanDefinitionRegistry(final @NotNull BeanDefinitionRegistry registry)
             throws BeansException {
-        final var buildProperties = StorageRegistrarUtils.loadBuildProperties();
-        registerStorageClients((DefaultListableBeanFactory) registry, buildProperties);
+        registerStorageClients((DefaultListableBeanFactory) registry);
     }
 
     @Override
@@ -469,8 +467,7 @@ public class StorageRegistrar
         // empty
     }
 
-    public void registerStorageClients(
-            final DefaultListableBeanFactory beanFactory, final BuildProperties buildProperties) {
+    public void registerStorageClients(final DefaultListableBeanFactory beanFactory) {
         final var mergedAnnotationsSearch =
                 MergedAnnotations.search(MergedAnnotations.SearchStrategy.TYPE_HIERARCHY)
                         .withEnclosingClasses(
@@ -479,7 +476,7 @@ public class StorageRegistrar
                                                 && !ClassUtils.isStaticClass(clazz));
         final var enableStoragesClass =
                 EnableAnnotationUtils.findSingletonNullableEnableClass(
-                        buildProperties.getGroup(), EnableStorages.class);
+                        applicationContext, EnableStorages.class);
 
         if (enableStoragesClass == null) {
             logger.info(
