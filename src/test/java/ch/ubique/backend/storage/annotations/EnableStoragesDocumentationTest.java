@@ -9,8 +9,6 @@ import ch.ubique.backend.storage.config.implementation.EnableStoragesImplementat
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
@@ -28,25 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 @AutoConfigureMockMvc
 class EnableStoragesDocumentationTest {
 
-    private static MockedStatic<StorageRegistrarUtils> mockedStorageRegistrarUtils;
-
     @SpyBean private ObjectMapper objectMapper;
 
     @Autowired private ApplicationContext applicationContext;
     @Autowired private MockMvc mockMvc;
-
-    @BeforeAll
-    static void beforeAll() {
-        mockedStorageRegistrarUtils = Mockito.mockStatic(StorageRegistrarUtils.class);
-        mockedStorageRegistrarUtils
-                .when(StorageRegistrarUtils::loadBuildProperties)
-                .thenReturn(MockedStorageRegistrarUtils.loadBuildProperties());
-    }
-
-    @AfterAll
-    public static void close() {
-        mockedStorageRegistrarUtils.close();
-    }
 
     @BeforeEach
     void beforeEach() {
