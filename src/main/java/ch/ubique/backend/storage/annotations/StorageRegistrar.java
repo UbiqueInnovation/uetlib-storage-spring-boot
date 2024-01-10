@@ -590,6 +590,7 @@ public class StorageRegistrar
                 storageInterfaceCanonicalName);
     }
 
+    @SuppressWarnings("java:S5443")
     private <T> void writeClassToFileSystem(final DynamicType.Unloaded<T> generatedClass) {
         final var springApplicationName =
                 Objects.requireNonNull(
