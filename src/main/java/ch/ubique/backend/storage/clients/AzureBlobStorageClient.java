@@ -43,8 +43,6 @@ import java.util.stream.Collectors;
 
 public class AzureBlobStorageClient implements StorageClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(AzureBlobStorageClient.class);
-
     private final BlobServiceClient blobServiceClient;
     private final BlobContainerClient blobContainerClient;
     @Nullable private final OutputMetaDataProvider outputMetaDataProvider;
@@ -153,8 +151,7 @@ public class AzureBlobStorageClient implements StorageClient {
 
             return inputStream;
         }
-
-}
+    }
 
     private BlobDownloadResponse downloadStreamWithResponse(
             @NotNull final String path, final ByteArrayOutputStream outputStream) {

@@ -28,8 +28,6 @@ import jakarta.validation.constraints.NotNull;
 import okhttp3.OkHttpClient;
 
 import org.apache.commons.lang3.NotImplementedException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 
 import java.io.IOException;
@@ -49,8 +47,6 @@ import java.util.stream.StreamSupport;
  */
 public sealed class MinioStorageClient implements StorageClient
         permits AmazonS3StorageClient, CloudflareR2StorageClient {
-
-    private static final Logger logger = LoggerFactory.getLogger(MinioStorageClient.class);
 
     private final String bucket;
     private final MinioClient minioClient;
