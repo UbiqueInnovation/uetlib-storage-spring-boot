@@ -50,6 +50,17 @@ public final class OutputMetaData {
         this.sMaxAge = Objects.requireNonNullElse(sMaxAge, maxAge);
     }
 
+    public OutputMetaData(@NotNull final OutputMetaData outputMetaData) {
+        this.maxAge = outputMetaData.maxAge;
+        this.sMaxAge = outputMetaData.sMaxAge;
+        this.bestBefore = outputMetaData.bestBefore;
+        this.nextRefresh = outputMetaData.nextRefresh;
+        this.backoff = outputMetaData.backoff;
+        this.contentLengthUncompressed = outputMetaData.contentLengthUncompressed;
+        this.accessPolicy = outputMetaData.accessPolicy;
+        this.customAccessPolicy = outputMetaData.customAccessPolicy;
+    }
+
     /**
      * This is used if neither a {@link OutputMetaData} is passed to the {@link
      * OutputMapping}/{@link StorageClient#write} method nor a default is provided to the {@link
@@ -69,7 +80,7 @@ public final class OutputMetaData {
             @NotNull final Output output) {
         final OutputMetaData resolvedOutputMetaData;
         if (outputMetaData != null) {
-            resolvedOutputMetaData = outputMetaData;
+            resolvedOutputMetaData = new OutputMetaData(outputMetaData);
         } else if (outputMetaDataProvider != null) {
             resolvedOutputMetaData = outputMetaDataProvider.createOutputMetaData();
         } else {
