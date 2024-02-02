@@ -26,6 +26,7 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@SuppressWarnings({"UnusedReturnValue", "unused"})
 public final class OutputMetaData {
     private static final Logger logger = LoggerFactory.getLogger(OutputMetaData.class);
 
@@ -43,7 +44,6 @@ public final class OutputMetaData {
      * @param maxAge Duration must not be null
      * @param sMaxAge Duration will be set to maxAge if null
      */
-    @Contract("null, _ -> fail")
     public OutputMetaData(@NotNull final Duration maxAge, @Nullable final Duration sMaxAge) {
         Objects.requireNonNull(maxAge);
         this.maxAge = maxAge;
@@ -101,21 +101,18 @@ public final class OutputMetaData {
         return resolvedOutputMetaData;
     }
 
-    @Contract("null -> fail")
     public OutputMetaData bestBefore(@NotNull final Instant bestBefore) {
         Objects.requireNonNull(bestBefore);
         this.bestBefore = bestBefore;
         return this;
     }
 
-    @Contract("null -> fail")
     public OutputMetaData nextRefresh(@NotNull final Instant nextRefresh) {
         Objects.requireNonNull(nextRefresh);
         this.nextRefresh = nextRefresh;
         return this;
     }
 
-    @Contract("null -> fail")
     public OutputMetaData backoff(@NotNull final Duration backoff) {
         Objects.requireNonNull(backoff);
         this.backoff = backoff;
@@ -130,7 +127,6 @@ public final class OutputMetaData {
      * @param accessPolicy The access policy
      * @return this to allow chaining
      */
-    @Contract("null -> fail")
     public OutputMetaData accessPolicy(@NotNull final CannedAcl accessPolicy)
             throws IllegalStateException {
         if (customAccessPolicy != null) {
@@ -151,7 +147,6 @@ public final class OutputMetaData {
      * @param customAccessPolicy The custom access policy
      * @return this to allow chaining
      */
-    @Contract("null -> fail")
     public OutputMetaData customAccessPolicy(@NotNull final String customAccessPolicy)
             throws IllegalStateException {
         if (accessPolicy != null) {
@@ -163,7 +158,6 @@ public final class OutputMetaData {
         return this;
     }
 
-    @Contract("null -> fail")
     public OutputMetaData contentLengthUncompressed(@NotNull final Long contentLengthUncompressed) {
         Objects.requireNonNull(contentLengthUncompressed);
         this.contentLengthUncompressed = contentLengthUncompressed;
