@@ -49,6 +49,7 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.nio.file.Path;
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -201,6 +202,12 @@ public class StorageRegistrar
             final MergedAnnotations.Search mergedAnnotationsSearch,
             final Storage storageAnnotation) {
         final var documentationClassName = storageInterface.getSimpleName() + "Documentation";
+        if (storageAnnotation.basePath().startsWith("/")) {
+            throw new IllegalArgumentException(
+                    MessageFormat.format(
+                            "Storage::basePath cannot start with ''/'' for storage {0}. Got: {1}",
+                            storageInterface.getSimpleName(), storageAnnotation.basePath()));
+        }
         final var basePath =
                 Stream.of(storageAnnotation.baseUrl(), storageAnnotation.basePath())
                         .filter(StringUtils::isNotBlank)
@@ -295,8 +302,17 @@ public class StorageRegistrar
                 Arrays.stream(method.getParameters())
                         .filter(parameter -> parameter.isAnnotationPresent(PathVariable.class))
                         .toList();
-        final var mappingPath =
-                methodInfo.storageMethodAnnotations().get(StorageMapping.class).synthesize().path();
+        final var storageMapping =
+                methodInfo.storageMethodAnnotations().get(StorageMapping.class).synthesize();
+        if (storageMapping.path().startsWith("/")) {
+            throw new IllegalArgumentException(
+                    MessageFormat.format(
+                            "StorageMapping::path cannot start with ''/'' for method {0}::{1}. Got: {2}",
+                            method.getDeclaringClass().getSimpleName(),
+                            method.getName(),
+                            storageMapping.path()));
+        }
+        final var mappingPath = storageMapping.path();
         final var methodAnnotations =
                 List.of(
                         AnnotationDescription.Builder.ofType(GetMapping.class)

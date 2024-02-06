@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.text.MessageFormat;
 
 public final class InputMappingInterceptor {
 
@@ -46,6 +47,14 @@ public final class InputMappingInterceptor {
         final var parameterAnnotations = method.getParameterAnnotations();
 
         final var returnType = method.getReturnType();
+        if (inputMapping.path().startsWith("/")) {
+            throw new IllegalArgumentException(
+                    MessageFormat.format(
+                            "InputMapping::path cannot start with ''/'' for method {0}::{1}. Got: {2}",
+                            method.getDeclaringClass().getSimpleName(),
+                            method.getName(),
+                            inputMapping.path()));
+        }
         final var path =
                 getPath(
                         method.getParameters(),
