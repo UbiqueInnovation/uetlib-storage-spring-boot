@@ -17,6 +17,7 @@ import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.text.MessageFormat;
 
 public final class DeleteMappingInterceptor {
 
@@ -40,6 +41,14 @@ public final class DeleteMappingInterceptor {
         final var deleteMapping = findAnnotation(method, DeleteMapping.class);
 
         final var returnType = method.getReturnType();
+        if (deleteMapping.path().startsWith("/")) {
+            throw new IllegalArgumentException(
+                    MessageFormat.format(
+                            "DeleteMapping::path cannot start with ''/'' for method {0}::{1}. Got: {2}",
+                            method.getDeclaringClass().getSimpleName(),
+                            method.getName(),
+                            deleteMapping.path()));
+        }
         final var path =
                 getPath(
                         method.getParameters(),

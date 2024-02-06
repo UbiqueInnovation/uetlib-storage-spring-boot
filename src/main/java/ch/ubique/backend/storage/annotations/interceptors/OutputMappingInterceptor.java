@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.stream.IntStream;
 
@@ -111,6 +112,14 @@ public final class OutputMappingInterceptor {
         final var parameterAnnotations = method.getParameterAnnotations();
 
         final var output = getOutput(thiz, outputMapping, parameterAnnotations, allArguments);
+        if (outputMapping.path().startsWith("/")) {
+            throw new IllegalArgumentException(
+                    MessageFormat.format(
+                            "OutputMapping::path cannot start with ''/'' for method {0}::{1}. Got: {2}",
+                            method.getDeclaringClass().getSimpleName(),
+                            method.getName(),
+                            outputMapping.path()));
+        }
         final var path =
                 getPath(
                         method.getParameters(),

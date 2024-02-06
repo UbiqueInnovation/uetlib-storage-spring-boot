@@ -46,6 +46,14 @@ public final class ListMappingInterceptor {
         final var listMapping = findAnnotation(method, ListMapping.class);
 
         final var returnType = method.getReturnType();
+        if (listMapping.path().startsWith("/")) {
+            throw new IllegalArgumentException(
+                    MessageFormat.format(
+                            "ListMapping::path cannot start with ''/'' for method {0}::{1}. Got: {2}",
+                            method.getDeclaringClass().getSimpleName(),
+                            method.getName(),
+                            listMapping.path()));
+        }
         final var path =
                 getPath(
                         method.getParameters(),

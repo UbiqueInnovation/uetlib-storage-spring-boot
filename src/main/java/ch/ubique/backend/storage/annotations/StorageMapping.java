@@ -12,19 +12,16 @@ import java.lang.annotation.*;
 public @interface StorageMapping {
 
     /**
-     * The primary mapping expressed by this annotation.
-     *
-     * <p>This is an alias for {@link #path}. For example, {@code @StorageMapping("foo")} is
-     * equivalent to {@code @StorageMapping(path="foo")}.
-     *
-     * <p><strong>NOTE</strong>: A handler method that is not mapped to any path explicitly is
-     * invalid.
+     * This is an alias for {@link #path}. For example, {@code @StorageMapping("foo")} is equivalent
+     * to {@code @StorageMapping(path="foo")}.
      */
     @AliasFor("path")
     String value() default "";
 
     /**
      * The path mapping URIs (e.g. {@code "file.json"}).
+     *
+     * <p>Cannot start with a `\` and startup will fail if it does.
      *
      * <p><strong>NOTE</strong>: A handler method that is not mapped to any path explicitly is
      * invalid.
