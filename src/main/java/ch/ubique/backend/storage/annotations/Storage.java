@@ -40,7 +40,7 @@ public @interface Storage {
     /**
      * Base path for all output mappings (comparable to @RequestMapping at Controller class level).
      *
-     * <p>Cannot start with a `\` and startup will fail if it does.
+     * <p>Cannot start with a `/` and startup will fail if it does.
      */
     String basePath() default "";
 
