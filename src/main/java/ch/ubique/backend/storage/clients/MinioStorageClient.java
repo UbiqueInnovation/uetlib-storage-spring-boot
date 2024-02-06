@@ -5,11 +5,11 @@ import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 
 import com.pivovarit.function.ThrowingConsumer;
 import com.pivovarit.function.ThrowingFunction;
-import com.pivovarit.function.exception.WrappedException;
 
 import io.minio.*;
 import io.minio.errors.ErrorResponseException;
@@ -35,6 +35,7 @@ import java.io.InputStream;
 import java.nio.file.DirectoryNotEmptyException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -132,7 +133,11 @@ public sealed class MinioStorageClient implements StorageClient
                 | NoSuchAlgorithmException
                 | ServerException
                 | XmlParserException e) {
-            throw new WrappedException(e);
+            throw new StorageClientException(
+                    MessageFormat.format(
+                            "failed to write for [path={0}, outputMetaData={1}, output={2}]",
+                            path, outputMetaData, output),
+                    e);
         }
     }
 
@@ -159,7 +164,11 @@ public sealed class MinioStorageClient implements StorageClient
                 | NoSuchAlgorithmException
                 | ServerException
                 | XmlParserException e) {
-            throw new WrappedException(e);
+            throw new StorageClientException(
+                    MessageFormat.format(
+                            "failed to read for [path={0}, doUncompressIfNeeded={1}]",
+                            path, doUncompressIfNeeded),
+                    e);
         }
     }
 
@@ -226,7 +235,10 @@ public sealed class MinioStorageClient implements StorageClient
                 | ServerException
                 | XmlParserException
                 | IOException e) {
-            throw new WrappedException(e);
+            throw new StorageClientException(
+                    MessageFormat.format(
+                            "failed to get signed url for [path={0}, expiry={1}]", path, expiry),
+                    e);
         }
     }
 
@@ -249,7 +261,10 @@ public sealed class MinioStorageClient implements StorageClient
                 | NoSuchAlgorithmException
                 | ServerException
                 | XmlParserException e) {
-            throw new WrappedException(e);
+            throw new StorageClientException(
+                    MessageFormat.format(
+                            "failed to create bucket for [bucketName={0}]", bucketName),
+                    e);
         }
     }
 }
