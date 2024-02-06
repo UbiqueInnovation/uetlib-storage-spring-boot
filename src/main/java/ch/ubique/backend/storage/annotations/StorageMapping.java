@@ -21,7 +21,7 @@ public @interface StorageMapping {
     /**
      * The path mapping URIs (e.g. {@code "file.json"}).
      *
-     * <p>Cannot start with a `\` and startup will fail if it does.
+     * <p>Cannot start with a `/` and startup will fail if it does.
      *
      * <p><strong>NOTE</strong>: A handler method that is not mapped to any path explicitly is
      * invalid.
