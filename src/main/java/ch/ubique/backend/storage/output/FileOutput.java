@@ -1,5 +1,9 @@
 package ch.ubique.backend.storage.output;
 
+import ch.ubique.backend.core.utils.StringUtils;
+
+import jakarta.annotation.Nullable;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -18,12 +22,12 @@ public final class FileOutput implements Output {
     private final String contentType;
 
     public FileOutput(final File file) {
-        this(file, "application/octet-stream");
+        this(file, null);
     }
 
-    public FileOutput(final File file, final String contentType) {
+    public FileOutput(final File file, @Nullable final String contentType) {
         this.file = file;
-        this.contentType = contentType;
+        this.contentType = StringUtils.requireNonBlankElse(contentType, "application/octet-stream");
     }
 
     @Override
