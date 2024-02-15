@@ -122,7 +122,7 @@ public sealed class MinioStorageClient implements StorageClient
                             .object(path)
                             .contentType(contentType)
                             .headers(createHeaders(output, metaData))
-                            .stream(inputStream, inputStream.available(), -1);
+                            .stream(inputStream, output.contentLength(), -1);
             putObjectArgs.userMetadata(metaData.createMinioMetaDataMap());
             minioClient.putObject(putObjectArgs.build());
         } catch (final ErrorResponseException
