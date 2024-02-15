@@ -5,7 +5,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Optional;
 
-public sealed interface Output permits GZipOutput, ByteOutput, FileOutput, JsonOutput {
+public sealed interface Output
+        permits ByteOutput, FileOutput, GZipOutput, InputStreamOutput, JsonOutput {
 
     void write(final OutputStream outputStream) throws IOException;
 

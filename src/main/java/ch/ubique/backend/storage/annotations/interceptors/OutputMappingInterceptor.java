@@ -8,22 +8,19 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.annotations.Storage;
 import ch.ubique.backend.storage.annotations.StorageObject;
-import ch.ubique.backend.storage.output.ByteOutput;
-import ch.ubique.backend.storage.output.FileOutput;
-import ch.ubique.backend.storage.output.JsonOutput;
-import ch.ubique.backend.storage.output.Output;
+import ch.ubique.backend.storage.output.*;
 
 import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.implementation.bind.annotation.Origin;
 import net.bytebuddy.implementation.bind.annotation.RuntimeType;
 import net.bytebuddy.implementation.bind.annotation.This;
 
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.text.MessageFormat;
@@ -67,30 +64,15 @@ public final class OutputMappingInterceptor {
         final var storageObject = allArguments[storageObjectParameterIndex];
         final var contentType = outputMapping.contentType();
 
-        final Output output;
-        // TODO Java 21 switch case pattern matching
-        if (storageObject instanceof final Output o) {
-            // no wrapping if already of type Output
-            output = o;
-        } else if (storageObject instanceof final File file) {
-            // wrap in FileOutput
-            if (StringUtils.isEmpty(contentType)) {
-                output = new FileOutput(file);
-            } else {
-                output = new FileOutput(file, contentType);
-            }
-        } else if (storageObject instanceof final byte[] bytes) {
-            // wrap in ByteOutput
-            if (StringUtils.isEmpty(contentType)) {
-                output = new ByteOutput(bytes);
-            } else {
-                output = new ByteOutput(bytes, contentType);
-            }
-        } else {
-            // default case wrap in JsonOutput
-            final var objectMapper = getObjectMapper(thiz, allArguments);
-            output = new JsonOutput<>(storageObject, objectMapper);
-        }
+        final var output =
+                switch (storageObject) {
+                    case final Output o -> o; // no wrapping if already of type Output
+                    case final File file -> new FileOutput(file, contentType);
+                    case final InputStream is -> new InputStreamOutput(is, contentType);
+                    case final byte[] bytes -> new ByteOutput(bytes, contentType);
+                    case null -> new ByteOutput(new byte[0], contentType);
+                    default -> new JsonOutput<>(storageObject, getObjectMapper(thiz, allArguments));
+                };
 
         if (outputMapping.gZip()) {
             return output.gZip();

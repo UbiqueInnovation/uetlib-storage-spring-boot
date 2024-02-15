@@ -1,6 +1,9 @@
 package ch.ubique.backend.storage.output;
 
 import ch.ubique.backend.core.file.ByteFile;
+import ch.ubique.backend.core.utils.StringUtils;
+
+import jakarta.annotation.Nullable;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -18,16 +21,16 @@ public final class ByteOutput implements Output {
     private final String contentType;
 
     public ByteOutput(final byte[] value) {
-        this(value, "application/octet-stream");
+        this(value, null);
     }
 
     public ByteOutput(final ByteFile byteFile) {
         this(byteFile.getBytes(), byteFile.getContentType());
     }
 
-    public ByteOutput(final byte[] value, final String contentType) {
+    public ByteOutput(final byte[] value, @Nullable final String contentType) {
         this.value = value;
-        this.contentType = contentType;
+        this.contentType = StringUtils.requireNonBlankElse(contentType, "application/octet-stream");
     }
 
     @Override
