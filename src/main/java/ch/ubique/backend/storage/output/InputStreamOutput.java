@@ -72,6 +72,11 @@ public final class InputStreamOutput implements Output {
 
     @Override
     public long contentLength() {
-        return -1;
+        try {
+            // Returns an estimate of the number of bytes that can be read
+            return inputStream.available();
+        } catch (final IOException e) {
+            return -1;
+        }
     }
 }
