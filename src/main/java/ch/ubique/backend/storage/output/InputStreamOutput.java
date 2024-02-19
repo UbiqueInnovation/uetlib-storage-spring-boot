@@ -12,19 +12,30 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Objects;
 
 public final class InputStreamOutput implements Output {
 
     private final String contentType;
     private final InputStream inputStream;
 
+    private final long contentLength;
+
     public InputStreamOutput(final InputStream inputStream) {
         this(inputStream, null);
     }
 
     public InputStreamOutput(final InputStream inputStream, @Nullable final String contentType) {
+        this(inputStream, contentType, null);
+    }
+
+    public InputStreamOutput(
+            final InputStream inputStream,
+            @Nullable final String contentType,
+            @Nullable final Long contentLength) {
         this.inputStream = inputStream;
         this.contentType = StringUtils.requireNonBlankElse(contentType, "application/octet-stream");
+        this.contentLength = Objects.requireNonNullElse(contentLength, -1L);
     }
 
     @Override
@@ -72,11 +83,6 @@ public final class InputStreamOutput implements Output {
 
     @Override
     public long contentLength() {
-        try {
-            // Returns an estimate of the number of bytes that can be read
-            return inputStream.available();
-        } catch (final IOException e) {
-            return -1;
-        }
+        return contentLength;
     }
 }
