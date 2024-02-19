@@ -33,14 +33,12 @@ public record GZipOutput(Output uncompressed) implements Output {
     }
 
     @Override
+    @SuppressWarnings("java:S2095")
     public InputStream read() throws IOException {
-        try (final var outputStream = new ByteArrayOutputStream()) {
-            write(outputStream);
-            // TODO fix InputStreamUtils.pipeOutputToInputStream, then revert this to:
-            // return InputStreamUtils.pipeOutputToInputStream(outputStream);
-            final var bytes = outputStream.toByteArray();
-            return new ByteArrayInputStream(bytes);
-        }
+        final var inPipe = new PipedInputStream();
+        final var outPipe = new PipedOutputStream(inPipe);
+        new Thread(ThrowingRunnable.unchecked(() -> write(outPipe))).start();
+        return inPipe;
     }
 
     @Override
