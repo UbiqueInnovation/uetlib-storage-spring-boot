@@ -16,7 +16,7 @@ import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
@@ -24,6 +24,12 @@ import java.time.OffsetDateTime;
 import java.util.Set;
 
 class StorageClientTest {
+
+    @NotNull
+    private static String readStringAndClose(final InputStream storageClient) throws IOException {
+        return new String(
+                InputStreamUtils.readBytesAndClose(storageClient), StandardCharsets.UTF_8);
+    }
 
     @Test
     void testFileSystemStorageClient() throws IOException {
@@ -101,9 +107,10 @@ class StorageClientTest {
         assertEquals(
                 "Hello World",
                 readStringAndClose(
-                        new URL(
+                        URI.create(
                                         storageClient.getSignedUrl(
                                                 "foo", OffsetDateTime.now().plusHours(1)))
+                                .toURL()
                                 .openStream()));
 
         storageClient.write(new ByteOutput(new byte[0]), "bar/foo1");
@@ -121,11 +128,5 @@ class StorageClientTest {
 
         assertDoesNotThrow(() -> storageClient.delete("bar", true));
         assertEquals(Set.of("foo"), storageClient.list());
-    }
-
-    @NotNull
-    private static String readStringAndClose(final InputStream storageClient) throws IOException {
-        return new String(
-                InputStreamUtils.readBytesAndClose(storageClient), StandardCharsets.UTF_8);
     }
 }
