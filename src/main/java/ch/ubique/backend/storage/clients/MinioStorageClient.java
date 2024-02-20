@@ -116,13 +116,16 @@ public sealed class MinioStorageClient implements StorageClient
 
             final var contentType = Objects.requireNonNull(output.contentType());
 
+            final var fallbackPartSize = 10 * 1024 * 1024; // 10MiB (must be between 5MiB to 5GiB)
+            final var partSize = output.contentLength() > 0 ? -1 : fallbackPartSize;
+
             final var putObjectArgs =
                     PutObjectArgs.builder()
                             .bucket(bucket)
                             .object(path)
                             .contentType(contentType)
                             .headers(createHeaders(output, metaData))
-                            .stream(inputStream, output.contentLength(), -1);
+                            .stream(inputStream, output.contentLength(), partSize);
             putObjectArgs.userMetadata(metaData.createMinioMetaDataMap());
             minioClient.putObject(putObjectArgs.build());
         } catch (final ErrorResponseException
