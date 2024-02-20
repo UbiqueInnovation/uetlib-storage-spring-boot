@@ -116,7 +116,9 @@ public sealed class MinioStorageClient implements StorageClient
 
             final var contentType = Objects.requireNonNull(output.contentType());
 
-            final var fallbackPartSize = 10 * 1024 * 1024; // 10MiB (must be between 5MiB to 5GiB)
+            // 8MiB (default in aws s3 cli, must be between 5MiB to 5GiB)
+            // CAUTION: The upload is restricted to 10000 * partSize = 80GiB at the moment. We might have to increase this at some point for unknown contentLength
+            final var fallbackPartSize = 8 * 1024 * 1024;
             final var partSize = output.contentLength() > 0 ? -1 : fallbackPartSize;
 
             final var putObjectArgs =
