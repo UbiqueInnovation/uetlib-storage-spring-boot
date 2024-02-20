@@ -117,7 +117,8 @@ public sealed class MinioStorageClient implements StorageClient
             final var contentType = Objects.requireNonNull(output.contentType());
 
             // 8MiB (default in aws s3 cli, must be between 5MiB to 5GiB)
-            // CAUTION: The upload is restricted to 10000 * partSize = 80GiB at the moment. We might have to increase this at some point for unknown contentLength
+            // CAUTION: The upload is restricted to 10000 * partSize = 80GiB at the moment. We might
+            // have to increase this at some point for unknown contentLength
             final var fallbackPartSize = 8 * 1024 * 1024;
             final var partSize = output.contentLength() > 0 ? -1 : fallbackPartSize;
 
@@ -127,9 +128,10 @@ public sealed class MinioStorageClient implements StorageClient
                             .object(path)
                             .contentType(contentType)
                             .headers(createHeaders(output, metaData))
-                            .stream(inputStream, output.contentLength(), partSize);
-            putObjectArgs.userMetadata(metaData.createMinioMetaDataMap());
-            minioClient.putObject(putObjectArgs.build());
+                            .stream(inputStream, output.contentLength(), partSize)
+                            .userMetadata(metaData.createMinioMetaDataMap())
+                            .build();
+            minioClient.putObject(putObjectArgs);
         } catch (final ErrorResponseException
                 | InsufficientDataException
                 | InternalException
