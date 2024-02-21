@@ -1,6 +1,7 @@
 package ch.ubique.backend.storage.output;
 
 import com.pivovarit.function.ThrowingRunnable;
+
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -37,7 +38,13 @@ public record GZipOutput(Output uncompressed) implements Output {
     public InputStream read() throws IOException {
         final var inPipe = new PipedInputStream();
         final var outPipe = new PipedOutputStream(inPipe);
-        new Thread(ThrowingRunnable.unchecked(() -> write(outPipe))).start();
+        new Thread(
+                        ThrowingRunnable.unchecked(
+                                () -> {
+                                    write(outPipe);
+                                    outPipe.close();
+                                }))
+                .start();
         return inPipe;
     }
 
