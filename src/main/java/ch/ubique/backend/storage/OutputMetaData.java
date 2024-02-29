@@ -1,5 +1,7 @@
 package ch.ubique.backend.storage;
 
+import static java.util.Map.entry;
+
 import ch.ubique.backend.core.http.header.HeaderUtility;
 import ch.ubique.backend.core.http.header.HttpHeader;
 import ch.ubique.backend.storage.annotations.OutputMapping;
@@ -178,22 +180,20 @@ public final class OutputMetaData {
 
         if (nextRefresh != null) {
             entries.add(
-                    Map.entry(
+                    entry(
                             HttpHeader.NEXT_REFRESH,
                             HeaderUtility.formatHttpHeaderDate(nextRefresh)));
         }
         if (bestBefore != null) {
             entries.add(
-                    Map.entry(
-                            HttpHeader.BEST_BEFORE,
-                            HeaderUtility.formatHttpHeaderDate(bestBefore)));
+                    entry(HttpHeader.BEST_BEFORE, HeaderUtility.formatHttpHeaderDate(bestBefore)));
         }
         if (backoff != null) {
-            entries.add(Map.entry(HttpHeader.BACKOFF, String.valueOf(backoff.getSeconds())));
+            entries.add(entry(HttpHeader.BACKOFF, String.valueOf(backoff.getSeconds())));
         }
         if (contentLengthUncompressed != null) {
             entries.add(
-                    Map.entry(
+                    entry(
                             HttpHeader.CONTENT_LENGTH_UNCOMPRESSED,
                             String.valueOf(contentLengthUncompressed)));
         }
