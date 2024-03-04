@@ -60,7 +60,12 @@ public record GZipOutput(Output uncompressed) implements Output {
 
     @Override
     public long contentLength() {
-        return uncompressed.contentLength();
+        return -1;
+    }
+
+    @Override
+    public long uncompressedContentLength() {
+        return uncompressed.uncompressedContentLength();
     }
 
     @Override

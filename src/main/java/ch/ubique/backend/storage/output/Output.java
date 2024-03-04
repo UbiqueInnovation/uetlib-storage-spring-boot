@@ -30,5 +30,9 @@ public sealed interface Output
         return this;
     }
 
-    long contentLength();
+    default long contentLength() {
+        return uncompressedContentLength();
+    }
+
+    long uncompressedContentLength();
 }

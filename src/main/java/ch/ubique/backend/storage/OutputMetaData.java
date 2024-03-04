@@ -89,14 +89,14 @@ public final class OutputMetaData {
 
         if (resolvedOutputMetaData.contentLengthUncompressed != null
                 && !resolvedOutputMetaData.contentLengthUncompressed.equals(
-                        output.contentLength())) {
+                        output.uncompressedContentLength())) {
             logger.warn(
                     "resolvedOutputMetaData.contentLengthUncompressed was already set to '{}' and"
                             + " is now overwritten with '{}'",
                     resolvedOutputMetaData.contentLengthUncompressed,
-                    output.contentLength());
+                    output.uncompressedContentLength());
         }
-        resolvedOutputMetaData.contentLengthUncompressed(output.contentLength());
+        resolvedOutputMetaData.contentLengthUncompressed(output.uncompressedContentLength());
 
         return resolvedOutputMetaData;
     }
