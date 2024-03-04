@@ -50,7 +50,7 @@ public final class JsonOutput<T> implements Output {
     }
 
     @Override
-    public long contentLength() {
+    public long uncompressedContentLength() {
         return byteValue.length;
     }
 

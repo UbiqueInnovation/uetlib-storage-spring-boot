@@ -54,7 +54,7 @@ public final class FileOutput implements Output {
     }
 
     @Override
-    public long contentLength() {
+    public long uncompressedContentLength() {
         return file.length();
     }
 

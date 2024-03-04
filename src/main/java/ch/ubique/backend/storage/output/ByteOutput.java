@@ -78,7 +78,7 @@ public final class ByteOutput implements Output {
     }
 
     @Override
-    public long contentLength() {
+    public long uncompressedContentLength() {
         return value.length;
     }
 }

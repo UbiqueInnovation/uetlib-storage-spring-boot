@@ -82,7 +82,7 @@ public final class InputStreamOutput implements Output {
     }
 
     @Override
-    public long contentLength() {
+    public long uncompressedContentLength() {
         return contentLength;
     }
 }
