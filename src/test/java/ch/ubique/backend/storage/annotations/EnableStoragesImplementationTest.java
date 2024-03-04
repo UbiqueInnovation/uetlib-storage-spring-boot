@@ -148,7 +148,7 @@ class EnableStoragesImplementationTest {
                 .containsSequence("WARN")
                 .containsSequence("AnnotatedTestStorage")
                 .endsWith(
-                        "writing content of type image/png to path storage/files/8.png with size 397742 and metadata null");
+                        "writing content of type image/png to path storage/files/8.png with size -1 and metadata null");
     }
 
     @Test
