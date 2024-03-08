@@ -32,7 +32,7 @@ public final class EnableAnnotationUtils {
             final ApplicationContext applicationContext, final Class<T> clazz) {
         final var enableClass = findEnableClasses(applicationContext, clazz);
 
-        if (enableClass != null) {
+        if (enableClass == null) {
             logger.debug("No bean class annotated with {} found in application context", clazz);
         }
 
