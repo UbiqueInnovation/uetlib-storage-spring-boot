@@ -32,7 +32,9 @@ public final class EnableAnnotationUtils {
         final var enableClass = findEnableClasses(applicationContext, clazz);
 
         if (enableClass == null) {
-            logger.debug("No bean class annotated with {} found in application context", clazz);
+            logger.debug(
+                    "No bean class annotated with @{} found in application context",
+                    clazz.getCanonicalName());
         }
 
         return enableClass;
@@ -53,7 +55,7 @@ public final class EnableAnnotationUtils {
         throw new IllegalStateException(
                 MessageFormat.format(
                         "Expected at most one bean class annotated with {0} in the application context. Found: {1}",
-                        clazz, enableClasses));
+                        clazz.getCanonicalName(), enableClasses));
     }
 
     public static Set<Class<?>> findAllClassesBy(
