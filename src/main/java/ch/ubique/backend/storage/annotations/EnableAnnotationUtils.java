@@ -1,6 +1,7 @@
 package ch.ubique.backend.storage.annotations;
 
 import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -38,6 +39,21 @@ public final class EnableAnnotationUtils {
         }
 
         return enableClass;
+    }
+
+    @NotNull
+    public static <T extends Annotation> Class<?> findSingletonEnableClass(
+            final ApplicationContext applicationContext, final Class<T> clazz) {
+        final var enableClass = findEnableClasses(applicationContext, clazz);
+
+        if (enableClass != null) {
+            return enableClass;
+        }
+
+        throw new IllegalStateException(
+                MessageFormat.format(
+                        "Expected one bean class annotated with {0} in the application context, found none.",
+                        clazz));
     }
 
     @Nullable
