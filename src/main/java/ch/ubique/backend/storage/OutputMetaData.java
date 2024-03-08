@@ -200,7 +200,7 @@ public final class OutputMetaData {
         final var entries = new ArrayList<Entry<String, String>>();
 
         if (expires != null) {
-            entries.add(entry(HttpHeaders.EXPIRES, formatHttpHeaderDate(nextRefresh)));
+            entries.add(entry(HttpHeaders.EXPIRES, formatHttpHeaderDate(expires)));
         }
 
         return entries;
@@ -229,14 +229,14 @@ public final class OutputMetaData {
     }
 
     public Map<String, String> createMinioMetaDataMap() {
-        return createHeaderHeaderMapper(HttpHeader::value);
+        return createHeaderWithKeyMapper(HttpHeader::value);
     }
 
     public Map<String, String> createAzureMetaDataMap() {
-        return createHeaderHeaderMapper(HttpHeader::noDashesAzure);
+        return createHeaderWithKeyMapper(HttpHeader::noDashesAzure);
     }
 
-    private Map<String, String> createHeaderHeaderMapper(
+    private Map<String, String> createHeaderWithKeyMapper(
             final Function<HttpHeader, String> keyMapper) {
         final var customHeaders =
                 createCustomHeaderEntries().stream()
