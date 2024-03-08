@@ -4,7 +4,6 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.ValidationException;
 import jakarta.validation.constraints.NotNull;
 
-import org.jetbrains.annotations.Contract;
 import org.springframework.http.CacheControl;
 
 import java.time.Duration;
@@ -22,7 +21,6 @@ public final class OutputMetaDataProvider {
     /**
      * @param cacheControl Cache control must not be null
      */
-    @Contract("null -> fail")
     public OutputMetaDataProvider(@NotNull final CacheControl cacheControl) {
         this.cacheControl = Objects.requireNonNull(cacheControl);
         if (this.cacheControl.equals(CacheControl.empty())) {
@@ -34,7 +32,6 @@ public final class OutputMetaDataProvider {
      * @param maxAge Duration must not be null
      * @param sMaxAge Duration will be set to maxAge if null
      */
-    @Contract("null, _ -> fail")
     public OutputMetaDataProvider(
             @NotNull final Duration maxAge, @Nullable final Duration sMaxAge) {
         this(
@@ -42,27 +39,23 @@ public final class OutputMetaDataProvider {
                         .sMaxAge(Objects.requireNonNullElse(sMaxAge, maxAge)));
     }
 
-    @Contract("null -> fail")
     public OutputMetaDataProvider expiresOffset(@NotNull final Duration expiresOffset) {
         this.expiresOffset = Objects.requireNonNull(expiresOffset);
         return this;
     }
 
-    @Contract("null -> fail")
     public OutputMetaDataProvider bestBeforeOffset(@NotNull final Duration bestBeforeOffset) {
         Objects.requireNonNull(bestBeforeOffset);
         this.bestBeforeOffset = bestBeforeOffset;
         return this;
     }
 
-    @Contract("null -> fail")
     public OutputMetaDataProvider nextRefreshOffset(@NotNull final Duration nextRefreshOffset) {
         Objects.requireNonNull(nextRefreshOffset);
         this.nextRefreshOffset = nextRefreshOffset;
         return this;
     }
 
-    @Contract("null -> fail")
     public OutputMetaDataProvider backoff(@NotNull final Duration backoff) {
         Objects.requireNonNull(backoff);
         this.backoff = backoff;
