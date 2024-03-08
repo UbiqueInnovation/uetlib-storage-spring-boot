@@ -8,9 +8,12 @@ import ch.ubique.backend.core.http.header.HttpHeader;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.output.Output;
 
+import com.google.common.net.HttpHeaders;
+
 import io.minio.messages.CannedAcl;
 
 import jakarta.annotation.Nullable;
+import jakarta.validation.ValidationException;
 import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -28,14 +31,15 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @SuppressWarnings({"UnusedReturnValue", "unused"})
 public final class OutputMetaData {
     private static final Logger logger = LoggerFactory.getLogger(OutputMetaData.class);
 
-    @NotNull private final Duration maxAge;
-    @NotNull private final Duration sMaxAge;
+    @NotNull private final CacheControl cacheControl;
 
+    private Instant expires;
     private Instant bestBefore;
     private Instant nextRefresh;
     private Duration backoff;
@@ -44,18 +48,28 @@ public final class OutputMetaData {
     private String customAccessPolicy;
 
     /**
+     * @param cacheControl must not be null
+     */
+    public OutputMetaData(@NotNull final CacheControl cacheControl) {
+        this.cacheControl = Objects.requireNonNull(cacheControl);
+        if (this.cacheControl.equals(CacheControl.empty())) {
+            throw new ValidationException("An empty cache control is disallowed.");
+        }
+    }
+
+    /**
      * @param maxAge Duration must not be null
      * @param sMaxAge Duration will be set to maxAge if null
      */
     public OutputMetaData(@NotNull final Duration maxAge, @Nullable final Duration sMaxAge) {
-        Objects.requireNonNull(maxAge);
-        this.maxAge = maxAge;
-        this.sMaxAge = Objects.requireNonNullElse(sMaxAge, maxAge);
+        this(
+                CacheControl.maxAge(Objects.requireNonNull(maxAge))
+                        .sMaxAge(Objects.requireNonNullElse(sMaxAge, maxAge)));
     }
 
     public OutputMetaData(@NotNull final OutputMetaData outputMetaData) {
-        this.maxAge = outputMetaData.maxAge;
-        this.sMaxAge = outputMetaData.sMaxAge;
+        this.cacheControl = outputMetaData.cacheControl;
+        this.expires = outputMetaData.expires;
         this.bestBefore = outputMetaData.bestBefore;
         this.nextRefresh = outputMetaData.nextRefresh;
         this.backoff = outputMetaData.backoff;
@@ -102,6 +116,11 @@ public final class OutputMetaData {
         resolvedOutputMetaData.contentLengthUncompressed(output.uncompressedContentLength());
 
         return resolvedOutputMetaData;
+    }
+
+    public OutputMetaData expires(@NotNull final Instant expires) {
+        this.expires = Objects.requireNonNull(expires);
+        return this;
     }
 
     public OutputMetaData bestBefore(@NotNull final Instant bestBefore) {
@@ -168,7 +187,8 @@ public final class OutputMetaData {
     }
 
     public String createCacheControl() {
-        return CacheControl.maxAge(maxAge).sMaxAge(sMaxAge).getHeaderValue();
+        return Objects.requireNonNull(
+                cacheControl.getHeaderValue(), "Cache control is not allowed to be empty");
     }
 
     public Optional<String> createCannedAcl() {
@@ -176,7 +196,17 @@ public final class OutputMetaData {
                 .or(() -> Optional.ofNullable(accessPolicy).map(CannedAcl::toString));
     }
 
-    private List<Entry<HttpHeader, String>> createMetaDataMapEntries() {
+    private List<Entry<String, String>> createStandardHeaderEntries() {
+        final var entries = new ArrayList<Entry<String, String>>();
+
+        if (expires != null) {
+            entries.add(entry(HttpHeaders.EXPIRES, formatHttpHeaderDate(nextRefresh)));
+        }
+
+        return entries;
+    }
+
+    private List<Entry<HttpHeader, String>> createCustomHeaderEntries() {
         final var entries = new ArrayList<Entry<HttpHeader, String>>();
 
         if (nextRefresh != null) {
@@ -199,19 +229,21 @@ public final class OutputMetaData {
     }
 
     public Map<String, String> createMinioMetaDataMap() {
-        return createMetaDataMapUsingHeaderMapper(HttpHeader::value);
+        return createHeaderHeaderMapper(HttpHeader::value);
     }
 
     public Map<String, String> createAzureMetaDataMap() {
-        return createMetaDataMapUsingHeaderMapper(HttpHeader::noDashesAzure);
+        return createHeaderHeaderMapper(HttpHeader::noDashesAzure);
     }
 
-    private Map<String, String> createMetaDataMapUsingHeaderMapper(
+    private Map<String, String> createHeaderHeaderMapper(
             final Function<HttpHeader, String> keyMapper) {
-        return createMetaDataMapEntries().stream()
-                .collect(
-                        Collectors.toUnmodifiableMap(
-                                entry -> keyMapper.apply(entry.getKey()), Entry::getValue));
+        final var customHeaders =
+                createCustomHeaderEntries().stream()
+                        .map(e -> entry(keyMapper.apply(e.getKey()), e.getValue()));
+
+        return Stream.concat(customHeaders, createStandardHeaderEntries().stream())
+                .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue));
     }
 
     @Override
@@ -225,8 +257,8 @@ public final class OutputMetaData {
         }
 
         return new EqualsBuilder()
-                .append(maxAge, that.maxAge)
-                .append(sMaxAge, that.sMaxAge)
+                .append(cacheControl, that.cacheControl)
+                .append(expires, that.expires)
                 .append(bestBefore, that.bestBefore)
                 .append(nextRefresh, that.nextRefresh)
                 .append(backoff, that.backoff)
@@ -239,8 +271,8 @@ public final class OutputMetaData {
     @Override
     public int hashCode() {
         return new HashCodeBuilder(17, 37)
-                .append(maxAge)
-                .append(sMaxAge)
+                .append(cacheControl)
+                .append(expires)
                 .append(bestBefore)
                 .append(nextRefresh)
                 .append(backoff)
@@ -253,8 +285,8 @@ public final class OutputMetaData {
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-                .append("maxAge", maxAge)
-                .append("sMaxAge", sMaxAge)
+                .append("cacheControl", cacheControl)
+                .append("expires", expires)
                 .append("bestBefore", bestBefore)
                 .append("nextRefresh", nextRefresh)
                 .append("backoff", backoff)
