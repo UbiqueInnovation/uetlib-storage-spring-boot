@@ -49,7 +49,8 @@ public final class ListMappingInterceptor {
         if (listMapping.path().startsWith("/")) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "ListMapping::path cannot start with ''/'' for method {0}::{1}. Got: {2}",
+                            "ListMapping::path cannot start with ''/'' for method {0}::{1}. Got:"
+                                + " {2}",
                             method.getDeclaringClass().getSimpleName(),
                             method.getName(),
                             listMapping.path()));
@@ -74,7 +75,8 @@ public final class ListMappingInterceptor {
         if (Stream.class.isAssignableFrom(returnType)) {
             atLevel(logger, level)
                     .log(
-                            "listing files from path {} with recursive={} and returning as a stream",
+                            "listing files from path {} with recursive={} and returning as a"
+                                + " stream",
                             path,
                             listMapping.recursive());
             return collection.stream();

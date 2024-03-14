@@ -52,7 +52,8 @@ public final class EnableAnnotationUtils {
 
         throw new IllegalStateException(
                 MessageFormat.format(
-                        "Expected one bean class annotated with {0} in the application context, found none.",
+                        "Expected one bean class annotated with {0} in the application context,"
+                            + " found none.",
                         clazz));
     }
 
@@ -70,7 +71,8 @@ public final class EnableAnnotationUtils {
 
         throw new IllegalStateException(
                 MessageFormat.format(
-                        "Expected at most one bean class annotated with {0} in the application context. Found: {1}",
+                        "Expected at most one bean class annotated with {0} in the application"
+                            + " context. Found: {1}",
                         clazz.getCanonicalName(), enableClasses));
     }
 

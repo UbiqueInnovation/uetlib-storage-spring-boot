@@ -11,7 +11,8 @@ public final class LogAtNullableLevel {
 
     private LogAtNullableLevel() {}
 
-    public static LoggingEventBuilder atLevel(@NotNull final Logger logger, @Nullable final Level level) {
+    public static LoggingEventBuilder atLevel(
+            @NotNull final Logger logger, @Nullable final Level level) {
         return level == null ? new NullLoggingEventBuilder() : logger.atLevel(level);
     }
 }

@@ -89,12 +89,14 @@ class EnableStoragesImplementationTest {
                 .containsSequence("INFO")
                 .containsSequence("AnnotatedTestStorage")
                 .endsWith(
-                        "reading content of type image/png from path storage/files/2.png with doUncompressIfNeeded=true");
+                        "reading content of type image/png from path storage/files/2.png with"
+                            + " doUncompressIfNeeded=true");
         assertThat(secondLastGetImage)
                 .containsSequence("INFO")
                 .containsSequence("InputStreamUtils")
                 .endsWith(
-                        "content encoding png not yet handled specifically, returning the stream as-is");
+                        "content encoding png not yet handled specifically, returning the stream"
+                            + " as-is");
         assertThat(lastGetImage)
                 .containsSequence("INFO")
                 .containsSequence("AnnotatedTestStorage")
@@ -148,7 +150,8 @@ class EnableStoragesImplementationTest {
                 .containsSequence("WARN")
                 .containsSequence("AnnotatedTestStorage")
                 .endsWith(
-                        "writing content of type image/png to path storage/files/8.png with size -1 and metadata null");
+                        "writing content of type image/png to path storage/files/8.png with size -1"
+                            + " and metadata null");
     }
 
     @Test
