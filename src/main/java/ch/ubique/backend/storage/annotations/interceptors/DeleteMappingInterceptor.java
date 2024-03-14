@@ -44,7 +44,8 @@ public final class DeleteMappingInterceptor {
         if (deleteMapping.path().startsWith("/")) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "DeleteMapping::path cannot start with ''/'' for method {0}::{1}. Got: {2}",
+                            "DeleteMapping::path cannot start with ''/'' for method {0}::{1}. Got:"
+                                + " {2}",
                             method.getDeclaringClass().getSimpleName(),
                             method.getName(),
                             deleteMapping.path()));

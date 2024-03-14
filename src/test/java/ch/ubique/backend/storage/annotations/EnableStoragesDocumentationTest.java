@@ -49,13 +49,21 @@ class EnableStoragesDocumentationTest {
                 .andExpect(
                         content()
                                 .json(
-                                        "{\"type\":\"about:blank\",\"title\":\"Bad Request\",\"status\":400,\"detail\":\"this storage method exists only to document blob storage endpoints and must not be called\",\"instance\":\"/documentation/storage/files/5.json\",\"properties\":null}"));
+                                        "{\"type\":\"about:blank\",\"title\":\"Bad"
+                                            + " Request\",\"status\":400,\"detail\":\"this storage"
+                                            + " method exists only to document blob storage"
+                                            + " endpoints and must not be"
+                                            + " called\",\"instance\":\"/documentation/storage/files/5.json\",\"properties\":null}"));
 
         mockMvc.perform(get("/documentation/storage/files/38.png"))
                 .andExpect(status().isBadRequest())
                 .andExpect(
                         content()
                                 .json(
-                                        "{\"type\":\"about:blank\",\"title\":\"Bad Request\",\"status\":400,\"detail\":\"this storage method exists only to document blob storage endpoints and must not be called\",\"instance\":\"/documentation/storage/files/38.png\",\"properties\":null}"));
+                                        "{\"type\":\"about:blank\",\"title\":\"Bad"
+                                            + " Request\",\"status\":400,\"detail\":\"this storage"
+                                            + " method exists only to document blob storage"
+                                            + " endpoints and must not be"
+                                            + " called\",\"instance\":\"/documentation/storage/files/38.png\",\"properties\":null}"));
     }
 }

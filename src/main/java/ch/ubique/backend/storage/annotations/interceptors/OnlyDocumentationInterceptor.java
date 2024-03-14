@@ -15,7 +15,8 @@ public class OnlyDocumentationInterceptor {
         return ResponseEntity.of(
                         ProblemDetail.forStatusAndDetail(
                                 HttpStatus.BAD_REQUEST,
-                                "this storage method exists only to document blob storage endpoints and must not be called"))
+                                "this storage method exists only to document blob storage endpoints"
+                                    + " and must not be called"))
                 .build();
     }
 }

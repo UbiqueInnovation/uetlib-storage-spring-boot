@@ -60,7 +60,8 @@ public final class OutputMappingInterceptor {
                         .orElseThrow(
                                 () ->
                                         new IllegalStateException(
-                                                "OutputMapping requires one argument to be annotated with '@StorageObject'"));
+                                                "OutputMapping requires one argument to be"
+                                                    + " annotated with '@StorageObject'"));
         final var storageObject = allArguments[storageObjectParameterIndex];
         final var contentType = outputMapping.contentType();
 
@@ -97,7 +98,8 @@ public final class OutputMappingInterceptor {
         if (outputMapping.path().startsWith("/")) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "OutputMapping::path cannot start with ''/'' for method {0}::{1}. Got: {2}",
+                            "OutputMapping::path cannot start with ''/'' for method {0}::{1}. Got:"
+                                + " {2}",
                             method.getDeclaringClass().getSimpleName(),
                             method.getName(),
                             outputMapping.path()));

@@ -307,7 +307,8 @@ public class StorageRegistrar
         if (storageMapping.path().startsWith("/")) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "StorageMapping::path cannot start with ''/'' for method {0}::{1}. Got: {2}",
+                            "StorageMapping::path cannot start with ''/'' for method {0}::{1}. Got:"
+                                + " {2}",
                             method.getDeclaringClass().getSimpleName(),
                             method.getName(),
                             storageMapping.path()));

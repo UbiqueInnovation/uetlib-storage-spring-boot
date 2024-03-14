@@ -50,7 +50,8 @@ public final class InputMappingInterceptor {
         if (inputMapping.path().startsWith("/")) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "InputMapping::path cannot start with ''/'' for method {0}::{1}. Got: {2}",
+                            "InputMapping::path cannot start with ''/'' for method {0}::{1}. Got:"
+                                + " {2}",
                             method.getDeclaringClass().getSimpleName(),
                             method.getName(),
                             inputMapping.path()));
@@ -89,7 +90,8 @@ public final class InputMappingInterceptor {
         final var objectMapper = getObjectMapper(thiz, allArguments);
         atLevel(logger, level)
                 .log(
-                        "reading content of type {} from path {} and parsing it to type {} using the supplied object mapper",
+                        "reading content of type {} from path {} and parsing it to type {} using"
+                            + " the supplied object mapper",
                         inputMapping.contentType(),
                         path,
                         returnType);
