@@ -1,6 +1,6 @@
 package ch.ubique.backend.storage.output;
 
-import com.pivovarit.function.ThrowingRunnable;
+import ch.ubique.backend.core.io.GZIPCompressingInputStream;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -36,16 +36,7 @@ public record GZipOutput(Output uncompressed) implements Output {
     @Override
     @SuppressWarnings("java:S2095")
     public InputStream read() throws IOException {
-        final var inPipe = new PipedInputStream();
-        final var outPipe = new PipedOutputStream(inPipe);
-        new Thread(
-                        ThrowingRunnable.unchecked(
-                                () -> {
-                                    write(outPipe);
-                                    outPipe.close();
-                                }))
-                .start();
-        return inPipe;
+        return new GZIPCompressingInputStream(uncompressed.read());
     }
 
     @Override
