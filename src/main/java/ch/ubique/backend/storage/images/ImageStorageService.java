@@ -5,6 +5,7 @@ import ch.ubique.backend.image.blurhash.BlurHashRepresentation;
 import ch.ubique.backend.image.util.ImageUtils;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.ByteOutput;
+import ch.ubique.backend.storage.output.InputStreamOutput;
 
 import com.drew.imaging.ImageProcessingException;
 
@@ -51,23 +52,32 @@ public class ImageStorageService {
             final Function<ImageVariant, String> generatePath,
             final MediaType mediaType)
             throws IOException, ImageProcessingException {
-        final var imageBytes = imageInputStream.readAllBytes();
-        // InputStream::readAllBytes does not close the imageInputStream
-        imageInputStream.close();
-        return processImage(imageBytes, generatePath, mediaType);
+        uploadOriginalImage(imageInputStream, generatePath, mediaType);
+        return processImageFromOriginal(generatePath, mediaType);
+    }
+
+    public void uploadOriginalImage(
+            final InputStream imageInputStream,
+            final Function<ImageVariant, String> generatePath,
+            final MediaType mediaType)
+            throws IOException {
+        storageClient.write(
+                new InputStreamOutput(imageInputStream, mediaType.toString()),
+                generatePath.apply(ImageVariant.ORIGINAL));
     }
 
     @NotNull
-    public BlurHashRepresentation processImage(
-            final byte[] imageBytes,
-            final Function<ImageVariant, String> generatePath,
-            final MediaType mediaType)
+    public BlurHashRepresentation processImageFromOriginal(
+            final Function<ImageVariant, String> generatePath, final MediaType mediaType)
             throws IOException, ImageProcessingException {
-        storageClient.write(
-                new ByteOutput(imageBytes, mediaType.toString()),
-                generatePath.apply(ImageVariant.ORIGINAL));
+        final var originalImageInputStream =
+                storageClient.read(generatePath.apply(ImageVariant.ORIGINAL));
+        final var originalImageBytes = originalImageInputStream.readAllBytes();
+        // InputStream::readAllBytes does not close the imageInputStream
+        originalImageInputStream.close();
 
-        final var hires = ImageUtils.scaleAndFlush(ImageUtils.imageFromBytes(imageBytes), 1200);
+        final var hires =
+                ImageUtils.scaleAndFlush(ImageUtils.imageFromBytes(originalImageBytes), 1200);
         storageClient.write(
                 new ByteOutput(ImageUtils.imageToBytes(hires, mediaType), mediaType.toString()),
                 generatePath.apply(ImageVariant.HIRES));
