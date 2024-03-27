@@ -4,25 +4,20 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 import ch.ubique.backend.image.blurhash.BlurHashClient;
-import ch.ubique.backend.storage.clients.AzureBlobStorageClient;
+import ch.ubique.backend.storage.clients.FileSystemStorageClient;
 import ch.ubique.backend.storage.images.ImageStorageService;
 import ch.ubique.backend.storage.images.ImageVariant;
-import ch.ubique.backend.storage.output.ByteOutput;
+import ch.ubique.backend.storage.output.InputStreamOutput;
 
 import com.drew.imaging.ImageProcessingException;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.time.Duration;
 import java.util.function.Function;
 
@@ -35,12 +30,12 @@ class ImageStorageServiceTest {
             GENERATE_GENERATE_PATH_PNG =
                     imageId -> variant -> String.format("sasImage/%d-%s.png", imageId, variant.key);
 
-    private final AzureBlobStorageClient blobStorageService = mock(AzureBlobStorageClient.class);
+    private final FileSystemStorageClient storageClient = mock(FileSystemStorageClient.class);
     private final Duration sasExpiry = Duration.ofDays(3);
     private final BlurHashClient blurHashClient = new BlurHashClient(10);
 
     private final ImageStorageService imageStorageService =
-            new ImageStorageService(blobStorageService, sasExpiry, blurHashClient);
+            new ImageStorageService(storageClient, sasExpiry, blurHashClient);
 
     @Test
     void testImageUpload() throws IOException, ImageProcessingException {
@@ -48,18 +43,50 @@ class ImageStorageServiceTest {
         final var image = ImageIO.read(new File("src/test/resources/data/ubique_main_image.jpg"));
         ImageIO.write(image, "jpeg", imageOutput);
         final var exampleImage = imageOutput.toByteArray();
+        final var exampleImageInputStream = new ByteArrayInputStream(exampleImage);
 
+        doReturn(new ByteArrayInputStream(exampleImage))
+                .when(storageClient)
+                .read("sasImage/1-original.jpeg");
         final var blurHashRepresentation =
                 imageStorageService.processImage(
-                        new ByteArrayInputStream(exampleImage),
+                        exampleImageInputStream,
                         GENERATE_GENERATE_PATH.apply(1),
                         MediaType.IMAGE_JPEG);
         assertEquals("UWJa[-?GIps:~qoKWExttSRjRPbHMxWCoeof", blurHashRepresentation.blurHash());
         assertEquals(1.77, blurHashRepresentation.aspectRatio(), 0.05);
-        verify(blobStorageService, atLeastOnce())
-                .write(new ByteOutput(exampleImage, "image/jpeg"), "sasImage/1-original.jpeg");
-        verify(blobStorageService, atLeastOnce()).write(any(), eq("sasImage/1-hires.jpeg"));
-        verify(blobStorageService, atLeastOnce()).write(any(), eq("sasImage/1-thumbnail.jpeg"));
+        verify(storageClient, atLeastOnce())
+                .write(
+                        new InputStreamOutput(exampleImageInputStream, MediaType.IMAGE_JPEG_VALUE),
+                        "sasImage/1-original.jpeg");
+        verify(storageClient, atLeastOnce()).write(any(), eq("sasImage/1-hires.jpeg"));
+        verify(storageClient, atLeastOnce()).write(any(), eq("sasImage/1-thumbnail.jpeg"));
+    }
+
+    @Test
+    void testImageUploadTwoSteps() throws IOException, ImageProcessingException {
+        final var imageOutput = new ByteArrayOutputStream();
+        final var image = ImageIO.read(new File("src/test/resources/data/ubique_main_image.jpg"));
+        ImageIO.write(image, "jpeg", imageOutput);
+        final var exampleImage = imageOutput.toByteArray();
+        final var exampleImageInputStream = new ByteArrayInputStream(exampleImage);
+        imageStorageService.uploadOriginalImage(
+                exampleImageInputStream, GENERATE_GENERATE_PATH.apply(1), MediaType.IMAGE_JPEG);
+        verify(storageClient, atLeastOnce())
+                .write(
+                        new InputStreamOutput(exampleImageInputStream, MediaType.IMAGE_JPEG_VALUE),
+                        "sasImage/1-original.jpeg");
+
+        doReturn(new ByteArrayInputStream(exampleImage))
+                .when(storageClient)
+                .read("sasImage/1-original.jpeg");
+        final var blurHashRepresentation =
+                imageStorageService.processImageFromOriginal(
+                        GENERATE_GENERATE_PATH.apply(1), MediaType.IMAGE_JPEG);
+        assertEquals("UWJa[-?GIps:~qoKWExttSRjRPbHMxWCoeof", blurHashRepresentation.blurHash());
+        assertEquals(1.77, blurHashRepresentation.aspectRatio(), 0.05);
+        verify(storageClient, atLeastOnce()).write(any(), eq("sasImage/1-hires.jpeg"));
+        verify(storageClient, atLeastOnce()).write(any(), eq("sasImage/1-thumbnail.jpeg"));
     }
 
     @Test
@@ -68,22 +95,28 @@ class ImageStorageServiceTest {
         final var image = ImageIO.read(new File("src/test/resources/data/png.png"));
         ImageIO.write(image, "png", imageOutput);
         final var exampleImage = imageOutput.toByteArray();
+        final var exampleImageInputStream = new ByteArrayInputStream(exampleImage);
 
+        doReturn(new ByteArrayInputStream(exampleImage))
+                .when(storageClient)
+                .read("sasImage/1-original.png");
         assertDoesNotThrow(
                 () ->
                         imageStorageService.processImage(
-                                new ByteArrayInputStream(exampleImage),
+                                exampleImageInputStream,
                                 GENERATE_GENERATE_PATH_PNG.apply(1),
                                 MediaType.IMAGE_PNG));
-        verify(blobStorageService, atLeastOnce())
-                .write(new ByteOutput(exampleImage, "image/png"), "sasImage/1-original.png");
-        verify(blobStorageService, atLeastOnce()).write(any(), eq("sasImage/1-hires.png"));
-        verify(blobStorageService, atLeastOnce()).write(any(), eq("sasImage/1-thumbnail.png"));
+        verify(storageClient, atLeastOnce())
+                .write(
+                        new InputStreamOutput(exampleImageInputStream, MediaType.IMAGE_PNG_VALUE),
+                        "sasImage/1-original.png");
+        verify(storageClient, atLeastOnce()).write(any(), eq("sasImage/1-hires.png"));
+        verify(storageClient, atLeastOnce()).write(any(), eq("sasImage/1-thumbnail.png"));
     }
 
     @Test
     void testImageSas() {
         imageStorageService.getSignedUrl(GENERATE_GENERATE_PATH.apply(0).apply(ImageVariant.HIRES));
-        verify(blobStorageService, atLeastOnce()).getSignedUrl(eq("sasImage/0-hires.jpeg"), any());
+        verify(storageClient, atLeastOnce()).getSignedUrl(eq("sasImage/0-hires.jpeg"), any());
     }
 }
