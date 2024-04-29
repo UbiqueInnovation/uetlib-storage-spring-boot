@@ -188,6 +188,11 @@ public class AzureBlobStorageClient implements StorageClient {
     }
 
     @Override
+    public boolean exists(final String path) throws IOException {
+        return blobContainerClient.getBlobClient(path).exists();
+    }
+
+    @Override
     public String getSignedUrl(final @NotNull String path, final @NotNull OffsetDateTime expiry) {
         final var blobSasPermission = new BlobSasPermission().setReadPermission(true);
         final var values =

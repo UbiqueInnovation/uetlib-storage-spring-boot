@@ -250,6 +250,10 @@ public class StorageRegistrar
                 Objects.requireNonNullElse(
                         annotatedMethodsByAnnotation.get(DeleteMapping.class),
                         List.<StorageMethodInfo>of());
+        final var existsMethodInfos =
+                Objects.requireNonNullElse(
+                        annotatedMethodsByAnnotation.get(ExistsMapping.class),
+                        List.<StorageMethodInfo>of());
         final var listMethodInfos =
                 Objects.requireNonNullElse(
                         annotatedMethodsByAnnotation.get(ListMapping.class),
@@ -264,6 +268,10 @@ public class StorageRegistrar
         for (final var deleteMethodInfo : deleteMethodInfos) {
             builder =
                     buildImplementationDeleteMethod(builder, deleteMethodInfo, storageClassLogger);
+        }
+        for (final var existsMethodInfo : existsMethodInfos) {
+            builder =
+                    buildImplementationExistsMethod(builder, existsMethodInfo, storageClassLogger);
         }
         for (final var listMethodInfo : listMethodInfos) {
             builder = buildImplementationListMethod(builder, listMethodInfo, storageClassLogger);
@@ -308,7 +316,7 @@ public class StorageRegistrar
             throw new IllegalArgumentException(
                     MessageFormat.format(
                             "StorageMapping::path cannot start with ''/'' for method {0}::{1}. Got:"
-                                + " {2}",
+                                    + " {2}",
                             method.getDeclaringClass().getSimpleName(),
                             method.getName(),
                             storageMapping.path()));
@@ -460,6 +468,27 @@ public class StorageRegistrar
         }
 
         return buildImplementationMethod(builder, parameters, deleteMethod, interceptor);
+    }
+
+    private static <T> DynamicType.Builder<T> buildImplementationExistsMethod(
+            final DynamicType.Builder<T> builder,
+            final StorageMethodInfo existsMethodInfo,
+            final Logger storageClassLogger) {
+        final var existsMethod = existsMethodInfo.storageMethod();
+        final var parameters = Arrays.stream(existsMethod.getParameters()).toList();
+
+        final Implementation interceptor;
+        final var existsAnnotation =
+                existsMethodInfo.storageMethodAnnotations().get(ExistsMapping.class).synthesize();
+        if (existsAnnotation.codeGenerationType().generateImplementationCode()) {
+            final var level = ArrayUtils.singletonOrNull(existsAnnotation.logLevel());
+            interceptor =
+                    MethodDelegation.to(new ExistsMappingInterceptor(storageClassLogger, level));
+        } else {
+            interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
+        }
+
+        return buildImplementationMethod(builder, parameters, existsMethod, interceptor);
     }
 
     private static Set<Class<?>> findAllStorageClasses(

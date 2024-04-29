@@ -25,6 +25,8 @@ public interface StorageClient {
 
     Collection<String> list(@NotNull String path, boolean recursive) throws IOException;
 
+    boolean exists(@NotNull String path) throws IOException;
+
     String getSignedUrl(@NotNull String path, @NotNull OffsetDateTime expiry);
 
     String getUrl(@NotNull String path);
@@ -32,6 +34,10 @@ public interface StorageClient {
     default void write(@NotNull final Output output, @NotNull final String path)
             throws IOException {
         write(output, path, null);
+    }
+
+    default InputStream read(@NotNull final String path) throws IOException {
+        return read(path, true);
     }
 
     default boolean delete(@NotNull final String path) throws IOException {

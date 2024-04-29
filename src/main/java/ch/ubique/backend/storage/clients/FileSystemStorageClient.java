@@ -111,6 +111,11 @@ public class FileSystemStorageClient implements StorageClient {
         }
     }
 
+    @Override
+    public boolean exists(final String path) throws IOException {
+        return Files.exists(getCompletePath(path));
+    }
+
     private Set<String> mapToRelativePaths(final Stream<File> stream) {
         final var baseUri = Path.of(basePath).toUri();
         return stream.map(file -> baseUri.relativize(file.toURI()).getPath())
