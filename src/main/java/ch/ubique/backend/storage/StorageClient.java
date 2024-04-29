@@ -57,10 +57,17 @@ public interface StorageClient {
     }
 
     default StorageClient retryable(@Nullable final RetryTemplate retryTemplate) {
+        if (this instanceof RetryStorageClient) {
+            return this;
+        }
         return new RetryStorageClient(this, retryTemplate);
     }
 
     default StorageClient retryable() {
         return retryable(null);
+    }
+
+    default StorageClient withoutRetry() {
+        return this;
     }
 }

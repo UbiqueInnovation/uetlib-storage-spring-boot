@@ -42,6 +42,11 @@ public class RetryStorageClient implements StorageClient {
     }
 
     @Override
+    public StorageClient withoutRetry() {
+        return storageClient.withoutRetry();
+    }
+
+    @Override
     public void write(
             final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws IOException {
