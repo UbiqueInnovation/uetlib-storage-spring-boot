@@ -46,8 +46,7 @@ import java.util.stream.StreamSupport;
  * {@link StorageClient} to perform bucket and object operations to any Amazon S3 / MinIO compatible
  * object storage service.
  */
-public sealed class MinioStorageClient implements StorageClient
-        permits AmazonS3StorageClient, CloudflareR2StorageClient {
+public sealed class MinioStorageClient implements StorageClient permits AmazonS3StorageClient {
 
     private final String bucket;
     private final MinioClient minioClient;

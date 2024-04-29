@@ -4,7 +4,7 @@ import ch.ubique.backend.storage.OutputMetaDataProvider;
 
 import java.time.Duration;
 
-public final class CloudflareR2StorageClient extends MinioStorageClient {
+public final class CloudflareR2StorageClient extends RetryStorageClient {
 
     public CloudflareR2StorageClient(
             final String bucket,
@@ -22,11 +22,12 @@ public final class CloudflareR2StorageClient extends MinioStorageClient {
             final Duration timeout,
             final OutputMetaDataProvider outputMetaDataProvider) {
         super(
-                bucket,
-                "https://" + accountId + ".r2.cloudflarestorage.com",
-                accessKey,
-                secretKey,
-                timeout,
-                outputMetaDataProvider);
+                new MinioStorageClient(
+                        bucket,
+                        "https://" + accountId + ".r2.cloudflarestorage.com",
+                        accessKey,
+                        secretKey,
+                        timeout,
+                        outputMetaDataProvider));
     }
 }

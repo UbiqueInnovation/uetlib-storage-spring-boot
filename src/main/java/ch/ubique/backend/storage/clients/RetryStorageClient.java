@@ -1,7 +1,6 @@
 package ch.ubique.backend.storage.clients;
 
-import static java.util.Objects.requireNonNull;
-import static java.util.Objects.requireNonNullElseGet;
+import static java.util.Objects.*;
 
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
@@ -15,6 +14,7 @@ import org.springframework.retry.support.RetryTemplate;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 
@@ -23,11 +23,22 @@ public class RetryStorageClient implements StorageClient {
     private final StorageClient storageClient;
     private final RetryTemplate retryTemplate;
 
+    private static final RetryTemplate DEFAULT_RETRY_TEMPLATE =
+            RetryTemplate.builder()
+                    .retryOn(IOException.class)
+                    .maxAttempts(10)
+                    .uniformRandomBackoff(Duration.ZERO, Duration.ofMillis(500))
+                    .build();
+
+    public RetryStorageClient(final StorageClient storageClient) {
+        this(storageClient, null);
+    }
+
     public RetryStorageClient(
             @NotNull final StorageClient storageClient,
             @Nullable final RetryTemplate retryTemplate) {
         this.storageClient = requireNonNull(storageClient, "Storage client must not be null.");
-        this.retryTemplate = requireNonNullElseGet(retryTemplate, RetryTemplate::defaultInstance);
+        this.retryTemplate = requireNonNullElse(retryTemplate, DEFAULT_RETRY_TEMPLATE);
     }
 
     @Override
@@ -59,7 +70,7 @@ public class RetryStorageClient implements StorageClient {
     }
 
     @Override
-    public boolean exists(final String path) throws IOException {
+    public boolean exists(String path) throws IOException {
         return retryTemplate.execute(context -> storageClient.exists(path));
     }
 
