@@ -220,6 +220,11 @@ public sealed class MinioStorageClient implements StorageClient
     }
 
     @Override
+    public boolean exists(final String path) throws IOException {
+        return !list(path, false).isEmpty();
+    }
+
+    @Override
     public final String getSignedUrl(
             final @NotNull String path, final @NotNull OffsetDateTime expiry) {
         try {

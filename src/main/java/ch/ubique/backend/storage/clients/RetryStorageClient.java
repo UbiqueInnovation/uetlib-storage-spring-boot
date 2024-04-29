@@ -59,6 +59,11 @@ public class RetryStorageClient implements StorageClient {
     }
 
     @Override
+    public boolean exists(final String path) throws IOException {
+        return retryTemplate.execute(context -> storageClient.exists(path));
+    }
+
+    @Override
     public String getSignedUrl(final String path, final OffsetDateTime expiry) {
         return retryTemplate.execute(context -> storageClient.getSignedUrl(path, expiry));
     }
