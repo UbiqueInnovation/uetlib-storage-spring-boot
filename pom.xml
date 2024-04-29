@@ -25,6 +25,13 @@
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
 
+        <!-- RetryTemplate and @Retryable, convenient way for retrying -->
+        <dependency>
+            <groupId>org.springframework.retry</groupId>
+            <artifactId>spring-retry</artifactId>
+            <version>2.0.5</version>
+        </dependency>
+
         <!-- External storage clients -->
         <dependency>
             <groupId>com.azure</groupId>
