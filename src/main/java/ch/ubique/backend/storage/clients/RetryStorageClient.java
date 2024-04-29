@@ -42,6 +42,12 @@ public class RetryStorageClient implements StorageClient {
     }
 
     @Override
+    public StorageClient retryable(final RetryTemplate retryTemplate) {
+        // Unwrap and wrap again with new retry template
+        return withoutRetry().retryable(retryTemplate);
+    }
+
+    @Override
     public StorageClient withoutRetry() {
         return storageClient.withoutRetry();
     }
