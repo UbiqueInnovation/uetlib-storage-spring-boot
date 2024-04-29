@@ -97,6 +97,11 @@ class StorageClientTest {
     }
 
     private void test(final StorageClient storageClient) throws IOException {
+
+        if (!(storageClient instanceof RetryStorageClient)) {
+            test(storageClient.retryable()); // Also test retryable version
+        }
+
         assertEquals(Set.of(), storageClient.list());
 
         storageClient.write(new ByteOutput("Hello World".getBytes(StandardCharsets.UTF_8)), "foo");
@@ -116,17 +121,33 @@ class StorageClientTest {
         storageClient.write(new ByteOutput(new byte[0]), "bar/foo1");
         storageClient.write(new ByteOutput(new byte[0]), "bar/foo2");
 
+        assertTrue(storageClient.exists("foo"));
+        assertTrue(storageClient.exists("bar/"));
+        assertTrue(storageClient.exists("bar/foo1"));
+        assertTrue(storageClient.exists("bar/foo2"));
+        assertFalse(storageClient.exists("nonExisting"));
+
         assertEquals(Set.of("foo", "bar/"), storageClient.list());
         assertEquals(Set.of("foo", "bar/foo1", "bar/foo2"), storageClient.list(true));
         assertEquals(Set.of("bar/foo1", "bar/foo2"), storageClient.list("bar", true));
 
         assertDoesNotThrow(() -> storageClient.delete("bar/foo1"));
+        assertFalse(storageClient.exists("bar/foo1"));
         assertEquals(Set.of("foo", "bar/foo2"), storageClient.list(true));
 
         assertThrows(IOException.class, () -> storageClient.delete("bar"));
+        assertTrue(storageClient.exists("bar/"));
+        assertTrue(storageClient.exists("bar/foo2"));
         assertEquals(Set.of("foo", "bar/"), storageClient.list());
 
         assertDoesNotThrow(() -> storageClient.delete("bar", true));
+        assertTrue(storageClient.exists("foo"));
+        assertFalse(storageClient.exists("bar/"));
+        assertFalse(storageClient.exists("bar/foo1"));
+        assertFalse(storageClient.exists("bar/foo2"));
         assertEquals(Set.of("foo"), storageClient.list());
+
+        assertDoesNotThrow(() -> storageClient.delete("foo"));
+        assertTrue(storageClient.list().isEmpty());
     }
 }

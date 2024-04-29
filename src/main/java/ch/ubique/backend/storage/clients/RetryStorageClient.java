@@ -27,7 +27,7 @@ public class RetryStorageClient implements StorageClient {
             RetryTemplate.builder()
                     .retryOn(IOException.class)
                     .maxAttempts(10)
-                    .uniformRandomBackoff(Duration.ZERO, Duration.ofMillis(500))
+                    .uniformRandomBackoff(Duration.ofMillis(1), Duration.ofMillis(500))
                     .build();
 
     public RetryStorageClient(final StorageClient storageClient) {
