@@ -219,7 +219,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
     }
 
     @Override
-    public boolean exists(final String path) throws IOException {
+    public boolean exists(final @NotNull String path) throws IOException {
         return !list(path, false).isEmpty();
     }
 

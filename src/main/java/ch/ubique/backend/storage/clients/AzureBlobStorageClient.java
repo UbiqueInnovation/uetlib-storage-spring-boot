@@ -188,7 +188,7 @@ public class AzureBlobStorageClient implements StorageClient {
     }
 
     @Override
-    public boolean exists(final String path) throws IOException {
+    public boolean exists(final @NotNull String path) throws IOException {
         return blobContainerClient.getBlobClient(path).exists() || !list(path, false).isEmpty();
     }
 

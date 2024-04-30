@@ -112,7 +112,7 @@ public class FileSystemStorageClient implements StorageClient {
     }
 
     @Override
-    public boolean exists(final String path) throws IOException {
+    public boolean exists(final @NotNull String path) throws IOException {
         return Files.exists(getCompletePath(path));
     }
 
