@@ -20,15 +20,15 @@ import java.util.Collection;
 
 public class RetryStorageClient implements StorageClient {
 
-    private final StorageClient storageClient;
-    private final RetryTemplate retryTemplate;
-
     private static final RetryTemplate DEFAULT_RETRY_TEMPLATE =
             RetryTemplate.builder()
                     .retryOn(IOException.class)
                     .maxAttempts(10)
                     .uniformRandomBackoff(Duration.ofMillis(1), Duration.ofMillis(500))
                     .build();
+
+    private final StorageClient storageClient;
+    private final RetryTemplate retryTemplate;
 
     public RetryStorageClient(final StorageClient storageClient) {
         this(storageClient, null);
@@ -54,7 +54,9 @@ public class RetryStorageClient implements StorageClient {
 
     @Override
     public void write(
-            final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
+            final @NotNull Output output,
+            final @NotNull String path,
+            @Nullable final OutputMetaData outputMetaData)
             throws IOException {
         retryTemplate.execute(
                 (RetryCallback<Void, IOException>)
@@ -65,33 +67,34 @@ public class RetryStorageClient implements StorageClient {
     }
 
     @Override
-    public InputStream read(final String path, final boolean doUncompressIfNeeded)
+    public InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
             throws IOException {
         return retryTemplate.execute(context -> storageClient.read(path, doUncompressIfNeeded));
     }
 
     @Override
-    public boolean delete(final String path, final boolean recursive) throws IOException {
+    public boolean delete(final @NotNull String path, final boolean recursive) throws IOException {
         return retryTemplate.execute(context -> storageClient.delete(path, recursive));
     }
 
     @Override
-    public Collection<String> list(final String path, final boolean recursive) throws IOException {
+    public Collection<String> list(final @NotNull String path, final boolean recursive)
+            throws IOException {
         return retryTemplate.execute(context -> storageClient.list(path, recursive));
     }
 
     @Override
-    public boolean exists(String path) throws IOException {
+    public boolean exists(@NotNull final String path) throws IOException {
         return retryTemplate.execute(context -> storageClient.exists(path));
     }
 
     @Override
-    public String getSignedUrl(final String path, final OffsetDateTime expiry) {
+    public String getSignedUrl(final @NotNull String path, final @NotNull OffsetDateTime expiry) {
         return retryTemplate.execute(context -> storageClient.getSignedUrl(path, expiry));
     }
 
     @Override
-    public String getUrl(final String path) {
+    public String getUrl(final @NotNull String path) {
         return retryTemplate.execute(context -> storageClient.getUrl(path));
     }
 }
