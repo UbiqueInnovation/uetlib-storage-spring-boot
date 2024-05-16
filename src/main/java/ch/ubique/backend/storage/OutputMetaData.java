@@ -90,20 +90,33 @@ public final class OutputMetaData {
     }
 
     @NotNull
+    @Contract("!null, _ -> param1; null, !null -> new")
+    public static OutputMetaData resolveOutputMetaData(
+            final OutputMetaData outputMetaData,
+            final OutputMetaDataProvider outputMetaDataProvider) {
+        if (outputMetaData != null) {
+            return new OutputMetaData(outputMetaData);
+        }
+        if (outputMetaDataProvider != null) {
+            return outputMetaDataProvider.createOutputMetaData();
+        }
+        return OutputMetaData.defaults();
+    }
+
+    @NotNull
     @Contract("!null, _, _ -> param1; null, !null, _ -> new")
     public static OutputMetaData resolveOutputMetaData(
             final OutputMetaData outputMetaData,
             final OutputMetaDataProvider outputMetaDataProvider,
             @NotNull final Output output) {
-        final OutputMetaData resolvedOutputMetaData;
-        if (outputMetaData != null) {
-            resolvedOutputMetaData = new OutputMetaData(outputMetaData);
-        } else if (outputMetaDataProvider != null) {
-            resolvedOutputMetaData = outputMetaDataProvider.createOutputMetaData();
-        } else {
-            resolvedOutputMetaData = OutputMetaData.defaults();
-        }
+        final var resolvedOutputMetaData =
+                resolveOutputMetaData(outputMetaData, outputMetaDataProvider);
+        setUncompressedContentLength(output, resolvedOutputMetaData);
+        return resolvedOutputMetaData;
+    }
 
+    private static void setUncompressedContentLength(
+            final Output output, final OutputMetaData resolvedOutputMetaData) {
         if (resolvedOutputMetaData.contentLengthUncompressed != null
                 && !resolvedOutputMetaData.contentLengthUncompressed.equals(
                         output.uncompressedContentLength())) {
@@ -114,8 +127,6 @@ public final class OutputMetaData {
                     output.uncompressedContentLength());
         }
         resolvedOutputMetaData.contentLengthUncompressed(output.uncompressedContentLength());
-
-        return resolvedOutputMetaData;
     }
 
     public OutputMetaData expires(@NotNull final Instant expires) {
