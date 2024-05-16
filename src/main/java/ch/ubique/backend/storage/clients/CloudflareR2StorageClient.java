@@ -27,6 +27,7 @@ public final class CloudflareR2StorageClient extends RetryStorageClient {
                         "https://" + accountId + ".r2.cloudflarestorage.com",
                         accessKey,
                         secretKey,
+                        false,
                         timeout,
                         outputMetaDataProvider));
     }
