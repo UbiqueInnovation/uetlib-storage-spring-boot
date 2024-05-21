@@ -76,7 +76,7 @@ class StorageClientTest {
     @Test
     void testAzureBlobStorageClient() throws IOException {
         try (final var azureBlobStorageContainer =
-                new GenericContainer<>("mcr.microsoft.com/azure-storage/azurite:3.27.0")) {
+                new GenericContainer<>("mcr.microsoft.com/azure-storage/azurite:3.30.0")) {
             azureBlobStorageContainer.withExposedPorts(10000).start();
 
             final var mappedPort = azureBlobStorageContainer.getFirstMappedPort();
