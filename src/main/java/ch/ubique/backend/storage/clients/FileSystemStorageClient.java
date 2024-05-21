@@ -4,6 +4,7 @@ import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
+import ch.ubique.backend.storage.output.OutputWithPath;
 
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
@@ -64,6 +65,15 @@ public class FileSystemStorageClient implements StorageClient {
         logger.trace("writing output to {}", path);
         try (final var outputStream = new FileOutputStream(file)) {
             output.uncompressed().write(outputStream);
+        }
+    }
+
+    @Override
+    public void write(
+            final Collection<OutputWithPath> outputs, @Nullable final OutputMetaData outputMetaData)
+            throws IOException {
+        for (final var outputWithPath : outputs) {
+            write(outputWithPath.output(), outputWithPath.path(), outputMetaData);
         }
     }
 

@@ -1,10 +1,12 @@
 package ch.ubique.backend.storage.clients;
 
+import ch.ubique.backend.core.executor.VirtualThreadUtils;
 import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
+import ch.ubique.backend.storage.output.OutputWithPath;
 
 import com.azure.core.http.HttpClient;
 import com.azure.core.http.HttpHeaderName;
@@ -126,6 +128,15 @@ public class AzureBlobStorageClient implements StorageClient {
                     .getBlobClient(path)
                     .uploadWithResponse(uploadOptions, null, Context.NONE);
         }
+    }
+
+    @Override
+    public void write(
+            final Collection<OutputWithPath> outputs, @Nullable final OutputMetaData outputMetaData)
+            throws IOException {
+        // The SDK unfortunately does not support a bulk upload.
+        VirtualThreadUtils.throwingForEach(
+                item -> write(item.output(), item.path(), outputMetaData), outputs);
     }
 
     @Override

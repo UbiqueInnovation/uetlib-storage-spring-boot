@@ -5,6 +5,9 @@ import static java.util.Objects.*;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
+import ch.ubique.backend.storage.output.OutputWithPath;
+
+import com.pivovarit.function.ThrowingRunnable;
 
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
@@ -22,7 +25,7 @@ public class RetryStorageClient implements StorageClient {
 
     private static final RetryTemplate DEFAULT_RETRY_TEMPLATE =
             RetryTemplate.builder()
-                    .retryOn(IOException.class)
+                    .retryOn(Exception.class)
                     .maxAttempts(10)
                     .uniformRandomBackoff(Duration.ofMillis(1), Duration.ofMillis(500))
                     .build();
@@ -58,12 +61,14 @@ public class RetryStorageClient implements StorageClient {
             final @NotNull String path,
             @Nullable final OutputMetaData outputMetaData)
             throws IOException {
-        retryTemplate.execute(
-                (RetryCallback<Void, IOException>)
-                        context -> {
-                            storageClient.write(output, path, outputMetaData);
-                            return null;
-                        });
+        retryRunnable(() -> storageClient.write(output, path, outputMetaData));
+    }
+
+    @Override
+    public void write(
+            final Collection<OutputWithPath> outputs, @Nullable final OutputMetaData outputMetaData)
+            throws IOException {
+        retryRunnable(() -> storageClient.write(outputs, outputMetaData));
     }
 
     @Override
@@ -96,5 +101,14 @@ public class RetryStorageClient implements StorageClient {
     @Override
     public String getUrl(final @NotNull String path) {
         return retryTemplate.execute(context -> storageClient.getUrl(path));
+    }
+
+    private void retryRunnable(final ThrowingRunnable<IOException> runnable) throws IOException {
+        retryTemplate.execute(
+                (RetryCallback<Void, IOException>)
+                        context -> {
+                            runnable.run();
+                            return null;
+                        });
     }
 }

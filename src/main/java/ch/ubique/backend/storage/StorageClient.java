@@ -2,6 +2,7 @@ package ch.ubique.backend.storage;
 
 import ch.ubique.backend.storage.clients.RetryStorageClient;
 import ch.ubique.backend.storage.output.Output;
+import ch.ubique.backend.storage.output.OutputWithPath;
 
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
@@ -17,6 +18,11 @@ public interface StorageClient {
 
     void write(
             @NotNull Output output, @NotNull String path, @Nullable OutputMetaData outputMetaData)
+            throws IOException;
+
+    void write(
+            @NotNull final Collection<OutputWithPath> outputs,
+            @Nullable final OutputMetaData outputMetaData)
             throws IOException;
 
     InputStream read(@NotNull String path, boolean doUncompressIfNeeded) throws IOException;
