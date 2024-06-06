@@ -10,7 +10,6 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.lang3.StringUtils;
@@ -86,8 +85,7 @@ public class FileSystemStorageClient implements StorageClient {
         final var fileInputStream = new FileInputStream(file);
 
         if (doUncompressIfNeeded) {
-            final var contentEncoding = FilenameUtils.getExtension(path);
-            return InputStreamUtils.uncompress(fileInputStream, contentEncoding);
+            return InputStreamUtils.uncompress(fileInputStream, null, path);
         }
 
         return fileInputStream;

@@ -154,7 +154,7 @@ public class AzureBlobStorageClient implements StorageClient {
                                                 .get(HttpHeaderName.CONTENT_ENCODING))
                                 .map(Header::getValue)
                                 .orElse(null);
-                return InputStreamUtils.uncompress(inputStream, contentEncoding);
+                return InputStreamUtils.uncompress(inputStream, contentEncoding, path);
             }
 
             return inputStream;

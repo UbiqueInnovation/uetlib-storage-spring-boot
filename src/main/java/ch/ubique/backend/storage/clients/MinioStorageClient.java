@@ -248,7 +248,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
             if (doUncompressIfNeeded) {
                 final var contentEncoding =
                         objectResponse.headers().get(HttpHeaders.CONTENT_ENCODING);
-                return InputStreamUtils.uncompress(objectResponse, contentEncoding);
+                return InputStreamUtils.uncompress(objectResponse, contentEncoding, path);
             }
 
             return objectResponse;
