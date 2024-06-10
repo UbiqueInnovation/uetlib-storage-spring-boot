@@ -47,7 +47,8 @@ public class FileSystemStorageClient implements StorageClient {
             final @NotNull String path,
             @Nullable final OutputMetaData outputMetaData)
             throws IOException {
-        final var file = new File(getCompletePath(path).toUri());
+        final var completePath = getCompletePath(path);
+        final var file = new File(completePath.toUri());
         final var parent = file.getParentFile();
         if (!parent.exists()) {
             synchronized (this) {
@@ -61,7 +62,7 @@ public class FileSystemStorageClient implements StorageClient {
                 }
             }
         }
-        logger.trace("writing output to {}", path);
+        logger.trace("writing output to {} (complete path {})", path, completePath);
         try (final var outputStream = new FileOutputStream(file)) {
             output.uncompressed().write(outputStream);
         }
@@ -80,8 +81,9 @@ public class FileSystemStorageClient implements StorageClient {
     @SuppressWarnings("java:S2095")
     public InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
             throws IOException {
-        final var file = new File(getCompletePath(path).toUri());
-        logger.debug("reading input from {}", path);
+        final var completePath = getCompletePath(path);
+        final var file = new File(completePath.toUri());
+        logger.debug("reading input from {} (complete path {})", path, completePath);
         final var fileInputStream = new FileInputStream(file);
 
         if (doUncompressIfNeeded) {
@@ -93,18 +95,19 @@ public class FileSystemStorageClient implements StorageClient {
 
     @Override
     public boolean delete(final @NotNull String path, final boolean recursive) throws IOException {
-        logger.debug("deleting from {}", path);
+        final var completePath = getCompletePath(path);
+        logger.debug("deleting from {} (complete path {})", path, completePath);
         if (recursive) {
-            return FileUtils.deleteQuietly(getCompletePath(path).toFile());
+            return FileUtils.deleteQuietly(completePath.toFile());
         }
-        return Files.deleteIfExists(getCompletePath(path));
+        return Files.deleteIfExists(completePath);
     }
 
     @Override
     public Collection<String> list(@NotNull final String path, final boolean recursive)
             throws IOException {
-
         final var completePath = getCompletePath(path);
+        logger.debug("listing files from {} (complete path {})", path, completePath);
         if (recursive) {
             final var files =
                     FileUtils.listFiles(
@@ -121,7 +124,9 @@ public class FileSystemStorageClient implements StorageClient {
 
     @Override
     public boolean exists(final @NotNull String path) throws IOException {
-        return Files.exists(getCompletePath(path));
+        final var completePath = getCompletePath(path);
+        logger.debug("checking file existing at {} (complete path {})", path, completePath);
+        return Files.exists(completePath.toFile().toPath());
     }
 
     private Set<String> mapToRelativePaths(final Stream<File> stream) {
