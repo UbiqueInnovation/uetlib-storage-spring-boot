@@ -14,7 +14,6 @@ import jakarta.validation.constraints.NotNull;
 
 import org.springframework.retry.RetryCallback;
 import org.springframework.retry.support.RetryTemplate;
-import org.springframework.retry.support.RetryTemplateBuilder;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,7 +24,11 @@ import java.util.Collection;
 public class RetryStorageClient implements StorageClient {
 
     private static final RetryTemplate DEFAULT_RETRY_TEMPLATE =
-            createDefaultRetryTemplateBuilder().build();
+            RetryTemplate.builder()
+                    .retryOn(Exception.class)
+                    .maxAttempts(10)
+                    .uniformRandomBackoff(Duration.ofMillis(1), Duration.ofMillis(500))
+                    .build();
 
     private final StorageClient storageClient;
     private final RetryTemplate retryTemplate;
@@ -39,13 +42,6 @@ public class RetryStorageClient implements StorageClient {
             @Nullable final RetryTemplate retryTemplate) {
         this.storageClient = requireNonNull(storageClient, "Storage client must not be null.");
         this.retryTemplate = requireNonNullElse(retryTemplate, DEFAULT_RETRY_TEMPLATE);
-    }
-
-    public static RetryTemplateBuilder createDefaultRetryTemplateBuilder() {
-        return RetryTemplate.builder()
-                .retryOn(Exception.class)
-                .maxAttempts(15)
-                .exponentialBackoff(Duration.ofMillis(100), 2, Duration.ofMinutes(15), true);
     }
 
     @Override
