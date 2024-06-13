@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
+import org.springframework.retry.support.RetryTemplateBuilder;
 import org.testcontainers.Testcontainers;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
@@ -100,7 +101,12 @@ class StorageClientTest {
     private void test(final StorageClient storageClient) throws IOException {
 
         if (!(storageClient instanceof RetryStorageClient)) {
-            test(storageClient.retryable()); // Also test retryable version
+            test(
+                    storageClient.retryable(
+                            new RetryTemplateBuilder()
+                                    .maxAttempts(2)
+                                    .fixedBackoff(Duration.ofMillis(1))
+                                    .build())); // Also test retryable version
         }
 
         assertEquals(Set.of(), storageClient.list());
