@@ -28,8 +28,6 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
-import okhttp3.ConnectionPool;
-import okhttp3.Dispatcher;
 import okhttp3.OkHttpClient;
 
 import org.apache.commons.lang3.NotImplementedException;
@@ -47,8 +45,6 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -75,15 +71,10 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
         this.supportsSnowball = supportsSnowball;
         this.outputMetaDataProvider = outputMetaDataProvider;
         final var timeoutOrDefault = Objects.requireNonNullElse(timeout, Duration.ofSeconds(15));
-        final var maxTotalConnections = 32;
-        final var connectionPool = new ConnectionPool(maxTotalConnections, 60, TimeUnit.SECONDS);
-        final var dispatcher = new Dispatcher(Executors.newFixedThreadPool(maxTotalConnections));
         final var httpClient =
                 new OkHttpClient()
                         .newBuilder()
                         .connectTimeout(timeoutOrDefault)
-                        .connectionPool(connectionPool)
-                        .dispatcher(dispatcher)
                         .readTimeout(timeoutOrDefault)
                         .writeTimeout(timeoutOrDefault)
                         .build();
