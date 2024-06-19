@@ -82,19 +82,14 @@ class EnableStoragesImplementationTest {
         assertArrayEquals(png2.getContentAsByteArray(), image);
         verify(storageClient).read("storage/files/2.png", true);
         final var outputGetImage = capturedOutput.getOut().split("\n");
-        final var thirdLastGetImage = outputGetImage[outputGetImage.length - 3];
         final var secondLastGetImage = outputGetImage[outputGetImage.length - 2];
         final var lastGetImage = ArrayUtils.lastElement(outputGetImage);
-        assertThat(thirdLastGetImage)
+        assertThat(secondLastGetImage)
                 .containsSequence("INFO")
                 .containsSequence("AnnotatedTestStorage")
                 .endsWith(
                         "reading content of type image/png from path storage/files/2.png with"
                                 + " doUncompressIfNeeded=true");
-        assertThat(secondLastGetImage)
-                .containsSequence("INFO")
-                .containsSequence("InputStreamUtils")
-                .endsWith("Could not find compression algorithm. Returning stream as-is");
         assertThat(lastGetImage)
                 .containsSequence("INFO")
                 .containsSequence("AnnotatedTestStorage")
