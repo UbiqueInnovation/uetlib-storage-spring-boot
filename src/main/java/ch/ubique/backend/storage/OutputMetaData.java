@@ -247,7 +247,7 @@ public final class OutputMetaData {
         return createHeaderWithKeyMapper(HttpHeader::noDashesAzure);
     }
 
-    private Map<String, String> createHeaderWithKeyMapper(
+    public Map<String, String> createHeaderWithKeyMapper(
             final Function<HttpHeader, String> keyMapper) {
         final var customHeaders =
                 createCustomHeaderEntries().stream()

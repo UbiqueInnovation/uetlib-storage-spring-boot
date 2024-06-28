@@ -137,7 +137,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                             .contentType(contentType)
                             .headers(createHeaders(output, metaData))
                             .stream(inputStream, output.contentLength(), partSize)
-                            .userMetadata(metaData.createMinioMetaDataMap())
+                            .userMetadata(encodeUserMetadata(metaData))
                             .build();
             minioClient.putObject(putObjectArgs);
         } catch (final ErrorResponseException
@@ -154,6 +154,14 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                             path, outputMetaData, output),
                     e);
         }
+    }
+
+    protected Map<String, String> encodeUserMetadata(final OutputMetaData outputMetaData) {
+        return outputMetaData.createHeaderWithKeyMapper(this::keyForCustomMetadata);
+    }
+
+    protected String keyForCustomMetadata(final HttpHeader httpHeader) {
+        return httpHeader.withXPrefix();
     }
 
     @Override
@@ -183,7 +191,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                             .bucket(bucket)
                             .objects(createSnowballObjects(outputsWithPaths))
                             .headers(createHeaders(anyOutput, metaData))
-                            .userMetadata(metaData.createMinioMetaDataMap())
+                            .userMetadata(encodeUserMetadata(metaData))
                             .build());
 
         } catch (final ErrorResponseException
