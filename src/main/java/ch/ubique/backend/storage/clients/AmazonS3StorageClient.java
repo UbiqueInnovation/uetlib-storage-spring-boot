@@ -1,5 +1,6 @@
 package ch.ubique.backend.storage.clients;
 
+import ch.ubique.backend.core.http.header.HttpHeader;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 
 import jakarta.annotation.Nullable;
@@ -51,5 +52,10 @@ public final class AmazonS3StorageClient extends MinioStorageClient {
                 true,
                 timeout,
                 outputMetaDataProvider);
+    }
+
+    @Override
+    protected String keyForCustomMetadata(final HttpHeader httpHeader) {
+        return httpHeader.withAmazonPrefix();
     }
 }
