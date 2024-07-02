@@ -4,7 +4,9 @@ import static ch.ubique.backend.core.http.header.HeaderUtility.formatHttpHeaderD
 
 import static java.util.Map.entry;
 
+import ch.ubique.backend.core.http.header.HeaderUtility;
 import ch.ubique.backend.core.http.header.HttpHeader;
+import ch.ubique.backend.core.utils.MapCollectors;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.output.Output;
 
@@ -30,7 +32,6 @@ import java.time.Instant;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @SuppressWarnings({"UnusedReturnValue", "unused"})
@@ -207,6 +208,10 @@ public final class OutputMetaData {
                 .or(() -> Optional.ofNullable(accessPolicy).map(CannedAcl::toString));
     }
 
+    public Optional<String> expires() {
+        return Optional.ofNullable(expires).map(HeaderUtility::formatHttpHeaderDate);
+    }
+
     private List<Entry<String, String>> createStandardHeaderEntries() {
         final var entries = new ArrayList<Entry<String, String>>();
 
@@ -240,21 +245,22 @@ public final class OutputMetaData {
     }
 
     public Map<String, String> createMinioMetaDataMap() {
-        return createHeaderWithKeyMapper(HttpHeader::value);
+        return createCustomHeadersWithKeyMapper(HttpHeader::value);
     }
 
     public Map<String, String> createAzureMetaDataMap() {
-        return createHeaderWithKeyMapper(HttpHeader::noDashesAzure);
+        final var customHeaderEntries =
+                createCustomHeadersWithKeyMapper(HttpHeader::noDashesAzure).entrySet();
+
+        return Stream.concat(createStandardHeaderEntries().stream(), customHeaderEntries.stream())
+                .collect(MapCollectors.entriesToMap());
     }
 
-    public Map<String, String> createHeaderWithKeyMapper(
+    public Map<String, String> createCustomHeadersWithKeyMapper(
             final Function<HttpHeader, String> keyMapper) {
-        final var customHeaders =
-                createCustomHeaderEntries().stream()
-                        .map(e -> entry(keyMapper.apply(e.getKey()), e.getValue()));
-
-        return Stream.concat(customHeaders, createStandardHeaderEntries().stream())
-                .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue));
+        return createCustomHeaderEntries().stream()
+                .map(e -> entry(keyMapper.apply(e.getKey()), e.getValue()))
+                .collect(MapCollectors.entriesToMap());
     }
 
     @Override
