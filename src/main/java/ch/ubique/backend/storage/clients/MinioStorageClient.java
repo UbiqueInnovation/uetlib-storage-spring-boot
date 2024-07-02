@@ -102,6 +102,11 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 .map(OutputMetaData::createCacheControl)
                 .ifPresent(cacheControl -> headers.put(HttpHeaders.CACHE_CONTROL, cacheControl));
 
+        // Expires
+        Optional.ofNullable(metaData)
+                .flatMap(OutputMetaData::expires)
+                .ifPresent(expires -> headers.put(HttpHeaders.EXPIRES, expires));
+
         // ACL (Access Control)
         Optional.ofNullable(metaData)
                 .flatMap(OutputMetaData::createCannedAcl)
@@ -157,7 +162,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
     }
 
     private Map<String, String> createUserMetadata(final OutputMetaData outputMetaData) {
-        return outputMetaData.createHeaderWithKeyMapper(this::keyForCustomMetadata);
+        return outputMetaData.createCustomHeadersWithKeyMapper(this::keyForCustomMetadata);
     }
 
     protected String keyForCustomMetadata(final HttpHeader httpHeader) {

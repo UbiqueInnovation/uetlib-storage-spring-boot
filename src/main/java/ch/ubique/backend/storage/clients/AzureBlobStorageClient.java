@@ -132,7 +132,8 @@ public class AzureBlobStorageClient implements StorageClient {
 
     @Override
     public void write(
-            final Collection<OutputWithPath> outputs, @Nullable final OutputMetaData outputMetaData)
+            final @NotNull Collection<OutputWithPath> outputs,
+            @Nullable final OutputMetaData outputMetaData)
             throws IOException {
         // The SDK unfortunately does not support a bulk upload.
         VirtualThreadUtils.throwingForEach(
