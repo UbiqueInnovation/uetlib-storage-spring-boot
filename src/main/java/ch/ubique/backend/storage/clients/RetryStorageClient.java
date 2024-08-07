@@ -94,7 +94,8 @@ public class RetryStorageClient implements StorageClient {
     }
 
     @Override
-    public String getSignedUrl(final @NotNull String path, final @NotNull OffsetDateTime expiry) {
+    public String getSignedUrl(final @NotNull String path, final @NotNull OffsetDateTime expiry)
+            throws IOException {
         return retryTemplate.execute(context -> storageClient.getSignedUrl(path, expiry));
     }
 

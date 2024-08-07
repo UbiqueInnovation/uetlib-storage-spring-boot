@@ -114,7 +114,7 @@ public class ImageStorageService {
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    public String getSignedUrl(final String path) {
+    public String getSignedUrl(final String path) throws IOException {
         return storageClient.getSignedUrl(
                 path, OffsetDateTime.now().plusNanos(sasExpiry.toNanos()));
     }
