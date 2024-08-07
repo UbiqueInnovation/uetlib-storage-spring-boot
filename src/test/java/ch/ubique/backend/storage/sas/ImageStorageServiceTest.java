@@ -115,7 +115,7 @@ class ImageStorageServiceTest {
     }
 
     @Test
-    void testImageSas() {
+    void testImageSas() throws IOException {
         imageStorageService.getSignedUrl(GENERATE_GENERATE_PATH.apply(0).apply(ImageVariant.HIRES));
         verify(storageClient, atLeastOnce()).getSignedUrl(eq("sasImage/0-hires.jpeg"), any());
     }
