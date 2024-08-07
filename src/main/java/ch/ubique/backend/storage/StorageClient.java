@@ -33,7 +33,7 @@ public interface StorageClient {
 
     boolean exists(@NotNull String path) throws IOException;
 
-    String getSignedUrl(@NotNull String path, @NotNull OffsetDateTime expiry);
+    String getSignedUrl(@NotNull String path, @NotNull OffsetDateTime expiry) throws IOException;
 
     String getUrl(@NotNull String path);
 
