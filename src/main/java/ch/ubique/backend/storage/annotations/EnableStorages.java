@@ -1,5 +1,8 @@
 package ch.ubique.backend.storage.annotations;
 
+import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
 import org.springframework.context.annotation.Import;
 import org.springframework.core.annotation.AliasFor;
 
@@ -11,8 +14,8 @@ import java.lang.annotation.*;
  *
  * <p>The package 'ch.ubique.backend' is always included.
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
+@Retention(RUNTIME)
+@Target(TYPE)
 @Documented
 @Import(StorageRegistrar.class)
 public @interface EnableStorages {
