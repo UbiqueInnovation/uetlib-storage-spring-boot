@@ -1,6 +1,8 @@
 package ch.ubique.backend.storage.exception;
 
-public class StorageClientException extends RuntimeException {
+import java.io.IOException;
+
+public class StorageClientException extends IOException {
 
     public StorageClientException(final Throwable cause) {
         this(cause.getMessage(), cause);
