@@ -115,6 +115,32 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
         return headers;
     }
 
+    private static @NotNull List<SnowballObject> createSnowballObjects(
+            final Collection<@NotNull @Valid OutputWithPath> outputsWithPaths) throws IOException {
+        try {
+            return outputsWithPaths.stream()
+                    .map(
+                            outputWithPath -> {
+                                try {
+                                    return createSnowBallObject(outputWithPath);
+                                } catch (final IOException e) {
+                                    throw new UncheckedIOException(e);
+                                }
+                            })
+                    .toList();
+        } catch (final UncheckedIOException e) {
+            throw e.getCause();
+        }
+    }
+
+    private static @NotNull SnowballObject createSnowBallObject(
+            final @NotNull OutputWithPath outputWithPath) throws IOException {
+        final var bytes = InputStreamUtils.readBytesAndClose(outputWithPath.output().read());
+        final var inputStream = new ByteArrayInputStream(bytes);
+        return new SnowballObject(
+                outputWithPath.path(), inputStream, bytes.length, ZonedDateTime.now());
+    }
+
     @Override
     public final void write(
             final @NotNull Output output,
@@ -215,32 +241,6 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
         }
     }
 
-    private static @NotNull List<SnowballObject> createSnowballObjects(
-            final Collection<@NotNull @Valid OutputWithPath> outputsWithPaths) throws IOException {
-        try {
-            return outputsWithPaths.stream()
-                    .map(
-                            outputWithPath -> {
-                                try {
-                                    return createSnowBallObject(outputWithPath);
-                                } catch (final IOException e) {
-                                    throw new UncheckedIOException(e);
-                                }
-                            })
-                    .toList();
-        } catch (final UncheckedIOException e) {
-            throw e.getCause();
-        }
-    }
-
-    private static @NotNull SnowballObject createSnowBallObject(
-            final @NotNull OutputWithPath outputWithPath) throws IOException {
-        final var bytes = InputStreamUtils.readBytesAndClose(outputWithPath.output().read());
-        final var inputStream = new ByteArrayInputStream(bytes);
-        return new SnowballObject(
-                outputWithPath.path(), inputStream, bytes.length, ZonedDateTime.now());
-    }
-
     @Override
     public final InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
             throws IOException {
@@ -319,7 +319,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
 
     @Override
     public final String getSignedUrl(
-            final @NotNull String path, final @NotNull OffsetDateTime expiry) {
+            final @NotNull String path, final @NotNull OffsetDateTime expiry) throws IOException {
         try {
             return minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
@@ -354,7 +354,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                         + " per S3 spec)");
     }
 
-    public void createBucket(final String bucketName) {
+    public void createBucket(final String bucketName) throws IOException {
         try {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
         } catch (final ErrorResponseException
