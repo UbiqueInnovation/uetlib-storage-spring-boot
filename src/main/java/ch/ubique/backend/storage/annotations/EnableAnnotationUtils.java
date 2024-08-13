@@ -10,6 +10,9 @@ import org.reflections.util.ConfigurationBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.MergedAnnotations;
+import org.springframework.core.env.Environment;
 
 import java.lang.annotation.Annotation;
 import java.text.MessageFormat;
@@ -41,8 +44,7 @@ public final class EnableAnnotationUtils {
         return enableClass;
     }
 
-    @NotNull
-    public static <T extends Annotation> Class<?> findSingletonEnableClass(
+    public static @NotNull <T extends Annotation> Class<?> findSingletonEnableClass(
             final ApplicationContext applicationContext, final Class<T> clazz) {
         final var enableClass = findEnableClasses(applicationContext, clazz);
 
@@ -53,7 +55,7 @@ public final class EnableAnnotationUtils {
         throw new IllegalStateException(
                 MessageFormat.format(
                         "Expected one bean class annotated with {0} in the application context,"
-                            + " found none.",
+                                + " found none.",
                         clazz));
     }
 
@@ -72,7 +74,7 @@ public final class EnableAnnotationUtils {
         throw new IllegalStateException(
                 MessageFormat.format(
                         "Expected at most one bean class annotated with {0} in the application"
-                            + " context. Found: {1}",
+                                + " context. Found: {1}",
                         clazz.getCanonicalName(), enableClasses));
     }
 
@@ -141,5 +143,27 @@ public final class EnableAnnotationUtils {
                         Arrays.stream(basePackageClassesAttribute).map(Class::getPackageName),
                         Arrays.stream(basePackagesAttribute).filter(StringUtils::isNotBlank))
                 .collect(Collectors.toSet());
+    }
+
+    public static Set<Class<?>> filterClassesByProfileEnabled(
+            final Environment environment,
+            final MergedAnnotations.Search mergedAnnotationsSearch,
+            final Set<Class<?>> storageClasses) {
+        return storageClasses.stream()
+                .filter(
+                        storageClass -> {
+                            final var mergedAnnotations =
+                                    mergedAnnotationsSearch.from(storageClass);
+                            final var isProfileAnnotationPresent =
+                                    mergedAnnotations.isPresent(Profile.class);
+                            if (!isProfileAnnotationPresent) {
+                                // no profile annotation -> always instantiate this storage
+                                return true;
+                            }
+                            final var profileAnnotation =
+                                    mergedAnnotations.get(Profile.class).synthesize();
+                            return environment.matchesProfiles(profileAnnotation.value());
+                        })
+                .collect(Collectors.toUnmodifiableSet());
     }
 }
