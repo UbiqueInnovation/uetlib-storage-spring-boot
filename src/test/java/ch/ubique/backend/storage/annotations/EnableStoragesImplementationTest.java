@@ -1,5 +1,7 @@
 package ch.ubique.backend.storage.annotations;
 
+import static ch.ubique.backend.test.assertion.AssertionUtils.assertThrowsWithMessage;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
@@ -19,12 +21,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.Resource;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
@@ -32,9 +38,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
 
+@ActiveProfiles("test")
 @SpringBootTest(classes = EnableStoragesImplementationTestConfig.class)
 @ExtendWith(OutputCaptureExtension.class)
 class EnableStoragesImplementationTest {
+
+    @Autowired private ApplicationContext applicationContext;
 
     @SpyBean private ObjectMapper objectMapper;
     @SpyBean private StorageClient storageClient;
@@ -220,5 +229,14 @@ class EnableStoragesImplementationTest {
                 .containsSequence("INFO")
                 .containsSequence("AnnotatedTestStorage")
                 .endsWith("listing files from path storage/files/ with recursive=true");
+    }
+
+    @Test
+    void profileAnnotationStorage() {
+        assertNotNull(applicationContext.getBean(ProfileEnabledAnnotatedTestStorage.class));
+        assertThrowsWithMessage(
+                NoSuchBeanDefinitionException.class,
+                () -> applicationContext.getBean(ProfileDisabledAnnotatedTestStorage.class),
+                "No qualifying bean of type 'ch.ubique.backend.storage.annotations.ProfileDisabledAnnotatedTestStorage' available");
     }
 }

@@ -36,6 +36,7 @@ import org.springframework.beans.factory.support.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.annotation.MergedAnnotations;
+import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
@@ -65,6 +66,7 @@ public class StorageRegistrar
     private static final Logger logger = LoggerFactory.getLogger(StorageRegistrar.class);
 
     private ApplicationContext applicationContext;
+    private Environment environment;
 
     private static Map<Class<? extends Annotation>, List<StorageMethodInfo>>
             getStorageMethodsByAnnotation(
@@ -155,8 +157,7 @@ public class StorageRegistrar
                 callSuperConstructor.andThen(setStorageClient).andThen(setObjectMapper));
     }
 
-    @NotNull
-    private static WithoutSpecifiedTarget getCallSuperConstructor() {
+    private static @NotNull WithoutSpecifiedTarget getCallSuperConstructor() {
         final WithoutSpecifiedTarget callSuperConstructor;
         try {
             callSuperConstructor = MethodCall.invoke(Object.class.getConstructor());
@@ -491,14 +492,20 @@ public class StorageRegistrar
         return buildImplementationMethod(builder, parameters, existsMethod, interceptor);
     }
 
-    private static Set<Class<?>> findAllStorageClasses(
-            final Class<?> enableStoragesClass, final EnableStorages enableStoragesAnnotation) {
-        return EnableAnnotationUtils.findAllClassesBy(
-                enableStoragesAnnotation.storages(),
-                enableStoragesAnnotation.basePackages(),
-                enableStoragesAnnotation.basePackageClasses(),
-                enableStoragesClass.getPackageName(),
-                Storage.class);
+    private Set<Class<?>> findAllStorageClasses(
+            final Class<?> enableStoragesClass,
+            final EnableStorages enableStoragesAnnotation,
+            final MergedAnnotations.Search mergedAnnotationsSearch) {
+        final var storageClasses =
+                EnableAnnotationUtils.findAllClassesBy(
+                        enableStoragesAnnotation.storages(),
+                        enableStoragesAnnotation.basePackages(),
+                        enableStoragesAnnotation.basePackageClasses(),
+                        enableStoragesClass.getPackageName(),
+                        Storage.class);
+
+        return EnableAnnotationUtils.filterClassesByProfileEnabled(
+                environment, mergedAnnotationsSearch, storageClasses);
     }
 
     @Override
@@ -538,7 +545,8 @@ public class StorageRegistrar
                         .get(EnableStorages.class)
                         .synthesize();
         final var storageClasses =
-                findAllStorageClasses(enableStoragesClass, enableStoragesAnnotation);
+                findAllStorageClasses(
+                        enableStoragesClass, enableStoragesAnnotation, mergedAnnotationsSearch);
 
         for (final var storageClass : storageClasses) {
             Assert.isTrue(
@@ -639,8 +647,7 @@ public class StorageRegistrar
     @SuppressWarnings("java:S5443")
     private <T> void writeClassToFileSystem(final DynamicType.Unloaded<T> generatedClass) {
         final var springApplicationName =
-                Objects.requireNonNull(
-                        applicationContext.getEnvironment().getProperty("spring.application.name"));
+                Objects.requireNonNull(environment.getProperty("spring.application.name"));
         final var tempFile = Path.of("/tmp/bytebuddy/").resolve(springApplicationName);
         try {
             generatedClass.saveIn(tempFile.toFile());
@@ -655,6 +662,7 @@ public class StorageRegistrar
     public void setApplicationContext(final @NotNull ApplicationContext applicationContext)
             throws BeansException {
         this.applicationContext = applicationContext;
+        this.environment = applicationContext.getEnvironment();
     }
 
     private enum StorageBeanType {
