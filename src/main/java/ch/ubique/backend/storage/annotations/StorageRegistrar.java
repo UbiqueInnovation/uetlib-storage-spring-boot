@@ -1,5 +1,7 @@
 package ch.ubique.backend.storage.annotations;
 
+import static java.util.Map.*;
+
 import ch.ubique.backend.core.utils.ArrayUtils;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.interceptors.*;
@@ -238,44 +240,39 @@ public class StorageRegistrar
 
         final var storageClassLogger = LoggerFactory.getLogger(storageInterface);
 
+        final Map<Class<? extends Annotation>, BuildImplementationMethod<T>>
+                buildImplementationMethodByAnnotation =
+                        ofEntries(
+                                entry(
+                                        OutputMapping.class,
+                                        StorageRegistrar::buildImplementationOutputMethod),
+                                entry(
+                                        InputMapping.class,
+                                        StorageRegistrar::buildImplementationInputMethod),
+                                entry(
+                                        DeleteMapping.class,
+                                        StorageRegistrar::buildImplementationDeleteMethod),
+                                entry(
+                                        ExistsMapping.class,
+                                        StorageRegistrar::buildImplementationExistsMethod),
+                                entry(
+                                        ListMapping.class,
+                                        StorageRegistrar::buildImplementationListMethod));
+
         var builder = b;
-        final var outputMethodInfos =
-                Objects.requireNonNullElse(
-                        annotatedMethodsByAnnotation.get(OutputMapping.class),
-                        List.<StorageMethodInfo>of());
-        final var inputMethodInfos =
-                Objects.requireNonNullElse(
-                        annotatedMethodsByAnnotation.get(InputMapping.class),
-                        List.<StorageMethodInfo>of());
-        final var deleteMethodInfos =
-                Objects.requireNonNullElse(
-                        annotatedMethodsByAnnotation.get(DeleteMapping.class),
-                        List.<StorageMethodInfo>of());
-        final var existsMethodInfos =
-                Objects.requireNonNullElse(
-                        annotatedMethodsByAnnotation.get(ExistsMapping.class),
-                        List.<StorageMethodInfo>of());
-        final var listMethodInfos =
-                Objects.requireNonNullElse(
-                        annotatedMethodsByAnnotation.get(ListMapping.class),
-                        List.<StorageMethodInfo>of());
-        for (final var outputMethodInfo : outputMethodInfos) {
-            builder =
-                    buildImplementationOutputMethod(builder, outputMethodInfo, storageClassLogger);
-        }
-        for (final var inputMethodInfo : inputMethodInfos) {
-            builder = buildImplementationInputMethod(builder, inputMethodInfo, storageClassLogger);
-        }
-        for (final var deleteMethodInfo : deleteMethodInfos) {
-            builder =
-                    buildImplementationDeleteMethod(builder, deleteMethodInfo, storageClassLogger);
-        }
-        for (final var existsMethodInfo : existsMethodInfos) {
-            builder =
-                    buildImplementationExistsMethod(builder, existsMethodInfo, storageClassLogger);
-        }
-        for (final var listMethodInfo : listMethodInfos) {
-            builder = buildImplementationListMethod(builder, listMethodInfo, storageClassLogger);
+        for (final var methodByAnnotationEntry : buildImplementationMethodByAnnotation.entrySet()) {
+            final var mappingAnnotationType = methodByAnnotationEntry.getKey();
+            final var buildImplementationMethod = methodByAnnotationEntry.getValue();
+            final var storageMethodInfos = annotatedMethodsByAnnotation.get(mappingAnnotationType);
+            if (storageMethodInfos == null) {
+                continue;
+            }
+
+            for (final var methodInfo : storageMethodInfos) {
+                builder =
+                        buildImplementationMethod.buildImplementationMethod(
+                                builder, methodInfo, storageClassLogger);
+            }
         }
         return builder;
     }
@@ -668,6 +665,14 @@ public class StorageRegistrar
     private enum StorageBeanType {
         IMPLEMENTATION,
         DOCUMENTATION
+    }
+
+    @FunctionalInterface
+    private interface BuildImplementationMethod<T> {
+        DynamicType.Builder<T> buildImplementationMethod(
+                final DynamicType.Builder<T> builder,
+                final StorageMethodInfo outputMethodInfo,
+                final Logger storageClassLogger);
     }
 
     private record StorageMethodInfo(
