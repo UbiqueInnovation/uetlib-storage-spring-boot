@@ -1,15 +1,23 @@
 package ch.ubique.backend.storage.annotations;
 
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
+import ch.ubique.backend.storage.annotations.interceptors.OutputMappingInterceptor;
+
 import org.slf4j.event.Level;
 import org.springframework.core.annotation.AliasFor;
 
-import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.RUNTIME)
+/**
+ * Implementations of methods annotated by this function are generated at runtime using byte-buddy.
+ * The implementation will call {@link OutputMappingInterceptor#intercept}. You can debug this
+ * method if there are any issues with this mapping.
+ */
+@Target(METHOD)
+@Retention(RUNTIME)
 @StorageMapping
 public @interface OutputMapping {
 
