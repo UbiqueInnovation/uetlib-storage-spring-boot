@@ -1,12 +1,27 @@
 package ch.ubique.backend.storage.annotations;
 
+import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
 import org.slf4j.event.Level;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.*;
 
-@Target(ElementType.ANNOTATION_TYPE)
-@Retention(RetentionPolicy.RUNTIME)
+/**
+ * This is just a meta annotation. The annotations to use in a {@link Storage} class are in the same
+ * package. These are:
+ *
+ * <ul>
+ *   <li>{@link InputMapping}
+ *   <li>{@link OutputMapping}
+ *   <li>{@link DeleteMapping}
+ *   <li>{@link ExistsMapping}
+ *   <li>{@link ListMapping}
+ * </ul>
+ */
+@Target(ANNOTATION_TYPE)
+@Retention(RUNTIME)
 @Documented
 @Inherited
 public @interface StorageMapping {

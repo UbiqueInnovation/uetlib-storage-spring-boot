@@ -6,6 +6,10 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
+/**
+ * {@link Storage} interface have methods that are all annotated with mapping annotations that are
+ * "subtypes" of the {@link StorageMapping} meta annotation. Check the javadoc for more info.
+ */
 @Retention(RUNTIME)
 @Target(TYPE)
 public @interface Storage {
