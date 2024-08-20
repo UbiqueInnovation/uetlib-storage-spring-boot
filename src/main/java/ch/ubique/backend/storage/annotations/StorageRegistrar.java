@@ -489,6 +489,10 @@ public class StorageRegistrar
         return buildImplementationMethod(builder, parameters, existsMethod, interceptor);
     }
 
+    private static @NotNull String classNameToBeanName(final String storageInterfaceSimpleName) {
+        return CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, storageInterfaceSimpleName);
+    }
+
     private Set<Class<?>> findAllStorageClasses(
             final Class<?> enableStoragesClass,
             final EnableStorages enableStoragesAnnotation,
@@ -612,33 +616,34 @@ public class StorageRegistrar
 
         final var beanDefinition = beanDefinitionBuilder.getBeanDefinition();
 
-        final var beanName =
-                CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, storageInterfaceSimpleName);
+        final var beanName = classNameToBeanName(storageInterfaceSimpleName);
 
-        if (storageBeanType == StorageBeanType.IMPLEMENTATION) {
-            final var holder = new BeanDefinitionHolder(beanDefinition, beanName);
-            BeanDefinitionReaderUtils.registerBeanDefinition(holder, beanFactory);
+        switch (storageBeanType) {
+            case IMPLEMENTATION -> {
+                final var holder = new BeanDefinitionHolder(beanDefinition, beanName);
+                BeanDefinitionReaderUtils.registerBeanDefinition(holder, beanFactory);
 
-            logger.info(
-                    "Registered storage bean {} of class {} for storage class {}",
-                    beanName,
-                    storageClass.getCanonicalName(),
-                    storageInterfaceCanonicalName);
-
-            return;
+                logger.info(
+                        "Registered storage bean {} of class {} for storage class {}",
+                        beanName,
+                        storageClass.getCanonicalName(),
+                        storageInterfaceCanonicalName);
+            }
+            case DOCUMENTATION -> {
+                final var documentationBeanName =
+                        beanName
+                                + CaseFormat.UPPER_UNDERSCORE.to(
+                                        CaseFormat.UPPER_CAMEL,
+                                        StorageBeanType.DOCUMENTATION.name());
+                final var documentationBean = beanFactory.createBean(beanDefinition.getBeanClass());
+                beanFactory.registerSingleton(documentationBeanName, documentationBean);
+                logger.info(
+                        "Registered documentation bean {} of class {} for storage class {}",
+                        documentationBeanName,
+                        storageClass.getCanonicalName(),
+                        storageInterfaceCanonicalName);
+            }
         }
-
-        final var documentationBeanName =
-                beanName
-                        + CaseFormat.UPPER_UNDERSCORE.to(
-                                CaseFormat.UPPER_CAMEL, StorageBeanType.DOCUMENTATION.name());
-        final var documentationBean = beanFactory.createBean(beanDefinition.getBeanClass());
-        beanFactory.registerSingleton(documentationBeanName, documentationBean);
-        logger.info(
-                "Registered documentation bean {} of class {} for storage class {}",
-                documentationBeanName,
-                storageClass.getCanonicalName(),
-                storageInterfaceCanonicalName);
     }
 
     @SuppressWarnings("java:S5443")
