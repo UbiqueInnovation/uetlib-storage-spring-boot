@@ -1,81 +1,29 @@
-package ch.ubique.backend.storage.annotations;
-
-import jakarta.annotation.Nullable;
-import jakarta.validation.constraints.NotNull;
+package ch.ubique.backend.storage.annotations.utils;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.reflections.Reflections;
+import org.reflections.scanners.Scanners;
 import org.reflections.util.ConfigurationBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.core.env.Environment;
 
 import java.lang.annotation.Annotation;
-import java.text.MessageFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public final class EnableAnnotationUtils {
 
-    private static final Logger logger = LoggerFactory.getLogger(EnableAnnotationUtils.class);
-
     private EnableAnnotationUtils() {}
 
     private static Reflections getReflectionsForPackages(final String packageIdentifier) {
-        return new Reflections(new ConfigurationBuilder().forPackages(packageIdentifier));
-    }
-
-    @Nullable
-    public static <T extends Annotation> Class<?> findSingletonNullableEnableClass(
-            final ApplicationContext applicationContext, final Class<T> clazz) {
-        final var enableClass = findEnableClasses(applicationContext, clazz);
-
-        if (enableClass == null) {
-            logger.debug(
-                    "No bean class annotated with @{} found in application context",
-                    clazz.getCanonicalName());
-        }
-
-        return enableClass;
-    }
-
-    public static @NotNull <T extends Annotation> Class<?> findSingletonEnableClass(
-            final ApplicationContext applicationContext, final Class<T> clazz) {
-        final var enableClass = findEnableClasses(applicationContext, clazz);
-
-        if (enableClass != null) {
-            return enableClass;
-        }
-
-        throw new IllegalStateException(
-                MessageFormat.format(
-                        "Expected one bean class annotated with {0} in the application context,"
-                                + " found none.",
-                        clazz));
-    }
-
-    @Nullable
-    private static <T extends Annotation> Class<?> findEnableClasses(
-            final ApplicationContext applicationContext, final Class<T> clazz) {
-        final var enableClasses =
-                applicationContext.getBeansWithAnnotation(clazz).values().stream()
-                        .map(Object::getClass)
-                        .toList();
-
-        if (enableClasses.size() <= 1) {
-            return enableClasses.stream().findFirst().orElse(null);
-        }
-
-        throw new IllegalStateException(
-                MessageFormat.format(
-                        "Expected at most one bean class annotated with {0} in the application"
-                                + " context. Found: {1}",
-                        clazz.getCanonicalName(), enableClasses));
+        return new Reflections(
+                new ConfigurationBuilder()
+                        .forPackages(packageIdentifier)
+                        .setScanners(Scanners.TypesAnnotated)
+                        .setExpandSuperTypes(false));
     }
 
     public static Set<Class<?>> findAllClassesBy(
@@ -112,7 +60,7 @@ public final class EnableAnnotationUtils {
                             .map(EnableAnnotationUtils::getReflectionsForPackages)
                             .reduce(firstReflections, Reflections::merge);
             typesAnnotatedWithStream =
-                    reflections.getTypesAnnotatedWith(annotationClassToFind).stream()
+                    reflections.getTypesAnnotatedWith(annotationClassToFind, true).stream()
                             .filter(cls -> isPartOfAnyPackage(cls, basePackages));
         }
 
