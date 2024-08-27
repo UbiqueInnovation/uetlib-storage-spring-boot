@@ -667,21 +667,4 @@ public class StorageRegistrar
         this.environment = applicationContext.getEnvironment();
     }
 
-    private enum StorageBeanType {
-        IMPLEMENTATION,
-        DOCUMENTATION
-    }
-
-    @FunctionalInterface
-    private interface BuildImplementationMethod<T> {
-        DynamicType.Builder<T> buildImplementationMethod(
-                final DynamicType.Builder<T> builder,
-                final StorageMethodInfo outputMethodInfo,
-                final Logger storageClassLogger);
-    }
-
-    private record StorageMethodInfo(
-            Method storageMethod,
-            MergedAnnotations storageMethodAnnotations,
-            Class<? extends Annotation> mappingAnnotationType) {}
 }

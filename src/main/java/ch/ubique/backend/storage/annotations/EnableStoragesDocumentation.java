@@ -1,15 +1,20 @@
 package ch.ubique.backend.storage.annotations;
 
+import static ch.ubique.backend.storage.annotations.CodeGenerationType.DOCUMENTATION;
+
+import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.*;
 
 /** Shorthand annotation for {@link EnableStorages} to generate documentation only */
-@Target(ElementType.TYPE)
-@Retention(RetentionPolicy.RUNTIME)
+@Target(TYPE)
+@Retention(RUNTIME)
 @Documented
 @Inherited
-@EnableStorages(codeGenerationType = CodeGenerationType.DOCUMENTATION)
+@EnableStorages(codeGenerationType = DOCUMENTATION)
 public @interface EnableStoragesDocumentation {
     /** Alias for {@link EnableStorages#value}. */
     @AliasFor(annotation = EnableStorages.class)

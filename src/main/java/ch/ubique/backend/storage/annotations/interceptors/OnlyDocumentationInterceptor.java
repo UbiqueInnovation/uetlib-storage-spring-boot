@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 
-public class OnlyDocumentationInterceptor {
+public final class OnlyDocumentationInterceptor {
     private OnlyDocumentationInterceptor() {}
 
     @RuntimeType
@@ -16,7 +16,7 @@ public class OnlyDocumentationInterceptor {
                         ProblemDetail.forStatusAndDetail(
                                 HttpStatus.BAD_REQUEST,
                                 "this storage method exists only to document blob storage endpoints"
-                                    + " and must not be called"))
+                                        + " and must not be called"))
                 .build();
     }
 }
