@@ -1,5 +1,8 @@
 package ch.ubique.backend.storage.annotations;
 
+import static ch.ubique.backend.storage.annotations.utils.EnableAnnotationUtils.classForName;
+import static ch.ubique.backend.storage.annotations.utils.EnableAnnotationUtils.getBasePackages;
+
 import static java.util.Map.*;
 
 import ch.ubique.backend.core.utils.ArrayUtils;
@@ -30,14 +33,19 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
+import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.support.*;
 import org.springframework.context.EnvironmentAware;
+import org.springframework.context.ResourceLoaderAware;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.core.env.Environment;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -57,7 +65,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-class StorageRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAware {
+class StorageRegistrar
+        implements ImportBeanDefinitionRegistrar, ResourceLoaderAware, EnvironmentAware {
 
     private static final String STORAGE_CLIENT_PARAMETER = "storageClient";
     private static final String OBJECT_MAPPER_PARAMETER = "objectMapper";
@@ -66,6 +75,7 @@ class StorageRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAwar
 
     private static final Logger logger = LoggerFactory.getLogger(StorageRegistrar.class);
 
+    private ResourceLoader resourceLoader;
     private Environment environment;
 
     private static Map<Class<? extends Annotation>, List<StorageMethodInfo>>
@@ -506,20 +516,31 @@ class StorageRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAwar
         return enableStoragesClass;
     }
 
-    private Set<Class<?>> findAllStorageClasses(
-            final Class<?> enableStoragesClass,
-            final EnableStorages enableStoragesAnnotation,
-            final MergedAnnotations.Search mergedAnnotationsSearch) {
-        final var storageClasses =
-                EnableAnnotationUtils.findAllClassesBy(
-                        enableStoragesAnnotation.storages(),
-                        enableStoragesAnnotation.basePackages(),
-                        enableStoragesAnnotation.basePackageClasses(),
-                        enableStoragesClass.getPackageName(),
-                        Storage.class);
+    private Set<AnnotatedBeanDefinition> findAllStorageBeanDefinitions(
+            final Class<?> enableStoragesClass, final EnableStorages enableStoragesAnnotation) {
+        final var candidateComponents = new LinkedHashSet<BeanDefinition>();
+        final var storages = enableStoragesAnnotation.storages();
+        if (org.apache.commons.lang3.ArrayUtils.isEmpty(storages)) {
+            final var scanner =
+                    EnableAnnotationUtils.getScanner(environment, resourceLoader, Storage.class);
+            final var basePackages =
+                    getBasePackages(
+                            enableStoragesAnnotation.basePackages(),
+                            enableStoragesAnnotation.basePackageClasses(),
+                            enableStoragesClass.getPackageName());
+            for (final var basePackage : basePackages) {
+                candidateComponents.addAll(scanner.findCandidateComponents(basePackage));
+            }
+        } else {
+            for (final var storageClass : storages) {
+                candidateComponents.add(new AnnotatedGenericBeanDefinition(storageClass));
+            }
+        }
 
-        return EnableAnnotationUtils.filterClassesByProfileEnabled(
-                environment, mergedAnnotationsSearch, storageClasses);
+        return candidateComponents.stream()
+                .filter(AnnotatedBeanDefinition.class::isInstance)
+                .map(AnnotatedBeanDefinition.class::cast)
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     @Override
@@ -542,18 +563,27 @@ class StorageRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAwar
 
         final var enableStoragesAnnotation =
                 importingClassMetadata.getAnnotations().get(EnableStorages.class).synthesize();
-        final var storageClasses =
-                findAllStorageClasses(
-                        enableStoragesClass, enableStoragesAnnotation, mergedAnnotationsSearch);
+        final var storageBeanDefinitions =
+                findAllStorageBeanDefinitions(enableStoragesClass, enableStoragesAnnotation);
 
-        for (final var storageClass : storageClasses) {
+        for (final var storageBeanDefinition : storageBeanDefinitions) {
+            final var storageBeanMetadata = storageBeanDefinition.getMetadata();
+            // verify annotated class is an interface
             Assert.isTrue(
-                    storageClass.isInterface(),
+                    storageBeanMetadata.isInterface(),
                     "@Storage can only be specified on an interface, but was specified on "
-                            + storageClass);
+                            + storageBeanMetadata);
+
+            final var storageInterface = classForName(storageBeanMetadata.getClassName());
+            final var storageAnnotation =
+                    storageBeanMetadata.getAnnotations().get(Storage.class).synthesize();
 
             registerStorageClient(
-                    beanFactory, mergedAnnotationsSearch, storageClass, enableStoragesAnnotation);
+                    beanFactory,
+                    mergedAnnotationsSearch,
+                    storageInterface,
+                    storageAnnotation,
+                    enableStoragesAnnotation);
         }
     }
 
@@ -561,9 +591,8 @@ class StorageRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAwar
             final DefaultListableBeanFactory beanFactory,
             final MergedAnnotations.Search mergedAnnotationsSearch,
             final Class<T> storageInterface,
+            final Storage storageAnnotation,
             final EnableStorages enableStoragesAnnotation) {
-        final var mergedStorageClassAnnotations = mergedAnnotationsSearch.from(storageInterface);
-        final var storageAnnotation = mergedStorageClassAnnotations.get(Storage.class).synthesize();
 
         if (enableStoragesAnnotation.codeGenerationType().generateImplementationCode()
                 && storageAnnotation.codeGenerationType().generateImplementationCode()) {
@@ -655,6 +684,11 @@ class StorageRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAwar
         }
         logger.trace(
                 "saved at {}/{}.class", tempFile, generatedClass.getTypeDescription().getName());
+    }
+
+    @Override
+    public void setResourceLoader(final @NotNull ResourceLoader resourceLoader) {
+        this.resourceLoader = resourceLoader;
     }
 
     @Override
