@@ -5,6 +5,7 @@ import static java.util.Map.*;
 import ch.ubique.backend.core.utils.ArrayUtils;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.interceptors.*;
+import ch.ubique.backend.storage.annotations.utils.EnableAnnotationUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.CaseFormat;
@@ -29,16 +30,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.*;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.EnvironmentAware;
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.core.env.Environment;
+import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
@@ -57,8 +57,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class StorageRegistrar
-        implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
+class StorageRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAware {
 
     private static final String STORAGE_CLIENT_PARAMETER = "storageClient";
     private static final String OBJECT_MAPPER_PARAMETER = "objectMapper";
@@ -67,7 +66,6 @@ public class StorageRegistrar
 
     private static final Logger logger = LoggerFactory.getLogger(StorageRegistrar.class);
 
-    private ApplicationContext applicationContext;
     private Environment environment;
 
     private static Map<Class<? extends Annotation>, List<StorageMethodInfo>>
@@ -493,6 +491,21 @@ public class StorageRegistrar
         return CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, storageInterfaceSimpleName);
     }
 
+    private static @NotNull Class<?> loadEnableStoragesClass(
+            final @NotNull AnnotationMetadata importingClassMetadata) {
+        final Class<?> enableStoragesClass;
+        try {
+            enableStoragesClass = Class.forName(importingClassMetadata.getClassName());
+        } catch (final ClassNotFoundException e) {
+            throw new IllegalStateException(
+                    MessageFormat.format(
+                            "Unable to load class {0}, the class that is annotated with @{1}",
+                            importingClassMetadata.getClassName(), EnableStorages.class),
+                    e);
+        }
+        return enableStoragesClass;
+    }
+
     private Set<Class<?>> findAllStorageClasses(
             final Class<?> enableStoragesClass,
             final EnableStorages enableStoragesAnnotation,
@@ -510,41 +523,25 @@ public class StorageRegistrar
     }
 
     @Override
-    public void postProcessBeanDefinitionRegistry(final @NotNull BeanDefinitionRegistry registry)
-            throws BeansException {
-        registerStorageClients((DefaultListableBeanFactory) registry);
+    public void registerBeanDefinitions(
+            final @NotNull AnnotationMetadata importingClassMetadata,
+            final @NotNull BeanDefinitionRegistry registry) {
+        registerStorageClients((DefaultListableBeanFactory) registry, importingClassMetadata);
     }
 
-    @Override
-    public void postProcessBeanFactory(final @NotNull ConfigurableListableBeanFactory beanFactory)
-            throws BeansException {
-        // empty
-    }
-
-    public void registerStorageClients(final DefaultListableBeanFactory beanFactory) {
+    public void registerStorageClients(
+            final @NotNull DefaultListableBeanFactory beanFactory,
+            final @NotNull AnnotationMetadata importingClassMetadata) {
         final var mergedAnnotationsSearch =
                 MergedAnnotations.search(MergedAnnotations.SearchStrategy.TYPE_HIERARCHY)
                         .withEnclosingClasses(
                                 clazz ->
                                         !ClassUtils.isInnerClass(clazz)
                                                 && !ClassUtils.isStaticClass(clazz));
-        final var enableStoragesClass =
-                EnableAnnotationUtils.findSingletonNullableEnableClass(
-                        applicationContext, EnableStorages.class);
-
-        if (enableStoragesClass == null) {
-            logger.info(
-                    "No {} annotation found, not registering any {} beans.",
-                    EnableStorages.class,
-                    Storage.class);
-            return;
-        }
+        final var enableStoragesClass = loadEnableStoragesClass(importingClassMetadata);
 
         final var enableStoragesAnnotation =
-                mergedAnnotationsSearch
-                        .from(enableStoragesClass)
-                        .get(EnableStorages.class)
-                        .synthesize();
+                importingClassMetadata.getAnnotations().get(EnableStorages.class).synthesize();
         final var storageClasses =
                 findAllStorageClasses(
                         enableStoragesClass, enableStoragesAnnotation, mergedAnnotationsSearch);
@@ -661,10 +658,7 @@ public class StorageRegistrar
     }
 
     @Override
-    public void setApplicationContext(final @NotNull ApplicationContext applicationContext)
-            throws BeansException {
-        this.applicationContext = applicationContext;
-        this.environment = applicationContext.getEnvironment();
+    public void setEnvironment(final @NotNull Environment environment) {
+        this.environment = environment;
     }
-
 }

@@ -8,10 +8,14 @@ import ch.ubique.backend.storage.clients.FileSystemStorageClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
 
 import java.io.IOException;
 import java.nio.file.Files;
 
+@Configuration
+@ComponentScan(basePackages = "ch.ubique.backend.storage")
 @EnableStorages(basePackages = "ch.ubique.backend.storage.annotations")
 public class EnableStoragesImplementationTestConfig {
 
