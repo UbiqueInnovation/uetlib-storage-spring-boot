@@ -8,10 +8,6 @@ import ch.ubique.backend.storage.output.JsonOutput;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
-
 import java.io.IOException;
 import java.util.Collection;
 
@@ -20,14 +16,10 @@ public final class TestStorageReferenceImplementation implements TestStorage {
 
     private final ObjectMapper objectMapper;
 
-    private final Logger logger;
-
     public TestStorageReferenceImplementation(
-            @Qualifier("storageClient") final StorageClient storageClient,
-            final ObjectMapper objectMapper) {
+            final StorageClient storageClient, final ObjectMapper objectMapper) {
         this.storageClient = storageClient;
         this.objectMapper = objectMapper;
-        this.logger = LoggerFactory.getLogger(getClass());
     }
 
     @Override
