@@ -47,7 +47,7 @@ class EnableStoragesImplementationTest {
 
     @SpyBean private ObjectMapper objectMapper;
     @SpyBean private StorageClient storageClient;
-    @SpyBean private AnnotatedTestStorage testStorage;
+    @SpyBean private AnnotatedTestStorage annotatedTestStorage;
     @SpyBean private TestStorageReferenceImplementation referenceImplementation;
 
     @Value("classpath:storage/files/2.png")
@@ -68,10 +68,10 @@ class EnableStoragesImplementationTest {
 
     @Test
     void testInputStorage(final CapturedOutput capturedOutput) throws IOException {
-        assertNotNull(testStorage);
+        assertNotNull(annotatedTestStorage);
         assertNotNull(referenceImplementation);
 
-        final var testUser = testStorage.getJson(17);
+        final var testUser = annotatedTestStorage.getJson(17);
         assertEquals(new TestUser(17, "Professor", "Jaffe Presley"), testUser);
         verify(storageClient).read("storage/files/17.json", true);
         // testStorage.getJson has log level to DEBUG, but the test logger is set to INFO, so
@@ -79,7 +79,7 @@ class EnableStoragesImplementationTest {
         assertThat(ArrayUtils.lastElement(capturedOutput.getOut().split("\n")))
                 .doesNotContain("AnnotatedTestStorage");
 
-        final var imageCompressed = testStorage.getImageCompressed(2);
+        final var imageCompressed = annotatedTestStorage.getImageCompressed(2);
         assertArrayEquals(png2.getContentAsByteArray(), imageCompressed);
         verify(storageClient).read("storage/files/2.png", false);
         // testStorage.getImageCompressed has log level null, so correctly no log from
@@ -87,7 +87,7 @@ class EnableStoragesImplementationTest {
         assertThat(ArrayUtils.lastElement(capturedOutput.getOut().split("\n")))
                 .doesNotContain("AnnotatedTestStorage");
 
-        final var image = testStorage.getImage(2);
+        final var image = annotatedTestStorage.getImage(2);
         assertArrayEquals(png2.getContentAsByteArray(), image);
         verify(storageClient).read("storage/files/2.png", true);
         final var outputGetImage = capturedOutput.getOut().split("\n");
@@ -107,11 +107,11 @@ class EnableStoragesImplementationTest {
 
     @Test
     void testOutputStorage(final CapturedOutput capturedOutput) throws IOException {
-        assertNotNull(testStorage);
+        assertNotNull(annotatedTestStorage);
         assertNotNull(referenceImplementation);
 
         final var testUser = new TestUser(32, "Student", "Seong-Hyeon Lebogang");
-        testStorage.saveJson(testUser, "32", null);
+        annotatedTestStorage.saveJson(testUser, "32", null);
         verify(storageClient)
                 .write(
                         new GZipOutput(new JsonOutput<>(testUser, objectMapper)),
@@ -130,7 +130,7 @@ class EnableStoragesImplementationTest {
                 new OutputMetaData(Duration.ofSeconds(48654), Duration.ofMillis(87623))
                         .backoff(Duration.ofHours(2))
                         .nextRefresh(Instant.now().plusMillis(629235637873L));
-        testStorage.saveJson(testUser, "32", outputMetaData);
+        annotatedTestStorage.saveJson(testUser, "32", outputMetaData);
         verify(storageClient)
                 .write(
                         new GZipOutput(new JsonOutput<>(testUser, objectMapper)),
@@ -141,7 +141,7 @@ class EnableStoragesImplementationTest {
                 objectMapper.readValue(
                         storageClient.read("storage/files/32.json", true), TestUser.class));
 
-        testStorage.saveImage(png2.getContentAsByteArray(), "8");
+        annotatedTestStorage.saveImage(png2.getContentAsByteArray(), "8");
         verify(storageClient)
                 .write(
                         new GZipOutput(
@@ -158,7 +158,7 @@ class EnableStoragesImplementationTest {
 
     @Test
     void testDeleteStorage(final CapturedOutput capturedOutput) throws IOException {
-        final var deleted62 = testStorage.deleteFile("62");
+        final var deleted62 = annotatedTestStorage.deleteFile("62");
         verify(storageClient).delete("storage/files/62.png", false);
         assertFalse(deleted62);
         assertEquals(
@@ -169,7 +169,7 @@ class EnableStoragesImplementationTest {
                         "storage/files/61.png"),
                 storageClient.list("storage/files/"));
 
-        final var deleted61 = testStorage.deleteFile("61");
+        final var deleted61 = annotatedTestStorage.deleteFile("61");
         verify(storageClient).delete("storage/files/61.png", false);
         assertTrue(deleted61);
         assertFalse(
@@ -187,14 +187,14 @@ class EnableStoragesImplementationTest {
         assertEquals(
                 storageClient.list("storage/files/5/"),
                 Set.of("storage/files/5/54.png", "storage/files/5/42.png"));
-        final var deletedFolder4 = testStorage.deleteFolder(4);
+        final var deletedFolder4 = annotatedTestStorage.deleteFolder(4);
         verify(storageClient).delete("storage/files/4", true);
         assertFalse(deletedFolder4);
         assertEquals(
                 Set.of("storage/files/5/54.png", "storage/files/5/42.png"),
                 storageClient.list("storage/files/5/"));
 
-        final var deletedFolder5 = testStorage.deleteFolder(5);
+        final var deletedFolder5 = annotatedTestStorage.deleteFolder(5);
         verify(storageClient).delete("storage/files/5", true);
         assertTrue(deletedFolder5);
         assertThrows(NoSuchFileException.class, () -> storageClient.list("storage/files/5/"));
@@ -213,7 +213,7 @@ class EnableStoragesImplementationTest {
                         "storage/files/5/",
                         "storage/files/17.json",
                         "storage/files/61.png"),
-                testStorage.listFiles("files"));
+                annotatedTestStorage.listFiles("files"));
         verify(storageClient).list("storage/files/", false);
 
         assertEquals(
@@ -223,7 +223,7 @@ class EnableStoragesImplementationTest {
                         "storage/files/5/42.png",
                         "storage/files/17.json",
                         "storage/files/61.png"),
-                testStorage.listFilesRecursive());
+                annotatedTestStorage.listFilesRecursive());
         verify(storageClient).list("storage/files/", true);
         assertThat(ArrayUtils.lastElement(capturedOutput.getOut().split("\n")))
                 .containsSequence("INFO")
