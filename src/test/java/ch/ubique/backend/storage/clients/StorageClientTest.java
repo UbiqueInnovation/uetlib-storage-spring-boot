@@ -63,8 +63,7 @@ class StorageClientTest {
                     String.format("http://%s:%s", minioServer.getHost(), mappedPort);
 
             final var storageClient =
-                    new MinioStorageClient(
-                            "test", minioServerUrl, "test", "test1234", true, null, null);
+                    new MinioStorageClient("test", minioServerUrl, "test", "test1234", null, null);
 
             storageClient.createBucket("test");
 
