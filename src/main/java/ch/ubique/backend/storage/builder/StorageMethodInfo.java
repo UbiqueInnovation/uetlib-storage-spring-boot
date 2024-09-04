@@ -1,4 +1,4 @@
-package ch.ubique.backend.storage.annotations;
+package ch.ubique.backend.storage.builder;
 
 import org.springframework.core.annotation.MergedAnnotations;
 

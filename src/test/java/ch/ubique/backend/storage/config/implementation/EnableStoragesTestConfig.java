@@ -17,7 +17,7 @@ import java.nio.file.Files;
 @Configuration
 @ComponentScan(basePackages = "ch.ubique.backend.storage")
 @EnableStorages(basePackages = "ch.ubique.backend.storage.annotations")
-public class EnableStoragesImplementationTestConfig {
+public class EnableStoragesTestConfig {
 
     @Bean
     StorageClient testStorageClient() throws IOException {
