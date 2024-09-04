@@ -56,7 +56,6 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
 
     private final String bucket;
     private final MinioClient minioClient;
-    private final boolean supportsSnowball;
     @Nullable private final OutputMetaDataProvider outputMetaDataProvider;
 
     public MinioStorageClient(
@@ -64,11 +63,9 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
             final String endpoint,
             final String accessKey,
             final String secretKey,
-            final boolean supportsSnowball,
             @Nullable final Duration timeout,
             @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
         this.bucket = bucket;
-        this.supportsSnowball = supportsSnowball;
         this.outputMetaDataProvider = outputMetaDataProvider;
         final var timeoutOrDefault = Objects.requireNonNullElse(timeout, Duration.ofSeconds(15));
         final var httpClient =
@@ -205,40 +202,8 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
             return;
         }
 
-        if (!supportsSnowball) {
-            VirtualThreadUtils.throwingForEach(
-                    item -> write(item.output(), item.path(), outputMetaData), outputsWithPaths);
-            return;
-        }
-
-        final var metaData =
-                OutputMetaData.resolveOutputMetaData(outputMetaData, outputMetaDataProvider);
-        final var anyOutput =
-                outputsWithPaths.stream().map(OutputWithPath::output).findAny().orElseThrow();
-
-        try {
-            minioClient.uploadSnowballObjects(
-                    UploadSnowballObjectsArgs.builder()
-                            .bucket(bucket)
-                            .objects(createSnowballObjects(outputsWithPaths))
-                            .headers(createHeaders(anyOutput, metaData))
-                            .userMetadata(createUserMetadata(metaData))
-                            .build());
-
-        } catch (final ErrorResponseException
-                | InsufficientDataException
-                | InternalException
-                | InvalidKeyException
-                | InvalidResponseException
-                | NoSuchAlgorithmException
-                | ServerException
-                | XmlParserException e) {
-            throw new StorageClientException(
-                    MessageFormat.format(
-                            "failed to write for [outputs={0}, outputMetaData={1}]",
-                            outputsWithPaths, outputMetaData),
-                    e);
-        }
+        VirtualThreadUtils.throwingForEach(
+                item -> write(item.output(), item.path(), outputMetaData), outputsWithPaths);
     }
 
     @Override
