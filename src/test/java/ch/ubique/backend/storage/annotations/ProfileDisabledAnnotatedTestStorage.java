@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Profile;
 @Profile("never-activated-profile-this-storage-should-not-be-instantiated")
 @Storage(
         clientQualifier = "testStorageClient",
-        baseUrl = "documentation",
+        baseUrl = "documentation/profile",
         basePath = "storage",
         objectMapperQualifier = "testObjectMapper")
 public interface ProfileDisabledAnnotatedTestStorage extends TestStorage {}

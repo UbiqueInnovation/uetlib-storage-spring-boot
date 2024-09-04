@@ -1,6 +1,6 @@
 package ch.ubique.backend.storage.annotations;
 
-enum StorageBeanType {
+public enum StorageBeanType {
     IMPLEMENTATION,
     DOCUMENTATION
 }

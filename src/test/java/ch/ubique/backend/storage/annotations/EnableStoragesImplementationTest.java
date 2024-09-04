@@ -10,7 +10,7 @@ import static org.springframework.http.MediaType.IMAGE_PNG_VALUE;
 import ch.ubique.backend.core.utils.ArrayUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
-import ch.ubique.backend.storage.config.implementation.EnableStoragesImplementationTestConfig;
+import ch.ubique.backend.storage.config.implementation.EnableStoragesTestConfig;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.GZipOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
@@ -39,15 +39,16 @@ import java.time.Instant;
 import java.util.Set;
 
 @ActiveProfiles("test")
-@SpringBootTest(classes = EnableStoragesImplementationTestConfig.class)
+@SpringBootTest(classes = EnableStoragesTestConfig.class)
 @ExtendWith(OutputCaptureExtension.class)
 class EnableStoragesImplementationTest {
 
     @Autowired private ApplicationContext applicationContext;
 
-    @SpyBean private ObjectMapper objectMapper;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private AnnotatedTestStorage annotatedTestStorage;
+
     @SpyBean private StorageClient storageClient;
-    @SpyBean private AnnotatedTestStorage annotatedTestStorage;
     @SpyBean private TestStorageReferenceImplementation referenceImplementation;
 
     @Value("classpath:storage/files/2.png")
