@@ -33,17 +33,14 @@ import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.http.HttpHeaders;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.nio.file.DirectoryNotEmptyException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -110,32 +107,6 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 .ifPresent(cannedAcl -> headers.put(HttpHeader.AMZ_ACL.value(), cannedAcl));
 
         return headers;
-    }
-
-    private static @NotNull List<SnowballObject> createSnowballObjects(
-            final Collection<@NotNull @Valid OutputWithPath> outputsWithPaths) throws IOException {
-        try {
-            return outputsWithPaths.stream()
-                    .map(
-                            outputWithPath -> {
-                                try {
-                                    return createSnowBallObject(outputWithPath);
-                                } catch (final IOException e) {
-                                    throw new UncheckedIOException(e);
-                                }
-                            })
-                    .toList();
-        } catch (final UncheckedIOException e) {
-            throw e.getCause();
-        }
-    }
-
-    private static @NotNull SnowballObject createSnowBallObject(
-            final @NotNull OutputWithPath outputWithPath) throws IOException {
-        final var bytes = InputStreamUtils.readBytesAndClose(outputWithPath.output().read());
-        final var inputStream = new ByteArrayInputStream(bytes);
-        return new SnowballObject(
-                outputWithPath.path(), inputStream, bytes.length, ZonedDateTime.now());
     }
 
     @Override
