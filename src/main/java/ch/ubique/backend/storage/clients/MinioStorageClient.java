@@ -10,9 +10,6 @@ import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 
-import com.pivovarit.function.ThrowingConsumer;
-import com.pivovarit.function.ThrowingFunction;
-
 import io.minio.*;
 import io.minio.errors.ErrorResponseException;
 import io.minio.errors.InsufficientDataException;
@@ -22,7 +19,6 @@ import io.minio.errors.ServerException;
 import io.minio.errors.XmlParserException;
 import io.minio.http.Method;
 import io.minio.messages.DeleteObject;
-import io.minio.messages.Item;
 
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
@@ -33,20 +29,15 @@ import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.http.HttpHeaders;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.nio.file.DirectoryNotEmptyException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * {@link StorageClient} to perform bucket and object operations to any Amazon S3 / MinIO compatible
@@ -110,32 +101,6 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 .ifPresent(cannedAcl -> headers.put(HttpHeader.AMZ_ACL.value(), cannedAcl));
 
         return headers;
-    }
-
-    private static @NotNull List<SnowballObject> createSnowballObjects(
-            final Collection<@NotNull @Valid OutputWithPath> outputsWithPaths) throws IOException {
-        try {
-            return outputsWithPaths.stream()
-                    .map(
-                            outputWithPath -> {
-                                try {
-                                    return createSnowBallObject(outputWithPath);
-                                } catch (final IOException e) {
-                                    throw new UncheckedIOException(e);
-                                }
-                            })
-                    .toList();
-        } catch (final UncheckedIOException e) {
-            throw e.getCause();
-        }
-    }
-
-    private static @NotNull SnowballObject createSnowBallObject(
-            final @NotNull OutputWithPath outputWithPath) throws IOException {
-        final var bytes = InputStreamUtils.readBytesAndClose(outputWithPath.output().read());
-        final var inputStream = new ByteArrayInputStream(bytes);
-        return new SnowballObject(
-                outputWithPath.path(), inputStream, bytes.length, ZonedDateTime.now());
     }
 
     @Override
@@ -252,10 +217,31 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                         ? existing.stream().map(DeleteObject::new).toList()
                         : List.of(new DeleteObject(path));
 
-        minioClient
-                .removeObjects(
-                        RemoveObjectsArgs.builder().bucket(bucket).objects(objectsToDelete).build())
-                .forEach(ThrowingConsumer.unchecked(Result::get));
+        final var results =
+                minioClient.removeObjects(
+                        RemoveObjectsArgs.builder()
+                                .bucket(bucket)
+                                .objects(objectsToDelete)
+                                .build());
+
+        try {
+            for (final var result : results) {
+                result.get();
+            }
+        } catch (final ErrorResponseException
+                | InsufficientDataException
+                | InternalException
+                | InvalidKeyException
+                | InvalidResponseException
+                | NoSuchAlgorithmException
+                | ServerException
+                | XmlParserException
+                | IOException e) {
+            throw new StorageClientException(
+                    MessageFormat.format(
+                            "failed to delete for [path={0}, recursive={1}]", path, recursive),
+                    e);
+        }
 
         return true;
     }
@@ -271,10 +257,26 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                                 .recursive(recursive)
                                 .build());
 
-        return StreamSupport.stream(objects.spliterator(), false)
-                .map(ThrowingFunction.unchecked(Result::get))
-                .map(Item::objectName)
-                .collect(Collectors.toUnmodifiableSet());
+        final var paths = new HashSet<String>();
+        try {
+            for (final var object : objects) {
+                paths.add(object.get().objectName());
+            }
+        } catch (final ErrorResponseException
+                | InsufficientDataException
+                | InternalException
+                | InvalidKeyException
+                | InvalidResponseException
+                | NoSuchAlgorithmException
+                | ServerException
+                | XmlParserException
+                | IOException e) {
+            throw new StorageClientException(
+                    MessageFormat.format(
+                            "failed to list for [path={0}, recursive={1}]", path, recursive),
+                    e);
+        }
+        return Collections.unmodifiableSet(paths);
     }
 
     @Override
