@@ -38,7 +38,7 @@ import java.util.stream.Stream;
 public final class OutputMetaData {
     private static final Logger logger = LoggerFactory.getLogger(OutputMetaData.class);
 
-    @NotNull private final CacheControl cacheControl;
+    private final @NotNull CacheControl cacheControl;
 
     private Instant expires;
     private Instant bestBefore;
@@ -51,7 +51,7 @@ public final class OutputMetaData {
     /**
      * @param cacheControl must not be null
      */
-    public OutputMetaData(@NotNull final CacheControl cacheControl) {
+    public OutputMetaData(final @NotNull CacheControl cacheControl) {
         this.cacheControl = Objects.requireNonNull(cacheControl);
         if (this.cacheControl.equals(CacheControl.empty())) {
             throw new ValidationException("An empty cache control is disallowed.");
@@ -62,13 +62,13 @@ public final class OutputMetaData {
      * @param maxAge Duration must not be null
      * @param sMaxAge Duration will be set to maxAge if null
      */
-    public OutputMetaData(@NotNull final Duration maxAge, @Nullable final Duration sMaxAge) {
+    public OutputMetaData(final @NotNull Duration maxAge, @Nullable final Duration sMaxAge) {
         this(
                 CacheControl.maxAge(Objects.requireNonNull(maxAge))
                         .sMaxAge(Objects.requireNonNullElse(sMaxAge, maxAge)));
     }
 
-    public OutputMetaData(@NotNull final OutputMetaData outputMetaData) {
+    public OutputMetaData(final @NotNull OutputMetaData outputMetaData) {
         this.cacheControl = outputMetaData.cacheControl;
         this.expires = outputMetaData.expires;
         this.bestBefore = outputMetaData.bestBefore;
@@ -90,9 +90,8 @@ public final class OutputMetaData {
         return new OutputMetaData(Duration.ofDays(1), Duration.ofDays(1));
     }
 
-    @NotNull
     @Contract("!null, _ -> param1; null, !null -> new")
-    public static OutputMetaData resolveOutputMetaData(
+    public static @NotNull OutputMetaData resolveOutputMetaData(
             final OutputMetaData outputMetaData,
             final OutputMetaDataProvider outputMetaDataProvider) {
         if (outputMetaData != null) {
@@ -104,12 +103,11 @@ public final class OutputMetaData {
         return OutputMetaData.defaults();
     }
 
-    @NotNull
     @Contract("!null, _, _ -> param1; null, !null, _ -> new")
-    public static OutputMetaData resolveOutputMetaData(
+    public static @NotNull OutputMetaData resolveOutputMetaData(
             final OutputMetaData outputMetaData,
             final OutputMetaDataProvider outputMetaDataProvider,
-            @NotNull final Output output) {
+            final @NotNull Output output) {
         final var resolvedOutputMetaData =
                 resolveOutputMetaData(outputMetaData, outputMetaDataProvider);
         setUncompressedContentLength(output, resolvedOutputMetaData);
@@ -130,24 +128,24 @@ public final class OutputMetaData {
         resolvedOutputMetaData.contentLengthUncompressed(output.uncompressedContentLength());
     }
 
-    public OutputMetaData expires(@NotNull final Instant expires) {
+    public OutputMetaData expires(final @NotNull Instant expires) {
         this.expires = Objects.requireNonNull(expires);
         return this;
     }
 
-    public OutputMetaData bestBefore(@NotNull final Instant bestBefore) {
+    public OutputMetaData bestBefore(final @NotNull Instant bestBefore) {
         Objects.requireNonNull(bestBefore);
         this.bestBefore = bestBefore;
         return this;
     }
 
-    public OutputMetaData nextRefresh(@NotNull final Instant nextRefresh) {
+    public OutputMetaData nextRefresh(final @NotNull Instant nextRefresh) {
         Objects.requireNonNull(nextRefresh);
         this.nextRefresh = nextRefresh;
         return this;
     }
 
-    public OutputMetaData backoff(@NotNull final Duration backoff) {
+    public OutputMetaData backoff(final @NotNull Duration backoff) {
         Objects.requireNonNull(backoff);
         this.backoff = backoff;
         return this;
@@ -161,7 +159,7 @@ public final class OutputMetaData {
      * @param accessPolicy The access policy
      * @return this to allow chaining
      */
-    public OutputMetaData accessPolicy(@NotNull final CannedAcl accessPolicy)
+    public OutputMetaData accessPolicy(final @NotNull CannedAcl accessPolicy)
             throws IllegalStateException {
         if (customAccessPolicy != null) {
             throw new IllegalStateException(
@@ -181,7 +179,7 @@ public final class OutputMetaData {
      * @param customAccessPolicy The custom access policy
      * @return this to allow chaining
      */
-    public OutputMetaData customAccessPolicy(@NotNull final String customAccessPolicy)
+    public OutputMetaData customAccessPolicy(final @NotNull String customAccessPolicy)
             throws IllegalStateException {
         if (accessPolicy != null) {
             throw new IllegalStateException(
@@ -192,7 +190,7 @@ public final class OutputMetaData {
         return this;
     }
 
-    public OutputMetaData contentLengthUncompressed(@NotNull final Long contentLengthUncompressed) {
+    public OutputMetaData contentLengthUncompressed(final @NotNull Long contentLengthUncompressed) {
         Objects.requireNonNull(contentLengthUncompressed);
         this.contentLengthUncompressed = contentLengthUncompressed;
         return this;
