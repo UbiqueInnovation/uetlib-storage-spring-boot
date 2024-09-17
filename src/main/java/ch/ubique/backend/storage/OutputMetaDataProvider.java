@@ -1,5 +1,7 @@
 package ch.ubique.backend.storage;
 
+import io.minio.messages.CannedAcl;
+
 import jakarta.annotation.Nullable;
 import jakarta.validation.ValidationException;
 import jakarta.validation.constraints.NotNull;
@@ -18,6 +20,9 @@ public final class OutputMetaDataProvider {
     private Duration bestBeforeOffset;
     private Duration nextRefreshOffset;
     private Duration backoff;
+
+    private CannedAcl accessPolicy;
+    private String customAccessPolicy;
 
     /**
      * @param cacheControl Cache control must not be null
@@ -81,6 +86,45 @@ public final class OutputMetaDataProvider {
     public OutputMetaDataProvider backoff(final @NotNull Duration backoff) {
         Objects.requireNonNull(backoff);
         this.backoff = backoff;
+        return this;
+    }
+
+    /**
+     * Set an access policy for the object. This is only used for AWS S3. To set a custom access
+     * policy, use {@link #customAccessPolicy(String)}.
+     *
+     * @throws IllegalStateException if {@link #customAccessPolicy(String)} was already called
+     * @param accessPolicy The access policy
+     * @return this to allow chaining
+     */
+    public OutputMetaDataProvider accessPolicy(final @NotNull CannedAcl accessPolicy)
+            throws IllegalStateException {
+        if (customAccessPolicy != null) {
+            throw new IllegalStateException(
+                    "Cannot set access policy and custom access policy at the same time");
+        }
+        Objects.requireNonNull(accessPolicy);
+        this.accessPolicy = accessPolicy;
+        return this;
+    }
+
+    /**
+     * Set a custom access policy for the object. This is only used for AWS S3. To set a predefined
+     * access policy, use {@link #accessPolicy(CannedAcl)}. This method allows every string value,
+     * thus the user is responsible for the correctness of the value.
+     *
+     * @throws IllegalStateException if {@link #accessPolicy(CannedAcl)} was already called
+     * @param customAccessPolicy The custom access policy
+     * @return this to allow chaining
+     */
+    public OutputMetaDataProvider customAccessPolicy(final @NotNull String customAccessPolicy)
+            throws IllegalStateException {
+        if (accessPolicy != null) {
+            throw new IllegalStateException(
+                    "Cannot set access policy and custom access policy at the same time");
+        }
+        Objects.requireNonNull(customAccessPolicy);
+        this.customAccessPolicy = customAccessPolicy;
         return this;
     }
 
