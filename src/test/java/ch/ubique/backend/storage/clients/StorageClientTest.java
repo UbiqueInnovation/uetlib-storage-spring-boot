@@ -14,6 +14,7 @@ import org.springframework.retry.support.RetryTemplateBuilder;
 import org.testcontainers.Testcontainers;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
+import org.testcontainers.images.PullPolicy;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,6 +25,7 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Set;
 
+@SuppressWarnings("resource")
 class StorageClientTest {
 
     @NotNull
@@ -44,7 +46,9 @@ class StorageClientTest {
 
     @Test
     void testMinioStorageClient() throws IOException {
-        try (final var minioServer = new GenericContainer<>("minio/minio")) {
+        try (final var minioServer =
+                new GenericContainer<>("minio/minio")
+                        .withImagePullPolicy(PullPolicy.ageBased(Duration.ofDays(30)))) {
             minioServer
                     .withEnv("MINIO_ACCESS_KEY", "test")
                     .withEnv("MINIO_SECRET_KEY", "test1234")
@@ -76,7 +80,8 @@ class StorageClientTest {
     @Test
     void testAzureBlobStorageClient() throws IOException {
         try (final var azureBlobStorageContainer =
-                new GenericContainer<>("mcr.microsoft.com/azure-storage/azurite")) {
+                new GenericContainer<>("mcr.microsoft.com/azure-storage/azurite")
+                        .withImagePullPolicy(PullPolicy.ageBased(Duration.ofDays(30)))) {
             azureBlobStorageContainer.withExposedPorts(10000).start();
 
             final var mappedPort = azureBlobStorageContainer.getFirstMappedPort();
