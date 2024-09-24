@@ -85,4 +85,9 @@ public final class InputStreamOutput implements Output {
     public long uncompressedContentLength() {
         return contentLength;
     }
+
+    @Override
+    public boolean canBeRetried() {
+        return false;
+    }
 }
