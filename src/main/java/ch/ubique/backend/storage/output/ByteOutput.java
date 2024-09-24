@@ -81,4 +81,9 @@ public final class ByteOutput implements Output {
     public long uncompressedContentLength() {
         return value.length;
     }
+
+    @Override
+    public boolean canBeRetried() {
+        return true;
+    }
 }

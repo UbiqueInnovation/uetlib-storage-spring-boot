@@ -60,6 +60,11 @@ public record GZipOutput(Output uncompressed) implements Output {
     }
 
     @Override
+    public boolean canBeRetried() {
+        return uncompressed.canBeRetried();
+    }
+
+    @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
                 .append("uncompressed", uncompressed)
