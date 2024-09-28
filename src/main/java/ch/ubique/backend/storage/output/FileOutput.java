@@ -59,6 +59,11 @@ public final class FileOutput implements Output {
     }
 
     @Override
+    public boolean canBeRetried() {
+        return true;
+    }
+
+    @Override
     public boolean equals(final Object o) {
         if (this == o) {
             return true;

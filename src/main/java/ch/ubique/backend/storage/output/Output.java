@@ -35,4 +35,6 @@ public sealed interface Output
     }
 
     long uncompressedContentLength();
+
+    boolean canBeRetried();
 }
