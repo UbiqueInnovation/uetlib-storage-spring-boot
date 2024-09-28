@@ -55,6 +55,11 @@ public final class JsonOutput<T> implements Output {
     }
 
     @Override
+    public boolean canBeRetried() {
+        return true;
+    }
+
+    @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
                 .append("value", value)

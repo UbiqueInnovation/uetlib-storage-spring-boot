@@ -61,14 +61,22 @@ public class RetryStorageClient implements StorageClient {
             final @NotNull String path,
             @Nullable final OutputMetaData outputMetaData)
             throws IOException {
-        retryRunnable(() -> storageClient.write(output, path, outputMetaData));
+        if (output.canBeRetried()) {
+            retryRunnable(() -> storageClient.write(output, path, outputMetaData));
+        } else {
+            storageClient.write(output, path, outputMetaData);
+        }
     }
 
     @Override
     public void write(
             final Collection<OutputWithPath> outputs, @Nullable final OutputMetaData outputMetaData)
             throws IOException {
-        retryRunnable(() -> storageClient.write(outputs, outputMetaData));
+        if (outputs.stream().map(OutputWithPath::output).allMatch(Output::canBeRetried)) {
+            retryRunnable(() -> storageClient.write(outputs, outputMetaData));
+        } else {
+            storageClient.write(outputs, outputMetaData);
+        }
     }
 
     @Override
