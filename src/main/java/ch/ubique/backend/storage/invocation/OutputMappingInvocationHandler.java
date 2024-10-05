@@ -1,40 +1,32 @@
-package ch.ubique.backend.storage.annotations.interceptors;
+package ch.ubique.backend.storage.invocation;
 
-import static ch.ubique.backend.storage.annotations.interceptors.InterceptorUtil.*;
+import static ch.ubique.backend.storage.invocation.InvocationHandlerUtil.*;
 import static ch.ubique.backend.storage.logger.LogAtNullableLevel.atLevel;
 
+import ch.ubique.backend.core.utils.ArrayUtils;
 import ch.ubique.backend.storage.OutputMetaData;
-import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.OutputMapping;
-import ch.ubique.backend.storage.annotations.Storage;
 import ch.ubique.backend.storage.annotations.StorageObject;
+import ch.ubique.backend.storage.builder.StorageMappingInvocationProperties;
 import ch.ubique.backend.storage.output.*;
 
-import net.bytebuddy.implementation.bind.annotation.AllArguments;
-import net.bytebuddy.implementation.bind.annotation.Origin;
-import net.bytebuddy.implementation.bind.annotation.RuntimeType;
-import net.bytebuddy.implementation.bind.annotation.This;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.slf4j.Logger;
-import org.slf4j.event.Level;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.stream.IntStream;
 
-public final class OutputMappingInterceptor {
+public class OutputMappingInvocationHandler implements StorageMappingInvocationHandler {
 
     private final Logger logger;
-    private final Level level;
 
-    public OutputMappingInterceptor(final Logger logger, final Level level) {
+    public OutputMappingInvocationHandler(final Logger logger) {
         this.logger = logger;
-        this.level = level;
     }
 
     private static OutputMetaData getOutputMetaData(final Object[] allArguments) {
@@ -45,11 +37,11 @@ public final class OutputMappingInterceptor {
                 .orElse(null);
     }
 
-    private static Output getOutput(
-            final Object thiz,
+    private Output getOutput(
+            final ObjectMapper objectMapper,
             final OutputMapping outputMapping,
             final Annotation[][] parameterAnnotations,
-            final Object[] allArguments) {
+            final Object[] args) {
         final var storageObjectParameterIndex =
                 IntStream.range(0, parameterAnnotations.length)
                         .filter(
@@ -61,8 +53,8 @@ public final class OutputMappingInterceptor {
                                 () ->
                                         new IllegalStateException(
                                                 "OutputMapping requires one argument to be"
-                                                    + " annotated with '@StorageObject'"));
-        final var storageObject = allArguments[storageObjectParameterIndex];
+                                                        + " annotated with '@StorageObject'"));
+        final var storageObject = args[storageObjectParameterIndex];
         final var contentType = outputMapping.contentType();
 
         final var output =
@@ -72,7 +64,7 @@ public final class OutputMappingInterceptor {
                     case final InputStream is -> new InputStreamOutput(is, contentType);
                     case final byte[] bytes -> new ByteOutput(bytes, contentType);
                     case null -> new ByteOutput(new byte[0], contentType);
-                    default -> new JsonOutput<>(storageObject, getObjectMapper(thiz, allArguments));
+                    default -> new JsonOutput<>(storageObject, objectMapper);
                 };
 
         if (outputMapping.gZip()) {
@@ -81,35 +73,28 @@ public final class OutputMappingInterceptor {
         return output;
     }
 
-    @RuntimeType
-    @SuppressWarnings("unused")
-    public void intercept(
-            @Origin final Method method,
-            @This final Object thiz,
-            @AllArguments final Object[] allArguments)
-            throws IOException, NoSuchFieldException, IllegalAccessException {
+    @Override
+    public Object invoke(
+            final StorageMappingInvocationProperties storageMappingInvocationProperties,
+            final Method method,
+            final Object[] args)
+            throws Throwable {
+        final var storageClient = storageMappingInvocationProperties.storageClient();
+        final var objectMapper = storageMappingInvocationProperties.objectMapper();
 
-        final var storageClient = getInaccessibleField(thiz, "storageClient", StorageClient.class);
-        final var storageAnnotation = findAnnotation(thiz.getClass(), Storage.class);
         final var outputMapping = findAnnotation(method, OutputMapping.class);
         final var parameterAnnotations = method.getParameterAnnotations();
+        final var level = ArrayUtils.singletonOrNull(outputMapping.logLevel());
 
-        final var output = getOutput(thiz, outputMapping, parameterAnnotations, allArguments);
-        if (outputMapping.path().startsWith("/")) {
-            throw new IllegalArgumentException(
-                    MessageFormat.format(
-                            "OutputMapping::path cannot start with ''/'' for method {0}::{1}. Got:"
-                                + " {2}",
-                            method.getDeclaringClass().getSimpleName(),
-                            method.getName(),
-                            outputMapping.path()));
-        }
+        final var output = getOutput(objectMapper, outputMapping, parameterAnnotations, args);
+
+        final var basePath = storageMappingInvocationProperties.basePath();
         final var path =
                 getPath(
                         method.getParameters(),
-                        allArguments,
-                        getPathTemplate(storageAnnotation.basePath(), outputMapping.path()));
-        final var outputMetaData = getOutputMetaData(allArguments);
+                        args,
+                        getPathTemplate(basePath, outputMapping.path()));
+        final var outputMetaData = getOutputMetaData(args);
 
         atLevel(logger, level)
                 .log(
@@ -119,5 +104,7 @@ public final class OutputMappingInterceptor {
                         output.contentLength(),
                         outputMetaData);
         storageClient.write(output, path, outputMetaData);
+
+        return new Object();
     }
 }

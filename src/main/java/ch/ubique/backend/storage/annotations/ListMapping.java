@@ -3,7 +3,7 @@ package ch.ubique.backend.storage.annotations;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-import ch.ubique.backend.storage.annotations.interceptors.ListMappingInterceptor;
+import ch.ubique.backend.storage.invocation.ListMappingInvocationHandler;
 
 import org.slf4j.event.Level;
 import org.springframework.core.annotation.AliasFor;
@@ -13,8 +13,8 @@ import java.lang.annotation.Target;
 
 /**
  * Implementations of methods annotated by this function are generated at runtime using byte-buddy.
- * The implementation will call {@link ListMappingInterceptor#intercept}. You can debug this method
- * if there are any issues with this mapping.
+ * The implementation will call {@link ListMappingInvocationHandler#invoke}. You can debug this
+ * method if there are any issues with this mapping.
  */
 @Target(METHOD)
 @Retention(RUNTIME)

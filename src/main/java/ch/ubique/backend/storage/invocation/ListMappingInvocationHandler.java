@@ -1,21 +1,14 @@
-package ch.ubique.backend.storage.annotations.interceptors;
+package ch.ubique.backend.storage.invocation;
 
-import static ch.ubique.backend.storage.annotations.interceptors.InterceptorUtil.*;
+import static ch.ubique.backend.storage.invocation.InvocationHandlerUtil.*;
 import static ch.ubique.backend.storage.logger.LogAtNullableLevel.atLevel;
 
-import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.core.utils.ArrayUtils;
 import ch.ubique.backend.storage.annotations.ListMapping;
-import ch.ubique.backend.storage.annotations.Storage;
-
-import net.bytebuddy.implementation.bind.annotation.AllArguments;
-import net.bytebuddy.implementation.bind.annotation.Origin;
-import net.bytebuddy.implementation.bind.annotation.RuntimeType;
-import net.bytebuddy.implementation.bind.annotation.This;
+import ch.ubique.backend.storage.builder.StorageMappingInvocationProperties;
 
 import org.slf4j.Logger;
-import org.slf4j.event.Level;
 
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.text.MessageFormat;
 import java.util.Collection;
@@ -24,42 +17,32 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public final class ListMappingInterceptor {
+public class ListMappingInvocationHandler implements StorageMappingInvocationHandler {
 
     private final Logger logger;
-    private final Level level;
 
-    public ListMappingInterceptor(final Logger logger, final Level level) {
+    public ListMappingInvocationHandler(final Logger logger) {
         this.logger = logger;
-        this.level = level;
     }
 
-    @RuntimeType
-    @SuppressWarnings("unused")
-    public Object intercept(
-            @Origin final Method method,
-            @This final Object thiz,
-            @AllArguments final Object[] allArguments)
-            throws IOException, NoSuchFieldException, IllegalAccessException {
-        final var storageClient = getInaccessibleField(thiz, "storageClient", StorageClient.class);
-        final var storageAnnotation = findAnnotation(thiz.getClass(), Storage.class);
+    @Override
+    public Object invoke(
+            final StorageMappingInvocationProperties storageMappingInvocationProperties,
+            final Method method,
+            final Object[] args)
+            throws Throwable {
+        final var storageClient = storageMappingInvocationProperties.storageClient();
         final var listMapping = findAnnotation(method, ListMapping.class);
-
         final var returnType = method.getReturnType();
-        if (listMapping.path().startsWith("/")) {
-            throw new IllegalArgumentException(
-                    MessageFormat.format(
-                            "ListMapping::path cannot start with ''/'' for method {0}::{1}. Got:"
-                                + " {2}",
-                            method.getDeclaringClass().getSimpleName(),
-                            method.getName(),
-                            listMapping.path()));
-        }
+        final var level = ArrayUtils.singletonOrNull(listMapping.logLevel());
+
+        final var basePath = storageMappingInvocationProperties.basePath();
+
         final var path =
                 getPath(
                         method.getParameters(),
-                        allArguments,
-                        getPathTemplate(storageAnnotation.basePath(), listMapping.path()));
+                        args,
+                        getPathTemplate(basePath, listMapping.path()));
 
         final var collection = storageClient.list(path, listMapping.recursive());
 
@@ -76,7 +59,7 @@ public final class ListMappingInterceptor {
             atLevel(logger, level)
                     .log(
                             "listing files from path {} with recursive={} and returning as a"
-                                + " stream",
+                                    + " stream",
                             path,
                             listMapping.recursive());
             return collection.stream();

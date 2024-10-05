@@ -1,45 +1,32 @@
 package ch.ubique.backend.storage.builder;
 
-import static java.util.Map.entry;
-import static java.util.Map.ofEntries;
-
-import ch.ubique.backend.core.utils.ArrayUtils;
-import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.annotations.*;
-import ch.ubique.backend.storage.annotations.interceptors.*;
+import ch.ubique.backend.storage.annotations.interceptors.OnlyDocumentationInterceptor;
+import ch.ubique.backend.storage.factory.StorageMethodInfo;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.MoreCollectors;
 import com.pivovarit.function.exception.WrappedException;
 
-import jakarta.validation.constraints.NotNull;
-
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.description.annotation.AnnotationDescription;
-import net.bytebuddy.description.modifier.FieldManifestation;
 import net.bytebuddy.description.modifier.TypeManifestation;
 import net.bytebuddy.description.modifier.Visibility;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
-import net.bytebuddy.dynamic.scaffold.subclass.ConstructorStrategy;
-import net.bytebuddy.implementation.FieldAccessor;
 import net.bytebuddy.implementation.Implementation;
-import net.bytebuddy.implementation.MethodCall;
 import net.bytebuddy.implementation.MethodDelegation;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.core.env.Environment;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -56,12 +43,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public final class StorageBuilder<T> {
-    private static final String STORAGE_CLIENT_PARAMETER = "storageClient";
-    private static final String OBJECT_MAPPER_PARAMETER = "objectMapper";
-    private static final Implementation ONLY_DOCUMENTATION_THROW_INTERCEPTOR =
-            MethodDelegation.to(OnlyDocumentationInterceptor.class);
 
     private static final Logger logger = LoggerFactory.getLogger(StorageBuilder.class);
+
+    private static final Implementation ONLY_DOCUMENTATION_THROW_INTERCEPTOR =
+            MethodDelegation.to(OnlyDocumentationInterceptor.class);
 
     private final ClassLoader beanClassLoader;
     private final Environment environment;
@@ -113,111 +99,6 @@ public final class StorageBuilder<T> {
                 .collect(MoreCollectors.onlyElement());
     }
 
-    private static <T>
-            DynamicType.Builder.MethodDefinition.ReceiverTypeDefinition<T> buildConstructor(
-                    final DynamicType.Builder.FieldDefinition.Optional.Valuable<T> builder,
-                    final Storage storageAnnotation) {
-        final var shouldInjectObjectMapper =
-                Boolean.parseBoolean(String.valueOf(storageAnnotation.injectObjectMapper()));
-
-        var constructorBuilder =
-                // the public constructor with arguments
-                builder.defineConstructor(Visibility.PUBLIC)
-                        // parameter 0: storageClient
-                        .withParameter(StorageClient.class, STORAGE_CLIENT_PARAMETER);
-        if (StringUtils.isNotBlank(storageAnnotation.clientQualifier())) {
-            constructorBuilder =
-                    constructorBuilder.annotateParameter(
-                            AnnotationDescription.Builder.ofType(Qualifier.class)
-                                    .define("value", storageAnnotation.clientQualifier())
-                                    .build());
-        }
-
-        if (shouldInjectObjectMapper) {
-            constructorBuilder =
-                    constructorBuilder
-                            // parameter 1: objectMapper iff shouldInjectObjectMapper == true
-                            .withParameter(ObjectMapper.class, OBJECT_MAPPER_PARAMETER);
-            if (StringUtils.isNotBlank(storageAnnotation.objectMapperQualifier())) {
-                constructorBuilder =
-                        constructorBuilder.annotateParameter(
-                                AnnotationDescription.Builder.ofType(Qualifier.class)
-                                        .define("value", storageAnnotation.objectMapperQualifier())
-                                        .build());
-            }
-        }
-
-        final var setStorageClient =
-                FieldAccessor.ofField(STORAGE_CLIENT_PARAMETER).setsArgumentAt(0);
-        final var objectMapperAccessor = FieldAccessor.ofField(OBJECT_MAPPER_PARAMETER);
-        final Implementation.Composable setObjectMapper;
-        if (shouldInjectObjectMapper) {
-            setObjectMapper = objectMapperAccessor.setsArgumentAt(1);
-        } else {
-            setObjectMapper = objectMapperAccessor.setsValue(new ObjectMapper());
-        }
-
-        final var callSuperConstructor = getCallSuperConstructor();
-        return constructorBuilder.intercept(
-                callSuperConstructor.andThen(setStorageClient).andThen(setObjectMapper));
-    }
-
-    private static @NotNull MethodCall.WithoutSpecifiedTarget getCallSuperConstructor() {
-        final MethodCall.WithoutSpecifiedTarget callSuperConstructor;
-        try {
-            callSuperConstructor = MethodCall.invoke(Object.class.getConstructor());
-        } catch (final NoSuchMethodException e) {
-            // fatal: no way to handle "Object" not having a constructor ;)
-            throw new WrappedException(e);
-        }
-        return callSuperConstructor;
-    }
-
-    private static <T> DynamicType.Builder<T> buildImplementationMethods(
-            final DynamicType.Builder<T> b,
-            final Map<Class<? extends Annotation>, List<StorageMethodInfo>>
-                    annotatedMethodsByAnnotation,
-            final Class<T> storageInterface) {
-
-        final var storageClassLogger = LoggerFactory.getLogger(storageInterface);
-
-        final Map<Class<? extends Annotation>, BuildImplementationMethod<T>>
-                buildImplementationMethodByAnnotation =
-                        ofEntries(
-                                entry(
-                                        OutputMapping.class,
-                                        StorageBuilder::buildImplementationOutputMethod),
-                                entry(
-                                        InputMapping.class,
-                                        StorageBuilder::buildImplementationInputMethod),
-                                entry(
-                                        DeleteMapping.class,
-                                        StorageBuilder::buildImplementationDeleteMethod),
-                                entry(
-                                        ExistsMapping.class,
-                                        StorageBuilder::buildImplementationExistsMethod),
-                                entry(
-                                        ListMapping.class,
-                                        StorageBuilder::buildImplementationListMethod));
-
-        var builder = b;
-        for (final var methodByAnnotationEntry : buildImplementationMethodByAnnotation.entrySet()) {
-            final var mappingAnnotationType = methodByAnnotationEntry.getKey();
-            final var buildImplementationMethod = methodByAnnotationEntry.getValue();
-            final var storageMethodInfos = annotatedMethodsByAnnotation.get(mappingAnnotationType);
-            if (storageMethodInfos == null) {
-                continue;
-            }
-
-            for (final var methodInfo : storageMethodInfos) {
-                builder =
-                        buildImplementationMethod.buildImplementationMethod(
-                                builder, methodInfo, storageClassLogger);
-            }
-        }
-        return builder;
-    }
-
     private static <T> DynamicType.Builder<T> buildDocumentationMethods(
             final DynamicType.Builder<T> b,
             final Map<Class<? extends Annotation>, List<StorageMethodInfo>>
@@ -236,19 +117,6 @@ public final class StorageBuilder<T> {
     private static <T> DynamicType.Builder<T> buildDocumentationMethod(
             final DynamicType.Builder<T> builder, final StorageMethodInfo methodInfo) {
         final var method = methodInfo.storageMethod();
-        final var returnType =
-                TypeDescription.Generic.Builder.parameterizedType(
-                                ResponseEntity.class,
-                                methodInfo
-                                        .storageMethodAnnotations()
-                                        .get(OutputMapping.class)
-                                        .synthesize()
-                                        .documentedClass())
-                        .build();
-        final var parameters =
-                Arrays.stream(method.getParameters())
-                        .filter(parameter -> parameter.isAnnotationPresent(PathVariable.class))
-                        .toList();
         final var storageMapping =
                 methodInfo.storageMethodAnnotations().get(StorageMapping.class).synthesize();
         if (storageMapping.path().startsWith("/")) {
@@ -261,173 +129,18 @@ public final class StorageBuilder<T> {
                             storageMapping.path()));
         }
         final var mappingPath = storageMapping.path();
-        final var methodAnnotations =
-                List.of(
-                        AnnotationDescription.Builder.ofType(GetMapping.class)
-                                .defineArray("value", "/" + mappingPath)
-                                .build());
-
-        return buildMethod(
-                builder,
-                parameters,
-                method,
-                returnType,
-                ONLY_DOCUMENTATION_THROW_INTERCEPTOR,
-                methodAnnotations);
-    }
-
-    private static <T> DynamicType.Builder<T> buildImplementationMethod(
-            final DynamicType.Builder<T> builder,
-            final List<Parameter> parameters,
-            final Method method,
-            final Implementation interceptor) {
-        final var returnType = TypeDescription.Generic.Builder.of(method.getReturnType()).build();
-        return buildMethod(builder, parameters, method, returnType, interceptor, List.of());
-    }
-
-    private static <T> DynamicType.Builder<T> buildMethod(
-            final DynamicType.Builder<T> builder,
-            final List<Parameter> parameters,
-            final Method method,
-            final TypeDescription.Generic returnType,
-            final Implementation interceptor,
-            final List<AnnotationDescription> methodAnnotations) {
-        if (parameters.isEmpty()) {
-            return builder.defineMethod(method.getName(), returnType, Visibility.PUBLIC)
-                    .throwing(IOException.class)
-                    .intercept(interceptor);
-        }
-
-        // need to create the first parameter first, then the others in a loop so the type of the
-        // builder works out
-        final var firstParameter =
-                parameters.stream().limit(1).collect(MoreCollectors.onlyElement());
-        var parametersBuilder =
-                builder.defineMethod(method.getName(), returnType, Visibility.PUBLIC)
-                        .withParameter(
-                                firstParameter.getParameterizedType(),
-                                firstParameter.getName(),
-                                Modifier.FINAL)
-                        .annotateParameter(firstParameter.getAnnotations());
-
-        for (final var parameter : parameters.stream().skip(1).toList()) {
-            parametersBuilder =
-                    parametersBuilder
-                            .withParameter(
-                                    parameter.getParameterizedType(),
-                                    parameter.getName(),
-                                    Modifier.FINAL)
-                            .annotateParameter(parameter.getAnnotations());
-        }
-        return parametersBuilder
+        final var getMappingAnnotation =
+                AnnotationDescription.Builder.ofType(GetMapping.class)
+                        .defineArray("value", "/" + mappingPath)
+                        .build();
+        final var returnType =
+                TypeDescription.Generic.Builder.parameterizedType(
+                                ResponseEntity.class, ProblemDetail.class)
+                        .build();
+        return builder.defineMethod(method.getName(), returnType, Visibility.PUBLIC)
                 .throwing(IOException.class)
-                .intercept(interceptor)
-                .annotateMethod(methodAnnotations);
-    }
-
-    private static <T> DynamicType.Builder<T> buildImplementationOutputMethod(
-            final DynamicType.Builder<T> builder,
-            final StorageMethodInfo outputMethodInfo,
-            final Logger storageClassLogger) {
-        final var outputMethod = outputMethodInfo.storageMethod();
-        final var parameters = Arrays.stream(outputMethod.getParameters()).toList();
-
-        final Implementation interceptor;
-        final var outputAnnotation =
-                outputMethodInfo.storageMethodAnnotations().get(OutputMapping.class).synthesize();
-        if (outputAnnotation.codeGenerationType().generateImplementationCode()) {
-            final var level = ArrayUtils.singletonOrNull(outputAnnotation.logLevel());
-            interceptor =
-                    MethodDelegation.to(new OutputMappingInterceptor(storageClassLogger, level));
-        } else {
-            interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
-        }
-
-        return buildImplementationMethod(builder, parameters, outputMethod, interceptor);
-    }
-
-    private static <T> DynamicType.Builder<T> buildImplementationInputMethod(
-            final DynamicType.Builder<T> builder,
-            final StorageMethodInfo inputMethodInfo,
-            final Logger storageClassLogger) {
-        final var inputMethod = inputMethodInfo.storageMethod();
-        final var parameters = Arrays.stream(inputMethod.getParameters()).toList();
-
-        final Implementation interceptor;
-        final var inputAnnotation =
-                inputMethodInfo.storageMethodAnnotations().get(InputMapping.class).synthesize();
-        if (inputAnnotation.codeGenerationType().generateImplementationCode()) {
-            final var level = ArrayUtils.singletonOrNull(inputAnnotation.logLevel());
-            interceptor =
-                    MethodDelegation.to(new InputMappingInterceptor(storageClassLogger, level));
-        } else {
-            interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
-        }
-
-        return buildImplementationMethod(builder, parameters, inputMethod, interceptor);
-    }
-
-    private static <T> DynamicType.Builder<T> buildImplementationListMethod(
-            final DynamicType.Builder<T> builder,
-            final StorageMethodInfo listMethodInfo,
-            final Logger storageClassLogger) {
-        final var listMethod = listMethodInfo.storageMethod();
-        final var parameters = Arrays.stream(listMethod.getParameters()).toList();
-
-        final Implementation interceptor;
-        final var listAnnotation =
-                listMethodInfo.storageMethodAnnotations().get(ListMapping.class).synthesize();
-        if (listAnnotation.codeGenerationType().generateImplementationCode()) {
-            final var level = ArrayUtils.singletonOrNull(listAnnotation.logLevel());
-            interceptor =
-                    MethodDelegation.to(new ListMappingInterceptor(storageClassLogger, level));
-        } else {
-            interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
-        }
-
-        return buildImplementationMethod(builder, parameters, listMethod, interceptor);
-    }
-
-    private static <T> DynamicType.Builder<T> buildImplementationDeleteMethod(
-            final DynamicType.Builder<T> builder,
-            final StorageMethodInfo deleteMethodInfo,
-            final Logger storageClassLogger) {
-        final var deleteMethod = deleteMethodInfo.storageMethod();
-        final var parameters = Arrays.stream(deleteMethod.getParameters()).toList();
-
-        final Implementation interceptor;
-        final var deleteAnnotation =
-                deleteMethodInfo.storageMethodAnnotations().get(DeleteMapping.class).synthesize();
-        if (deleteAnnotation.codeGenerationType().generateImplementationCode()) {
-            final var level = ArrayUtils.singletonOrNull(deleteAnnotation.logLevel());
-            interceptor =
-                    MethodDelegation.to(new DeleteMappingInterceptor(storageClassLogger, level));
-        } else {
-            interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
-        }
-
-        return buildImplementationMethod(builder, parameters, deleteMethod, interceptor);
-    }
-
-    private static <T> DynamicType.Builder<T> buildImplementationExistsMethod(
-            final DynamicType.Builder<T> builder,
-            final StorageMethodInfo existsMethodInfo,
-            final Logger storageClassLogger) {
-        final var existsMethod = existsMethodInfo.storageMethod();
-        final var parameters = Arrays.stream(existsMethod.getParameters()).toList();
-
-        final Implementation interceptor;
-        final var existsAnnotation =
-                existsMethodInfo.storageMethodAnnotations().get(ExistsMapping.class).synthesize();
-        if (existsAnnotation.codeGenerationType().generateImplementationCode()) {
-            final var level = ArrayUtils.singletonOrNull(existsAnnotation.logLevel());
-            interceptor =
-                    MethodDelegation.to(new ExistsMappingInterceptor(storageClassLogger, level));
-        } else {
-            interceptor = ONLY_DOCUMENTATION_THROW_INTERCEPTOR;
-        }
-
-        return buildImplementationMethod(builder, parameters, existsMethod, interceptor);
+                .intercept(ONLY_DOCUMENTATION_THROW_INTERCEPTOR)
+                .annotateMethod(getMappingAnnotation);
     }
 
     @SuppressWarnings("java:S5443")
@@ -457,7 +170,7 @@ public final class StorageBuilder<T> {
                             storageInterface.getSimpleName(), storageAnnotation.basePath()));
         }
         final var basePath =
-                Stream.of(storageAnnotation.baseUrl(), storageAnnotation.basePath())
+                Stream.of(storageAnnotation.documentationBaseUrl(), storageAnnotation.basePath())
                         .filter(StringUtils::isNotBlank)
                         .collect(Collectors.joining("/", "/", ""));
         final var builder =
@@ -504,38 +217,5 @@ public final class StorageBuilder<T> {
                 throw new WrappedException(ex);
             }
         }
-    }
-
-    public Class<T> buildForImplementationClass(
-            final Class<T> storageInterface,
-            final MergedAnnotations.Search mergedAnnotationsSearch,
-            final Storage storageAnnotation) {
-        final var implementationClassName = storageInterface.getSimpleName() + "Implementation";
-        final var builderForConstructor =
-                new ByteBuddy()
-                        .subclass(storageInterface, ConstructorStrategy.Default.NO_CONSTRUCTORS)
-                        .annotateType(AnnotationDescription.Builder.ofType(Service.class).build())
-                        .name(implementationClassName)
-                        .modifiers(Visibility.PUBLIC, TypeManifestation.FINAL)
-                        .defineField(
-                                STORAGE_CLIENT_PARAMETER,
-                                StorageClient.class,
-                                Visibility.PRIVATE,
-                                FieldManifestation.FINAL)
-                        .defineField(
-                                OBJECT_MAPPER_PARAMETER,
-                                ObjectMapper.class,
-                                Visibility.PRIVATE,
-                                FieldManifestation.FINAL);
-        final var builderForMethods = buildConstructor(builderForConstructor, storageAnnotation);
-
-        final var annotatedMethodsByAnnotation =
-                getStorageMethodsByAnnotation(storageInterface, mergedAnnotationsSearch);
-
-        final var unloaded =
-                buildImplementationMethods(
-                                builderForMethods, annotatedMethodsByAnnotation, storageInterface)
-                        .make();
-        return writeAndLoadClass(unloaded);
     }
 }

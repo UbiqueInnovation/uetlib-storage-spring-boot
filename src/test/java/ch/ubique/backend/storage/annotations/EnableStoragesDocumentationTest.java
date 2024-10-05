@@ -43,7 +43,7 @@ class EnableStoragesDocumentationTest {
     @Test
     void testDocumentation() throws Exception {
         final var testStorageDocumentation =
-                applicationContext.getBean("annotatedTestStorageDocumentation");
+                applicationContext.getBean("annotatedTestStorageDocumentationController");
 
         mockMvc.perform(get("/documentation/storage/files/5.json"))
                 .andExpect(status().isBadRequest())
@@ -70,10 +70,14 @@ class EnableStoragesDocumentationTest {
 
     @Test
     void profileAnnotationStorage() {
-        assertNotNull(applicationContext.getBean("profileEnabledAnnotatedTestStorageDocumentation"));
+        assertNotNull(
+                applicationContext.getBean(
+                        "profileEnabledAnnotatedTestStorageDocumentationController"));
         assertThrowsWithMessage(
                 NoSuchBeanDefinitionException.class,
-                () -> applicationContext.getBean("profileDisabledAnnotatedTestStorageDocumentation"),
-                "No bean named 'profileDisabledAnnotatedTestStorageDocumentation' available");
+                () ->
+                        applicationContext.getBean(
+                                "profileDisabledAnnotatedTestStorageDocumentationController"),
+                "No bean named 'profileDisabledAnnotatedTestStorageDocumentationController' available");
     }
 }
