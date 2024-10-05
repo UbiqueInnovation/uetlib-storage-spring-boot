@@ -3,6 +3,8 @@ package ch.ubique.backend.storage.annotations;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
+import org.springframework.core.annotation.AliasFor;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
@@ -22,25 +24,25 @@ public @interface Storage {
     String clientQualifier() default "";
 
     /**
-     * Specifies if an object mapper should be injected. Defaults to true. If set to false, a new
-     * ObjectMapper is instantiated each time an object is serialized.
-     */
-    boolean injectObjectMapper() default true;
-
-    /**
      * You may specify the {@link com.fasterxml.jackson.databind.ObjectMapper} explicitly, using a
-     * qualifier. This field is ignored if {@code injectObjectMapper} is set to false. If the
-     * storage does not serialize any outputs or if only one {@link
+     * qualifier. If the storage does not serialize any outputs or if only one {@link
      * ch.ubique.backend.storage.StorageClient} bean is configured in the module, this property does
      * not need to be set.
      */
     String objectMapperQualifier() default "";
 
     /**
+     * @deprecated since v2.5, use {@link #documentationBaseUrl()}
+     */
+    @AliasFor("documentationBaseUrl")
+    String baseUrl() default "";
+
+    /**
      * Most of the time, this corresponds to the blob container name. This value is only used in the
      * documentation and has no impact on the output path.
      */
-    String baseUrl() default "";
+    @AliasFor("baseUrl")
+    String documentationBaseUrl() default "";
 
     /**
      * Base path for all output mappings (comparable to @RequestMapping at Controller class level).

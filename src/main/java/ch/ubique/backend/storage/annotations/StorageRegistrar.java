@@ -5,6 +5,7 @@ import static ch.ubique.backend.storage.annotations.utils.EnableAnnotationUtils.
 
 import ch.ubique.backend.storage.annotations.utils.EnableAnnotationUtils;
 import ch.ubique.backend.storage.builder.StorageBuilder;
+import ch.ubique.backend.storage.factory.StorageFactoryBean;
 
 import com.google.common.base.CaseFormat;
 
@@ -14,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.support.*;
@@ -139,15 +139,13 @@ class StorageRegistrar
 
         if (enableStoragesAnnotation.codeGenerationType().generateImplementationCode()
                 && storageAnnotation.codeGenerationType().generateImplementationCode()) {
-            final var generatedImplementationClass =
-                    new StorageBuilder<T>(beanFactory, environment)
-                            .buildForImplementationClass(
-                                    storageInterface, mergedAnnotationsSearch, storageAnnotation);
-            registerBeanForGeneratedClass(
-                    beanFactory,
-                    storageInterface,
-                    generatedImplementationClass,
-                    StorageBeanType.IMPLEMENTATION);
+            final var factoryBean = new StorageFactoryBean<>(storageInterface);
+            factoryBean.setClientQualifier(storageAnnotation.clientQualifier());
+            factoryBean.setObjectMapperQualifier(storageAnnotation.objectMapperQualifier());
+            factoryBean.setDocumentationBaseUrl(storageAnnotation.documentationBaseUrl());
+            factoryBean.setBasePath(storageAnnotation.basePath());
+            factoryBean.setBeanFactory(beanFactory);
+            registerImplementationFactoryBean(beanFactory, storageInterface, factoryBean);
         }
 
         if (enableStoragesAnnotation.codeGenerationType().generateDocumentationCode()
@@ -156,23 +154,42 @@ class StorageRegistrar
                     new StorageBuilder<T>(beanFactory, environment)
                             .buildForDocumentationClass(
                                     storageInterface, mergedAnnotationsSearch, storageAnnotation);
-            registerBeanForGeneratedClass(
-                    beanFactory,
-                    storageInterface,
-                    generatedDocumentationClass,
-                    StorageBeanType.DOCUMENTATION);
+            registerBeanForGeneratedDocumentationClass(
+                    beanFactory, storageInterface, generatedDocumentationClass);
         }
     }
 
-    private <T, U> void registerBeanForGeneratedClass(
+    private <T> void registerImplementationFactoryBean(
             final DefaultListableBeanFactory beanFactory,
             final Class<T> storageInterface,
-            final Class<U> storageClass,
-            final StorageBeanType storageBeanType) {
+            final StorageFactoryBean<T> factoryBean) {
+
+        final var storageInterfaceSimpleName = storageInterface.getSimpleName();
+        final var storageInterfaceCanonicalName = storageInterface.getCanonicalName();
+
+        final var beanName = classNameToBeanName(storageInterfaceSimpleName);
 
         final var beanDefinitionBuilder =
-                BeanDefinitionBuilder.genericBeanDefinition(storageClass)
-                        .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR);
+                BeanDefinitionBuilder.genericBeanDefinition(
+                                storageInterface, factoryBean::getObject)
+                        .setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+        final var beanDefinition = beanDefinitionBuilder.getBeanDefinition();
+        final var holder = new BeanDefinitionHolder(beanDefinition, beanName);
+        BeanDefinitionReaderUtils.registerBeanDefinition(holder, beanFactory);
+
+        logger.info(
+                "Registered storage bean {} of class {} for storage class {}",
+                beanName,
+                storageInterfaceCanonicalName,
+                storageInterfaceCanonicalName);
+    }
+
+    private <T, U> void registerBeanForGeneratedDocumentationClass(
+            final DefaultListableBeanFactory beanFactory,
+            final Class<T> storageInterface,
+            final Class<U> storageClass) {
+
+        final var beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(storageClass);
 
         final var beanDefinition = beanDefinitionBuilder.getBeanDefinition();
 
@@ -181,32 +198,14 @@ class StorageRegistrar
 
         final var beanName = classNameToBeanName(storageInterfaceSimpleName);
 
-        switch (storageBeanType) {
-            case IMPLEMENTATION -> {
-                final var holder = new BeanDefinitionHolder(beanDefinition, beanName);
-                BeanDefinitionReaderUtils.registerBeanDefinition(holder, beanFactory);
-
-                logger.info(
-                        "Registered storage bean {} of class {} for storage class {}",
-                        beanName,
-                        storageClass.getCanonicalName(),
-                        storageInterfaceCanonicalName);
-            }
-            case DOCUMENTATION -> {
-                final var documentationBeanName =
-                        beanName
-                                + CaseFormat.UPPER_UNDERSCORE.to(
-                                        CaseFormat.UPPER_CAMEL,
-                                        StorageBeanType.DOCUMENTATION.name());
-                final var documentationBean = beanFactory.createBean(beanDefinition.getBeanClass());
-                beanFactory.registerSingleton(documentationBeanName, documentationBean);
-                logger.info(
-                        "Registered storage documentation bean {} of class {} for storage class {}",
-                        documentationBeanName,
-                        storageClass.getCanonicalName(),
-                        storageInterfaceCanonicalName);
-            }
-        }
+        final var documentationBeanName = beanName + "DocumentationController";
+        final var documentationBean = beanFactory.createBean(beanDefinition.getBeanClass());
+        beanFactory.registerSingleton(documentationBeanName, documentationBean);
+        logger.info(
+                "Registered storage documentation bean {} of class {} for storage class {}",
+                documentationBeanName,
+                storageClass.getCanonicalName(),
+                storageInterfaceCanonicalName);
     }
 
     @Override
