@@ -113,32 +113,32 @@ public final class StorageFactoryBean<T>
                                 methodMethodAnnotationPair
                                         .getRight()
                                         .isPresent(StorageMapping.class))
-                // get the annotation of that method that is meta-annotated by @StorageMapping
                 .map(
-                        methodMethodAnnotationPair ->
-                                storageMethodInfo(
-                                        methodMethodAnnotationPair.getLeft(),
-                                        methodMethodAnnotationPair.getRight()))
-                .peek(
-                        storageMethodInfo -> {
+                        methodMethodAnnotationPair -> {
+                            final var storageMethodInfo =
+                                    storageMethodInfo(
+                                            methodMethodAnnotationPair.getLeft(),
+                                            methodMethodAnnotationPair.getRight());
                             final var mappingPath =
                                     storageMethodInfo
                                             .storageMethodAnnotations()
                                             .get(StorageMapping.class)
                                             .synthesize()
                                             .path();
-                            final var method = storageMethodInfo.storageMethod();
-                            if (mappingPath.startsWith("/")) {
-                                throw new IllegalArgumentException(
-                                        MessageFormat.format(
-                                                "{0}.path() cannot start with ''/'' for method {1}::{2}. Got path: {3}",
-                                                storageMethodInfo
-                                                        .mappingAnnotationType()
-                                                        .getSimpleName(),
-                                                method.getDeclaringClass().getSimpleName(),
-                                                method.getName(),
-                                                mappingPath));
+                            if (!mappingPath.startsWith("/")) {
+                                return storageMethodInfo;
                             }
+
+                            final var storageMethod = storageMethodInfo.storageMethod();
+                            throw new IllegalArgumentException(
+                                    MessageFormat.format(
+                                            "''{0}.path()'' cannot start with ''/'' for method {1}::{2}. Got path: ''{3}''",
+                                            storageMethodInfo
+                                                    .mappingAnnotationType()
+                                                    .getSimpleName(),
+                                            storageMethod.getDeclaringClass().getSimpleName(),
+                                            storageMethod.getName(),
+                                            mappingPath));
                         })
                 .collect(Collectors.groupingBy(StorageMethodInfo::mappingAnnotationType));
     }
