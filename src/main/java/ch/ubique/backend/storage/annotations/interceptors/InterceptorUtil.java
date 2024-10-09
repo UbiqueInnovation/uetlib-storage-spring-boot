@@ -16,6 +16,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 public final class InterceptorUtil {
+
     private InterceptorUtil() {}
 
     static String getPath(
