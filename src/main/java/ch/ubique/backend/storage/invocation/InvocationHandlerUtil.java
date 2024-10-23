@@ -1,5 +1,7 @@
 package ch.ubique.backend.storage.invocation;
 
+import ch.ubique.backend.core.utils.StreamUtils;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.MoreCollectors;
 
@@ -10,7 +12,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -20,7 +21,7 @@ public final class InvocationHandlerUtil {
 
     static ObjectMapper getObjectMapper(
             final ObjectMapper fallbackObjectMapper, final Object[] args) {
-        return Arrays.stream(args)
+        return StreamUtils.emptyIfNull(args)
                 // objectMapper can be passed as an argument
                 .filter(ObjectMapper.class::isInstance)
                 .map(ObjectMapper.class::cast)
