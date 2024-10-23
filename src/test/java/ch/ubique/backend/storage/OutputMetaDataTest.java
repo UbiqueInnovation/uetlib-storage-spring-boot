@@ -11,10 +11,10 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+@SuppressWarnings("DataFlowIssue")
 class OutputMetaDataTest {
 
     @Test
-    @SuppressWarnings("java:S5778")
     void getCacheControl() {
         Assertions.assertEquals(
                 "max-age=600, s-maxage=86400",
