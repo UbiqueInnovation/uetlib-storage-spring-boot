@@ -79,13 +79,17 @@ public class ImageStorageService {
         final var hires =
                 ImageUtils.scaleAndFlush(ImageUtils.imageFromBytes(originalImageBytes), 1200);
         storageClient.write(
-                new ByteOutput(ImageUtils.imageToBytes(hires, mediaType), mediaType.toString()),
+                new ByteOutput(
+                        ImageUtils.imageToBytes(hires, mediaType.getSubtype()),
+                        mediaType.toString()),
                 generatePath.apply(ImageVariant.HIRES));
 
         final var thumbnail = ImageUtils.scaleAndFlush(hires, 320);
 
         storageClient.write(
-                new ByteOutput(ImageUtils.imageToBytes(thumbnail, mediaType), mediaType.toString()),
+                new ByteOutput(
+                        ImageUtils.imageToBytes(thumbnail, mediaType.getSubtype()),
+                        mediaType.toString()),
                 generatePath.apply(ImageVariant.THUMBNAIL));
 
         final var blurHashRepresentation =
