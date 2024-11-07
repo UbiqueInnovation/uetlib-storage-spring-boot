@@ -19,7 +19,7 @@
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-spring</artifactId>
-            <version>1.0.0-alpha.6</version>
+            <version>1.0.0-alpha.7</version>
         </dependency>
 
         <dependency>
