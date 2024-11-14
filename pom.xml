@@ -6,8 +6,8 @@
 
     <parent>
         <groupId>ch.ubique</groupId>
-        <artifactId>uetlib-bom</artifactId>
-        <version>1.0.0-alpha.15</version>
+        <artifactId>uetlib-parent</artifactId>
+        <version>2.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>uetlib-storage-spring</artifactId>
@@ -19,7 +19,12 @@
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-spring</artifactId>
-            <version>1.0.0-alpha.8</version>
+            <version>2.0.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.ubique</groupId>
+            <artifactId>uetlib-storage</artifactId>
+            <version>2.0.0-SNAPSHOT</version>
         </dependency>
 
         <dependency>
@@ -27,48 +32,24 @@
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
 
-        <!-- RetryTemplate and @Retryable, convenient way for retrying -->
         <dependency>
-            <groupId>org.springframework.retry</groupId>
-            <artifactId>spring-retry</artifactId>
-        </dependency>
-
-        <!-- External storage clients -->
-        <dependency>
-            <groupId>com.azure</groupId>
-            <artifactId>azure-storage-blob</artifactId>
-            <version>12.28.1</version>
-        </dependency>
-        <dependency>
-            <groupId>io.minio</groupId>
-            <artifactId>minio</artifactId>
-            <version>8.5.13</version>
-        </dependency>
-
-        <!-- Reflections -->
-        <dependency>
-            <groupId>org.reflections</groupId>
-            <artifactId>reflections</artifactId>
-            <version>0.10.2</version>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
         </dependency>
 
         <!-- For testing storage clients -->
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-testcontainers-postgresql</artifactId>
-            <version>1.0.0-alpha.11</version>
+            <version>2.0.0-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-test</artifactId>
-            <version>1.0.0-alpha.11</version>
-        </dependency>
-
-        <dependency>
-            <groupId>net.bytebuddy</groupId>
-            <artifactId>byte-buddy</artifactId>
+            <version>2.0.0-SNAPSHOT</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
