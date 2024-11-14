@@ -11,6 +11,7 @@ import ch.ubique.backend.core.utils.ArrayUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.config.implementation.EnableStoragesTestConfig;
+import ch.ubique.backend.storage.exception.NonRetryableStorageClientException;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.GZipOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
@@ -33,7 +34,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.io.IOException;
-import java.nio.file.NoSuchFileException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
@@ -198,7 +198,9 @@ class EnableStoragesImplementationTest {
         final var deletedFolder5 = annotatedTestStorage.deleteFolder(5);
         verify(storageClient).delete("storage/files/5", true);
         assertTrue(deletedFolder5);
-        assertThrows(NoSuchFileException.class, () -> storageClient.list("storage/files/5/"));
+        assertThrows(
+                NonRetryableStorageClientException.class,
+                () -> storageClient.list("storage/files/5/"));
         assertFalse(storageClient.list("storage/files/").contains("storage/files/5/"));
         assertThat(ArrayUtils.lastElement(capturedOutput.getOut().split("\n")))
                 .containsSequence("ERROR")

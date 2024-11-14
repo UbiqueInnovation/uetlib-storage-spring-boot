@@ -4,6 +4,7 @@ import static java.util.Objects.*;
 
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 
@@ -15,7 +16,6 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.retry.RetryCallback;
 import org.springframework.retry.support.RetryTemplate;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -25,7 +25,7 @@ public class RetryStorageClient implements StorageClient {
 
     private static final RetryTemplate DEFAULT_RETRY_TEMPLATE =
             RetryTemplate.builder()
-                    .retryOn(Exception.class)
+                    .retryOn(StorageClientException.class)
                     .maxAttempts(10)
                     .uniformRandomBackoff(Duration.ofMillis(1), Duration.ofMillis(500))
                     .build();
@@ -60,7 +60,7 @@ public class RetryStorageClient implements StorageClient {
             final @NotNull Output output,
             final @NotNull String path,
             @Nullable final OutputMetaData outputMetaData)
-            throws IOException {
+            throws StorageClientException {
         if (output.canBeRetried()) {
             retryRunnable(() -> storageClient.write(output, path, outputMetaData));
         } else {
@@ -71,7 +71,7 @@ public class RetryStorageClient implements StorageClient {
     @Override
     public void write(
             final Collection<OutputWithPath> outputs, @Nullable final OutputMetaData outputMetaData)
-            throws IOException {
+            throws StorageClientException {
         if (outputs.stream().map(OutputWithPath::output).allMatch(Output::canBeRetried)) {
             retryRunnable(() -> storageClient.write(outputs, outputMetaData));
         } else {
@@ -81,29 +81,30 @@ public class RetryStorageClient implements StorageClient {
 
     @Override
     public InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
-            throws IOException {
+            throws StorageClientException {
         return retryTemplate.execute(context -> storageClient.read(path, doUncompressIfNeeded));
     }
 
     @Override
-    public boolean delete(final @NotNull String path, final boolean recursive) throws IOException {
+    public boolean delete(final @NotNull String path, final boolean recursive)
+            throws StorageClientException {
         return retryTemplate.execute(context -> storageClient.delete(path, recursive));
     }
 
     @Override
     public Collection<String> list(final @NotNull String path, final boolean recursive)
-            throws IOException {
+            throws StorageClientException {
         return retryTemplate.execute(context -> storageClient.list(path, recursive));
     }
 
     @Override
-    public boolean exists(@NotNull final String path) throws IOException {
+    public boolean exists(@NotNull final String path) throws StorageClientException {
         return retryTemplate.execute(context -> storageClient.exists(path));
     }
 
     @Override
     public String getSignedUrl(final @NotNull String path, final @NotNull OffsetDateTime expiry)
-            throws IOException {
+            throws StorageClientException {
         return retryTemplate.execute(context -> storageClient.getSignedUrl(path, expiry));
     }
 
@@ -112,9 +113,10 @@ public class RetryStorageClient implements StorageClient {
         return retryTemplate.execute(context -> storageClient.getUrl(path));
     }
 
-    private void retryRunnable(final ThrowingRunnable<IOException> runnable) throws IOException {
+    private void retryRunnable(final ThrowingRunnable<StorageClientException> runnable)
+            throws StorageClientException {
         retryTemplate.execute(
-                (RetryCallback<Void, IOException>)
+                (RetryCallback<Void, StorageClientException>)
                         context -> {
                             runnable.run();
                             return null;

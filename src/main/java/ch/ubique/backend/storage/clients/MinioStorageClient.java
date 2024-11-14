@@ -108,7 +108,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
             final @NotNull Output output,
             final @NotNull String path,
             @Nullable final OutputMetaData outputMetaData)
-            throws IOException {
+            throws StorageClientException {
         final var metaData =
                 OutputMetaData.resolveOutputMetaData(
                         outputMetaData, outputMetaDataProvider, output);
@@ -140,8 +140,9 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 | InvalidResponseException
                 | NoSuchAlgorithmException
                 | ServerException
-                | XmlParserException e) {
-            throw new StorageClientException(
+                | XmlParserException
+                | IOException e) {
+            throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to write for [path={0}, outputMetaData={1}, output={2}]",
                             path, outputMetaData, output),
@@ -161,7 +162,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
     public final void write(
             final Collection<@NotNull @Valid OutputWithPath> outputsWithPaths,
             @Nullable final OutputMetaData outputMetaData)
-            throws IOException {
+            throws StorageClientException {
 
         if (outputsWithPaths.isEmpty()) {
             return;
@@ -173,7 +174,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
 
     @Override
     public final InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
-            throws IOException {
+            throws StorageClientException {
         try {
             final var objectResponse =
                     minioClient.getObject(
@@ -193,8 +194,9 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 | InvalidResponseException
                 | NoSuchAlgorithmException
                 | ServerException
+                | IOException
                 | XmlParserException e) {
-            throw new StorageClientException(
+            throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to read for [path={0}, doUncompressIfNeeded={1}]",
                             path, doUncompressIfNeeded),
@@ -204,12 +206,14 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
 
     @Override
     public final boolean delete(final @NotNull String path, final boolean recursive)
-            throws IOException {
+            throws StorageClientException {
 
         final var existing = list(path, true);
 
         if (existing.stream().anyMatch(object -> !object.equals(path)) && !recursive) {
-            throw new DirectoryNotEmptyException(path);
+            throw StorageClientException.of(
+                    MessageFormat.format("can not delete not empty directory. [path={0}]", path),
+                    new DirectoryNotEmptyException(path));
         }
 
         final var objectsToDelete =
@@ -237,7 +241,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 | ServerException
                 | XmlParserException
                 | IOException e) {
-            throw new StorageClientException(
+            throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to delete for [path={0}, recursive={1}]", path, recursive),
                     e);
@@ -248,7 +252,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
 
     @Override
     public Collection<String> list(@NotNull final String path, final boolean recursive)
-            throws IOException {
+            throws StorageClientException {
         final var objects =
                 minioClient.listObjects(
                         ListObjectsArgs.builder()
@@ -271,7 +275,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 | ServerException
                 | XmlParserException
                 | IOException e) {
-            throw new StorageClientException(
+            throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to list for [path={0}, recursive={1}]", path, recursive),
                     e);
@@ -280,13 +284,14 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
     }
 
     @Override
-    public boolean exists(final @NotNull String path) throws IOException {
+    public boolean exists(final @NotNull String path) throws StorageClientException {
         return !list(path, false).isEmpty();
     }
 
     @Override
     public final String getSignedUrl(
-            final @NotNull String path, final @NotNull OffsetDateTime expiry) throws IOException {
+            final @NotNull String path, final @NotNull OffsetDateTime expiry)
+            throws StorageClientException {
         try {
             return minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
@@ -307,7 +312,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 | ServerException
                 | XmlParserException
                 | IOException e) {
-            throw new StorageClientException(
+            throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to get signed url for [path={0}, expiry={1}]", path, expiry),
                     e);
@@ -321,7 +326,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                         + " per S3 spec)");
     }
 
-    public void createBucket(final String bucketName) throws IOException {
+    public void createBucket(final String bucketName) throws StorageClientException {
         try {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
         } catch (final ErrorResponseException
@@ -333,7 +338,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 | NoSuchAlgorithmException
                 | ServerException
                 | XmlParserException e) {
-            throw new StorageClientException(
+            throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to create bucket for [bucketName={0}]", bucketName),
                     e);

@@ -5,6 +5,7 @@ import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 
@@ -33,6 +34,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryNotEmptyException;
+import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Collection;
@@ -108,7 +110,7 @@ public class AzureBlobStorageClient implements StorageClient {
             final @NotNull Output output,
             final @NotNull String path,
             @Nullable final OutputMetaData outputMetaData)
-            throws IOException {
+            throws StorageClientException {
         final var metaData =
                 OutputMetaData.resolveOutputMetaData(
                         outputMetaData, outputMetaDataProvider, output);
@@ -127,6 +129,9 @@ public class AzureBlobStorageClient implements StorageClient {
             blobContainerClient
                     .getBlobClient(path)
                     .uploadWithResponse(uploadOptions, null, Context.NONE);
+        } catch (final IOException e) {
+            throw StorageClientException.of(
+                    MessageFormat.format("failed to write [path={0}]", path), e);
         }
     }
 
@@ -134,7 +139,7 @@ public class AzureBlobStorageClient implements StorageClient {
     public void write(
             final @NotNull Collection<OutputWithPath> outputs,
             @Nullable final OutputMetaData outputMetaData)
-            throws IOException {
+            throws StorageClientException {
         // The SDK unfortunately does not support a bulk upload.
         VirtualThreadUtils.throwingForEach(
                 item -> write(item.output(), item.path(), outputMetaData), outputs);
@@ -142,7 +147,7 @@ public class AzureBlobStorageClient implements StorageClient {
 
     @Override
     public InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
-            throws IOException {
+            throws StorageClientException {
         try (final var outputStream = new ByteArrayOutputStream()) {
             final var blobDownloadResponse = downloadStreamWithResponse(path, outputStream);
             final var inputStream = InputStreamUtils.pipeOutputToInputStream(outputStream);
@@ -159,6 +164,9 @@ public class AzureBlobStorageClient implements StorageClient {
             }
 
             return inputStream;
+        } catch (final IOException e) {
+            throw StorageClientException.of(
+                    MessageFormat.format("failed to read for [path={0}]", path), e);
         }
     }
 
@@ -171,10 +179,14 @@ public class AzureBlobStorageClient implements StorageClient {
     }
 
     @Override
-    public boolean delete(final @NotNull String path, final boolean recursive) throws IOException {
+    public boolean delete(final @NotNull String path, final boolean recursive)
+            throws StorageClientException {
         final var existing = list(path, true);
         if (existing.stream().anyMatch(object -> !object.equals(path)) && !recursive) {
-            throw new DirectoryNotEmptyException(path);
+            throw StorageClientException.of(
+                    MessageFormat.format(
+                            "can not delete non empty directory [path={0}, recursive=false]", path),
+                    new DirectoryNotEmptyException(path));
         }
 
         if (recursive) {
@@ -187,7 +199,7 @@ public class AzureBlobStorageClient implements StorageClient {
 
     @Override
     public Collection<String> list(@NotNull final String path, final boolean recursive)
-            throws IOException {
+            throws StorageClientException {
 
         final PagedIterable<BlobItem> blobItems;
         if (recursive) {
@@ -200,7 +212,7 @@ public class AzureBlobStorageClient implements StorageClient {
     }
 
     @Override
-    public boolean exists(final @NotNull String path) throws IOException {
+    public boolean exists(final @NotNull String path) throws StorageClientException {
         return blobContainerClient.getBlobClient(path).exists() || !list(path, false).isEmpty();
     }
 
