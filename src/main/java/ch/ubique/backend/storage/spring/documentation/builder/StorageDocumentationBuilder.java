@@ -2,11 +2,11 @@ package ch.ubique.backend.storage.spring.documentation.builder;
 
 import static ch.ubique.backend.storage.builder.StorageBuilderUtil.getStorageMethodsByAnnotation;
 
+import ch.ubique.backend.storage.StorageMappingType;
+import ch.ubique.backend.storage.builder.StorageMethodInfo;
 import ch.ubique.backend.storage.spring.annotations.Storage;
 import ch.ubique.backend.storage.spring.documentation.annotations.StorageDocumentationRestController;
 import ch.ubique.backend.storage.spring.documentation.interceptors.OnlyDocumentationInterceptor;
-import ch.ubique.backend.storage.annotations.*;
-import ch.ubique.backend.storage.builder.StorageMethodInfo;
 
 import com.pivovarit.function.exception.WrappedException;
 
@@ -32,7 +32,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.lang.annotation.Annotation;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.List;
@@ -59,12 +58,11 @@ public final class StorageDocumentationBuilder<T> {
 
     private static <T> DynamicType.Builder<T> buildDocumentationMethods(
             final DynamicType.Builder<T> b,
-            final Map<Class<? extends Annotation>, List<StorageMethodInfo>>
-                    annotatedMethodsByAnnotation) {
+            final Map<StorageMappingType, List<StorageMethodInfo>> annotatedMethodsByAnnotation) {
         var builder = b;
         final var outputMethodInfos =
                 Objects.requireNonNullElse(
-                        annotatedMethodsByAnnotation.get(OutputMapping.class),
+                        annotatedMethodsByAnnotation.get(StorageMappingType.OUTPUT),
                         List.<StorageMethodInfo>of());
         for (final var outputMethodInfo : outputMethodInfos) {
             builder = buildDocumentationMethod(builder, outputMethodInfo);
