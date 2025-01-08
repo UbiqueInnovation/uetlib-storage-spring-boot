@@ -3,6 +3,7 @@ package ch.ubique.backend.storage.spring.annotations;
 import static ch.ubique.backend.test.assertion.AssertionUtils.assertThrowsWithMessage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCollection;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.IMAGE_PNG_VALUE;
@@ -18,6 +19,7 @@ import ch.ubique.backend.storage.spring.config.EnableStoragesTestConfig;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -198,9 +200,7 @@ class EnableStoragesImplementationTest {
         final var deletedFolder5 = annotatedTestStorage.deleteFolder(5);
         verify(storageClient).delete("storage/files/5", true);
         assertTrue(deletedFolder5);
-        assertThrows(
-                NonRetryableStorageClientException.class,
-                () -> storageClient.list("storage/files/5/"));
+        assertThatCollection(storageClient.list("storage/files/5/")).isEmpty();
         assertFalse(storageClient.list("storage/files/").contains("storage/files/5/"));
         assertThat(ArrayUtils.lastElement(capturedOutput.getOut().split("\n")))
                 .containsSequence("ERROR")
@@ -251,7 +251,8 @@ class EnableStoragesImplementationTest {
 
     @Test
     void profileAnnotationStorage() {
-        assertDoesNotThrow(() -> applicationContext.getBean(ProfileEnabledAnnotatedTestStorage.class));
+        assertDoesNotThrow(
+                () -> applicationContext.getBean(ProfileEnabledAnnotatedTestStorage.class));
         assertThrowsWithMessage(
                 NoSuchBeanDefinitionException.class,
                 () -> applicationContext.getBean(ProfileDisabledAnnotatedTestStorage.class),
