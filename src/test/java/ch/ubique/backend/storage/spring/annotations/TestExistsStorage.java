@@ -13,5 +13,5 @@ public interface TestExistsStorage {
     boolean existsFile(@StoragePathVariable String fileId) throws IOException;
 
     @ExistsMapping(path = "files/{folderId}", logLevel = Level.ERROR)
-    boolean existsFolder(@StoragePathVariable int folderId) throws IOException;
+    boolean existsPathPrefix(@StoragePathVariable int folderId) throws IOException;
 }
