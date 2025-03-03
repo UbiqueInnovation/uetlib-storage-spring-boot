@@ -11,7 +11,6 @@ import static org.springframework.http.MediaType.IMAGE_PNG_VALUE;
 import ch.ubique.backend.core.utils.ArrayUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
-import ch.ubique.backend.storage.exception.NonRetryableStorageClientException;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.GZipOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
@@ -19,7 +18,6 @@ import ch.ubique.backend.storage.spring.config.EnableStoragesTestConfig;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -242,10 +240,10 @@ class EnableStoragesImplementationTest {
         assertFalse(annotatedTestStorage.existsFile("5"));
         verify(storageClient).exists("storage/files/5.png");
 
-        assertTrue(annotatedTestStorage.existsFolder(5));
+        assertTrue(annotatedTestStorage.existsPathPrefix(5));
         verify(storageClient).exists("storage/files/5");
 
-        assertFalse(annotatedTestStorage.existsFolder(2));
+        assertTrue(annotatedTestStorage.existsPathPrefix(2));
         verify(storageClient).exists("storage/files/2");
     }
 

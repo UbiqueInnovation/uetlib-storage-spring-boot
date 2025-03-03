@@ -90,7 +90,7 @@ public final class TestStorageReferenceImplementation implements TestStorage {
     }
 
     @Override
-    public boolean existsFolder(final int folderId) throws IOException {
+    public boolean existsPathPrefix(final int folderId) throws IOException {
         return storageClient.exists("files/{folderId}");
     }
 }
