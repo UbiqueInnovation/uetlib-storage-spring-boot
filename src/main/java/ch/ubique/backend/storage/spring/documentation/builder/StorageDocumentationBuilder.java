@@ -2,7 +2,9 @@ package ch.ubique.backend.storage.spring.documentation.builder;
 
 import static ch.ubique.backend.storage.builder.StorageBuilderUtil.getStorageMethodsByAnnotation;
 
+import ch.ubique.backend.core.utils.AnnotationUtils;
 import ch.ubique.backend.storage.StorageMappingType;
+import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.builder.StorageMethodInfo;
 import ch.ubique.backend.storage.spring.annotations.Storage;
 import ch.ubique.backend.storage.spring.documentation.annotations.StorageDocumentationRestController;
@@ -14,7 +16,7 @@ import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.description.annotation.AnnotationDescription;
 import net.bytebuddy.description.modifier.TypeManifestation;
 import net.bytebuddy.description.modifier.Visibility;
-import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.description.type.TypeDescription.Generic.Builder;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.Implementation;
@@ -25,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.core.env.Environment;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -78,10 +79,12 @@ public final class StorageDocumentationBuilder<T> {
                 AnnotationDescription.Builder.ofType(GetMapping.class)
                         .defineArray("value", "/" + mappingPath)
                         .build();
+        final Class<?> responseClass =
+                AnnotationUtils.findAnnotation(method, OutputMapping.class)
+                        .map(OutputMapping::documentedClass)
+                        .orElseThrow(); // add documentedClass already to StoragMethodInfo
         final var returnType =
-                TypeDescription.Generic.Builder.parameterizedType(
-                                ResponseEntity.class, ProblemDetail.class)
-                        .build();
+                Builder.parameterizedType(ResponseEntity.class, responseClass).build();
         return builder.defineMethod(method.getName(), returnType, Visibility.PUBLIC)
                 .throwing(IOException.class)
                 .intercept(ONLY_DOCUMENTATION_THROW_INTERCEPTOR)
