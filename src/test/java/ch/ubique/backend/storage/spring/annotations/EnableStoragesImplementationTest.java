@@ -26,12 +26,12 @@ import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.Resource;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -48,8 +48,8 @@ class EnableStoragesImplementationTest {
     @Autowired private ObjectMapper objectMapper;
     @Autowired private AnnotatedTestStorage annotatedTestStorage;
 
-    @SpyBean private StorageClient storageClient;
-    @SpyBean private TestStorageReferenceImplementation referenceImplementation;
+    @MockitoSpyBean private StorageClient storageClient;
+    @MockitoSpyBean private TestStorageReferenceImplementation referenceImplementation;
 
     @Value("classpath:storage/files/2.png")
     private Resource png2;
