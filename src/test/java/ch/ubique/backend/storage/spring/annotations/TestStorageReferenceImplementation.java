@@ -35,20 +35,28 @@ public final class TestStorageReferenceImplementation implements TestStorage {
     public byte[] getImage(final int fileId) throws IOException {
         return InputStreamUtils.readBytesAndClose(
                 storageClient.read(
-                        "files/{fileId}.jpg".replace("{fileId}", String.valueOf(fileId)), true));
+                        "files/{fileId}.png".replace("{fileId}", String.valueOf(fileId)), true));
     }
 
     @Override
     public byte[] getImageCompressed(final int fileId) throws IOException {
         return InputStreamUtils.readBytesAndClose(
                 storageClient.read(
-                        "files/{fileId}.jpg".replace("{fileId}", String.valueOf(fileId)), false));
+                        "files/{fileId}.png".replace("{fileId}", String.valueOf(fileId)), false));
     }
 
     @Override
     public void saveImage(final byte[] data, final String fileId) throws IOException {
         storageClient.write(
                 new ByteOutput(data, "image/png").gZip(),
+                "files/{fileId}.png".replace("{fileId}", fileId),
+                null);
+    }
+
+    @Override
+    public void saveImageByteOutput(final ByteOutput byteOutput, final String fileId) throws IOException {
+        storageClient.write(
+                byteOutput.gZip(),
                 "files/{fileId}.png".replace("{fileId}", fileId),
                 null);
     }
@@ -64,8 +72,18 @@ public final class TestStorageReferenceImplementation implements TestStorage {
     }
 
     @Override
+    public void saveJsonOutput(
+            final JsonOutput<TestUser> jsonOutput, final String jsonId, final OutputMetaData outputMetaData)
+            throws IOException {
+        storageClient.write(
+                jsonOutput.gZip(),
+                "files/{jsonId}.json".replace("{jsonId}", jsonId),
+                outputMetaData);
+    }
+
+    @Override
     public boolean deleteFile(final String fileId) throws IOException {
-        return storageClient.delete("files/{fileId}.jpg".replace("{fileId}", fileId), false);
+        return storageClient.delete("files/{fileId}.png".replace("{fileId}", fileId), false);
     }
 
     @Override

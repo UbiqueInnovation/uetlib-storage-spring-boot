@@ -1,10 +1,11 @@
 package ch.ubique.backend.storage.spring.documentation.builder;
 
 import static ch.ubique.backend.storage.builder.StorageBuilderUtil.getStorageMethodsByAnnotation;
+import static ch.ubique.backend.storage.type.StorageObjectTypeResolver.getStorageObjectParameterType;
 
-import ch.ubique.backend.core.utils.AnnotationUtils;
+import ch.ubique.backend.core.utils.StreamUtils;
 import ch.ubique.backend.storage.StorageMappingType;
-import ch.ubique.backend.storage.annotations.OutputMapping;
+import ch.ubique.backend.storage.annotations.CodeGenerationType;
 import ch.ubique.backend.storage.builder.StorageMethodInfo;
 import ch.ubique.backend.storage.spring.annotations.Storage;
 import ch.ubique.backend.storage.spring.documentation.annotations.StorageDocumentationRestController;
@@ -16,6 +17,7 @@ import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.description.annotation.AnnotationDescription;
 import net.bytebuddy.description.modifier.TypeManifestation;
 import net.bytebuddy.description.modifier.Visibility;
+import net.bytebuddy.description.type.TypeDefinition;
 import net.bytebuddy.description.type.TypeDescription.Generic.Builder;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
@@ -62,9 +64,49 @@ public final class StorageDocumentationBuilder<T> {
             final Map<StorageMappingType, List<StorageMethodInfo>> annotatedMethodsByAnnotation) {
         var builder = b;
         final var outputMethodInfos =
-                Objects.requireNonNullElse(
-                        annotatedMethodsByAnnotation.get(StorageMappingType.OUTPUT),
-                        List.<StorageMethodInfo>of());
+                StreamUtils.emptyIfNull(annotatedMethodsByAnnotation.get(StorageMappingType.OUTPUT))
+                        .filter(
+                                storageMethodInfo ->
+                                        storageMethodInfo
+                                                .outputMappingAnnotation()
+                                                .codeGenerationType()
+                                                .generateDocumentationCode())
+                        .toList();
+
+        final var outputStorageMethodsByMappingPaths =
+                outputMethodInfos.stream()
+                        .collect(Collectors.groupingBy(StorageMethodInfo::mappingPath));
+        outputStorageMethodsByMappingPaths.entrySet().stream()
+                .filter(e -> e.getValue().size() > 1)
+                .forEach(
+                        entry -> {
+                            final var mappingPath = entry.getKey();
+                            final var methods =
+                                    entry.getValue().stream()
+                                            .map(StorageMethodInfo::storageMethod)
+                                            .toList();
+                            final var methodsString =
+                                    methods.stream()
+                                            .map(
+                                                    m ->
+                                                            m.getDeclaringClass().getSimpleName()
+                                                                    + "#"
+                                                                    + m.getName()
+                                                                    + "()")
+                                            .collect(Collectors.joining(", ", "{", "}"));
+                            final var storageClass =
+                                    methods.getFirst().getDeclaringClass().getSimpleName();
+
+                            throw new IllegalArgumentException(
+                                    MessageFormat.format(
+                                            "Storage {0} is not valid: Methods {1} map to the same documentation path {2}. Deduplicate the mapping paths or set only one of them to {3}.{4}",
+                                            storageClass,
+                                            methodsString,
+                                            mappingPath,
+                                            CodeGenerationType.class.getSimpleName(),
+                                            CodeGenerationType.DOCUMENTATION.name()));
+                        });
+
         for (final var outputMethodInfo : outputMethodInfos) {
             builder = buildDocumentationMethod(builder, outputMethodInfo);
         }
@@ -79,16 +121,23 @@ public final class StorageDocumentationBuilder<T> {
                 AnnotationDescription.Builder.ofType(GetMapping.class)
                         .defineArray("value", "/" + mappingPath)
                         .build();
-        final Class<?> responseClass =
-                AnnotationUtils.findAnnotation(method, OutputMapping.class)
-                        .map(OutputMapping::documentedClass)
-                        .orElseThrow(); // add documentedClass already to StoragMethodInfo
-        final var returnType =
-                Builder.parameterizedType(ResponseEntity.class, responseClass).build();
+        final var returnType = documentationMethodReturnType(methodInfo);
         return builder.defineMethod(method.getName(), returnType, Visibility.PUBLIC)
                 .throwing(IOException.class)
                 .intercept(ONLY_DOCUMENTATION_THROW_INTERCEPTOR)
                 .annotateMethod(getMappingAnnotation);
+    }
+
+    private static TypeDefinition documentationMethodReturnType(
+            final StorageMethodInfo methodInfo) {
+        final var documentedClass = methodInfo.outputMappingAnnotation().documentedClass();
+        if (!documentedClass.equals(Object.class)) {
+            // use documentedClass if it is explicitly set (default value is Object.class)
+            return Builder.parameterizedType(ResponseEntity.class, documentedClass).build();
+        }
+
+        final var type = getStorageObjectParameterType(methodInfo.storageMethod());
+        return Builder.parameterizedType(ResponseEntity.class, type).build();
     }
 
     @SuppressWarnings("java:S5443")

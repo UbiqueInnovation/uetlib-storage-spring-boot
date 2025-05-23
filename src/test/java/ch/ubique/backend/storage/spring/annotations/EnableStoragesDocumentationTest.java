@@ -7,6 +7,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import static java.util.Map.entry;
+import static java.util.Map.ofEntries;
+import static java.util.stream.Collectors.toMap;
+
 import ch.ubique.backend.storage.spring.config.EnableStoragesTestConfig;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,6 +28,10 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.util.Arrays;
+
 @WebMvcTest
 @ActiveProfiles("test")
 @ContextConfiguration(classes = EnableStoragesTestConfig.class)
@@ -38,6 +46,30 @@ class EnableStoragesDocumentationTest {
     @BeforeEach
     void beforeEach() {
         MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void testDocumentationControllerReturnType() {
+        final var testStorageDocumentationController =
+                applicationContext.getBean("annotatedTestStorageDocumentationController");
+        final var controllerMethods =
+                Arrays.stream(testStorageDocumentationController.getClass().getDeclaredMethods())
+                        .collect(
+                                toMap(
+                                        Method::getName,
+                                        method ->
+                                                ((ParameterizedType) method.getGenericReturnType())
+                                                        .getActualTypeArguments()[0]
+                                                                .getTypeName()));
+        assertEquals(
+                ofEntries(
+                        entry("saveImage", "byte[]"),
+                        entry("saveImageByteOutput", "byte[]"),
+                        entry("saveJson", "ch.ubique.backend.storage.spring.annotations.TestUser"),
+                        entry(
+                                "saveJsonOutput",
+                                "ch.ubique.backend.storage.spring.annotations.TestUser")),
+                controllerMethods);
     }
 
     @Test
