@@ -18,10 +18,10 @@ import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest
@@ -30,7 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 class EnableStoragesDocumentationTest {
 
-    @SpyBean private ObjectMapper objectMapper;
+    @MockitoSpyBean private ObjectMapper objectMapper;
 
     @Autowired private ApplicationContext applicationContext;
     @Autowired private MockMvc mockMvc;
@@ -44,6 +44,7 @@ class EnableStoragesDocumentationTest {
     void testDocumentation() throws Exception {
         final var testStorageDocumentation =
                 applicationContext.getBean("annotatedTestStorageDocumentationController");
+        assertNotNull(testStorageDocumentation);
 
         mockMvc.perform(get("/documentation/storage/files/5.json"))
                 .andExpect(status().isBadRequest())
