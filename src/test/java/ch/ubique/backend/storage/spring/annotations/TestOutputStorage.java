@@ -7,6 +7,8 @@ import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.annotations.StorageObject;
 import ch.ubique.backend.storage.annotations.StoragePathVariable;
+import ch.ubique.backend.storage.output.ByteOutput;
+import ch.ubique.backend.storage.output.JsonOutput;
 
 import org.slf4j.event.Level;
 
@@ -22,12 +24,30 @@ public interface TestOutputStorage {
             throws IOException;
 
     @OutputMapping(
-            path = "files/{jsonId}.json",
+            path = "files/output-{fileId}.png",
+            contentType = IMAGE_PNG_VALUE,
+            logLevel = Level.WARN)
+    void saveImageByteOutput(
+            @StorageObject ByteOutput byteOutput, @StoragePathVariable final String fileId)
+            throws IOException;
+
+    @OutputMapping(
+            path = "files/{jsonId}.json.gz",
             contentType = APPLICATION_JSON_VALUE,
-            documentedClass = TestUser.class,
             logLevel = Level.TRACE)
     void saveJson(
             @StorageObject TestUser json,
+            @StoragePathVariable final String jsonId,
+            OutputMetaData outputMetaData)
+            throws IOException;
+
+    @OutputMapping(
+            path = "files/{jsonId}.json",
+            contentType = APPLICATION_JSON_VALUE,
+            logLevel = Level.TRACE,
+            gZip = false)
+    void saveJsonOutput(
+            @StorageObject JsonOutput<TestUser> jsonOutput,
             @StoragePathVariable final String jsonId,
             OutputMetaData outputMetaData)
             throws IOException;
