@@ -8,8 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
@@ -19,8 +17,6 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 
 public final class StorageFactoryBean<T>
         implements FactoryBean<T>, InitializingBean, BeanFactoryAware {
-
-    private static final Logger logger = LoggerFactory.getLogger(StorageFactoryBean.class);
 
     private final Class<T> type;
 
