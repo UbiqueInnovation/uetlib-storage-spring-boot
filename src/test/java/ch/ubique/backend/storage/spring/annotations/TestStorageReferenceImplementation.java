@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Map;
 
 public final class TestStorageReferenceImplementation implements TestStorage {
 
@@ -68,6 +69,16 @@ public final class TestStorageReferenceImplementation implements TestStorage {
         storageClient.write(
                 new JsonOutput<>(json, objectMapper).gZip(),
                 "files/{jsonId}.json".replace("{jsonId}", jsonId),
+                outputMetaData);
+    }
+
+    @Override
+    public void saveGenericMap(
+            final Map<Integer, String> map, final String mapId, final OutputMetaData outputMetaData)
+            throws IOException {
+        storageClient.write(
+                new JsonOutput<>(map, objectMapper),
+                "files/maps/{mapId}.json".replace("{mapId}", mapId),
                 outputMetaData);
     }
 

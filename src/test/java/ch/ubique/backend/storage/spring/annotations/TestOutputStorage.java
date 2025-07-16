@@ -10,9 +10,12 @@ import ch.ubique.backend.storage.annotations.StoragePathVariable;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
 
+import jakarta.validation.constraints.NotBlank;
+
 import org.slf4j.event.Level;
 
 import java.io.IOException;
+import java.util.Map;
 
 public interface TestOutputStorage {
 
@@ -38,6 +41,16 @@ public interface TestOutputStorage {
     void saveJson(
             @StorageObject TestUser json,
             @StoragePathVariable final String jsonId,
+            OutputMetaData outputMetaData)
+            throws IOException;
+
+    @OutputMapping(
+            path = "files/maps/{mapId}.json",
+            contentType = "application/json",
+            logLevel = Level.TRACE)
+    void saveGenericMap(
+            @StorageObject Map<Integer, String> map,
+            @StoragePathVariable @NotBlank String mapId,
             OutputMetaData outputMetaData)
             throws IOException;
 

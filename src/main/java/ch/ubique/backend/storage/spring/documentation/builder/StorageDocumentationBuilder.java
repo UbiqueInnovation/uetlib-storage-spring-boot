@@ -1,7 +1,7 @@
 package ch.ubique.backend.storage.spring.documentation.builder;
 
 import static ch.ubique.backend.storage.builder.StorageBuilderUtil.getStorageMethodsByAnnotation;
-import static ch.ubique.backend.storage.type.StorageObjectTypeResolver.getStorageObjectParameterType;
+import static ch.ubique.backend.storage.spring.documentation.builder.StorageObjectTypeResolver.getStorageObjectParameterType;
 
 import ch.ubique.backend.core.utils.StreamUtils;
 import ch.ubique.backend.storage.StorageMappingType;
