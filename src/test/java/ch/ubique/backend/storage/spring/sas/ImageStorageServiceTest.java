@@ -32,7 +32,7 @@ class ImageStorageServiceTest {
 
     private final FileSystemStorageClient storageClient = mock(FileSystemStorageClient.class);
     private final Duration sasExpiry = Duration.ofDays(3);
-    private final BlurHashClient blurHashClient = new BlurHashClient(10, "ub-backend-jvm-lib");
+    private final BlurHashClient blurHashClient = new BlurHashClient(10, "ubique-uetlib");
 
     private final ImageStorageService imageStorageService =
             new ImageStorageService(storageClient, sasExpiry, blurHashClient);
