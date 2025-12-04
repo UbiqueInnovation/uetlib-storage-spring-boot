@@ -20,8 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.*;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
@@ -86,22 +86,14 @@ class EnableStoragesDocumentationTest {
                 .andExpect(
                         content()
                                 .json(
-                                        "{\"type\":\"about:blank\",\"title\":\"Bad"
-                                                + " Request\",\"status\":400,\"detail\":\"this storage"
-                                                + " method exists only to document blob storage"
-                                                + " endpoints and must not be"
-                                                + " called\",\"instance\":\"/documentation/storage/files/5.json\",\"properties\":null}"));
+                                        "{\"detail\":\"this storage method exists only to document blob storage endpoints and must not be called\",\"instance\":\"/documentation/storage/files/5.json\",\"status\":400,\"title\":\"Bad Request\"}"));
 
         mockMvc.perform(get("/documentation/storage/files/38.png"))
                 .andExpect(status().isBadRequest())
                 .andExpect(
                         content()
                                 .json(
-                                        "{\"type\":\"about:blank\",\"title\":\"Bad"
-                                                + " Request\",\"status\":400,\"detail\":\"this storage"
-                                                + " method exists only to document blob storage"
-                                                + " endpoints and must not be"
-                                                + " called\",\"instance\":\"/documentation/storage/files/38.png\",\"properties\":null}"));
+                                        "{\"detail\":\"this storage method exists only to document blob storage endpoints and must not be called\",\"instance\":\"/documentation/storage/files/38.png\",\"status\":400,\"title\":\"Bad Request\"}"));
     }
 
     @Test
