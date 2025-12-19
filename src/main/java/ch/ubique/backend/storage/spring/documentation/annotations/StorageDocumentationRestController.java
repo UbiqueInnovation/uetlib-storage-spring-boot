@@ -13,4 +13,8 @@ import java.lang.annotation.*;
 @Retention(RUNTIME)
 @Documented
 @Inherited
-public @interface StorageDocumentationRestController {}
+public @interface StorageDocumentationRestController {
+
+    /** The storage class that is documented by this controller. */
+    Class<?> storage() default Void.class;
+}

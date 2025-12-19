@@ -49,7 +49,7 @@ class EnableStoragesDocumentationTest {
     }
 
     @Test
-    void testDocumentationControllerReturnType() {
+    void testDocumentationControllerReturnTypes() {
         final var testStorageDocumentationController =
                 applicationContext.getBean("annotatedTestStorageDocumentationController");
         final var controllerMethods =
