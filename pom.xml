@@ -7,7 +7,7 @@
     <parent>
         <groupId>ch.ubique</groupId>
         <artifactId>uetlib-parent</artifactId>
-        <version>2026.0.0-SNAPSHOT</version>
+        <version>2026.0.0-alpha.3</version>
     </parent>
 
     <artifactId>uetlib-storage-spring-boot</artifactId>
@@ -18,12 +18,12 @@
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-spring-boot</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <version>2.0.0-alpha.1</version>
         </dependency>
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-storage</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <version>2.0.0-alpha.1</version>
         </dependency>
 
         <dependency>
@@ -41,23 +41,18 @@
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-testcontainers-postgresql</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>ch.ubique</groupId>
-            <artifactId>uetlib-test</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <version>2.0.0-alpha.1</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
 
-    <distributionManagement>
+    <repositories>
         <repository>
-            <id>ubique-artifactory</id>
+            <id>osgeo</id>
+            <name>Open Source Geospatial Foundation Repository</name>
+            <url>https://repo.osgeo.org/repository/release/</url>
         </repository>
-    </distributionManagement>
+    </repositories>
 
     <scm>
         <url>https://github.com/UbiqueInnovation/uetlib-spring-boot</url>
