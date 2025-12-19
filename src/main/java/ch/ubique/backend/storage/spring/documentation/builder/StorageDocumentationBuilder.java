@@ -174,6 +174,7 @@ public final class StorageDocumentationBuilder<T> {
                         .annotateType(
                                 AnnotationDescription.Builder.ofType(
                                                 StorageDocumentationRestController.class)
+                                        .define("storage", storageInterface)
                                         .build())
                         .annotateType(
                                 AnnotationDescription.Builder.ofType(RestController.class).build())
