@@ -6,7 +6,7 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.Collection;

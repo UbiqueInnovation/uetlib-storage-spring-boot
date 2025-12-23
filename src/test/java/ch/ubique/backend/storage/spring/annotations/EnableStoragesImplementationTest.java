@@ -16,7 +16,7 @@ import ch.ubique.backend.storage.output.GZipOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
 import ch.ubique.backend.storage.spring.config.EnableStoragesTestConfig;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

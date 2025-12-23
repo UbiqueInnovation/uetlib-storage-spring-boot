@@ -3,7 +3,7 @@ package ch.ubique.backend.storage.spring.factory;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.builder.StorageBuilder;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jakarta.validation.constraints.NotNull;
 
