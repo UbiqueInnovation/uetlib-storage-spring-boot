@@ -13,7 +13,7 @@ import static java.util.stream.Collectors.toMap;
 
 import ch.ubique.backend.storage.spring.config.EnableStoragesTestConfig;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

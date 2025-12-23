@@ -1,9 +1,9 @@
 package ch.ubique.backend.storage.spring.annotations;
 
-import ch.ubique.backend.storage.annotations.CodeGenerationType;
-
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
+import ch.ubique.backend.storage.annotations.CodeGenerationType;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -24,7 +24,7 @@ public @interface Storage {
     String clientQualifier() default "";
 
     /**
-     * You may specify the {@link com.fasterxml.jackson.databind.ObjectMapper} explicitly, using a
+     * You may specify the {@link tools.jackson.databind.ObjectMapper} explicitly, using a
      * qualifier. If the storage does not serialize any outputs or if only one {@link
      * ch.ubique.backend.storage.StorageClient} bean is configured in the module, this property does
      * not need to be set.
