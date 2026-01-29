@@ -14,21 +14,28 @@
     <version>2.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
+    <properties>
+        <uetlib-testcontainers.version>2.0.0-alpha.2</uetlib-testcontainers.version>
+        <uetlib-core.version>2.0.0-alpha.17</uetlib-core.version>
+        <uetlib-storage.version>2.0.0-alpha.5</uetlib-storage.version>
+        <uetlib-spring-boot.version>2.0.0-alpha.37</uetlib-spring-boot.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-core</artifactId>
-            <version>2.0.0-alpha.17</version>
+            <version>${uetlib-core.version}</version>
         </dependency>
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-spring-boot</artifactId>
-            <version>2.0.0-alpha.37</version>
+            <version>${uetlib-spring-boot.version}</version>
         </dependency>
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-storage</artifactId>
-            <version>2.0.0-alpha.5</version>
+            <version>${uetlib-storage.version}</version>
         </dependency>
 
         <dependency>
@@ -46,7 +53,7 @@
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-testcontainers-postgresql</artifactId>
-            <version>2.0.0-alpha.2</version>
+            <version>${uetlib-testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
