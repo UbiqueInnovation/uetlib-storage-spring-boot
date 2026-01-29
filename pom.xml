@@ -60,6 +60,6 @@
     </repositories>
 
     <scm>
-        <url>https://github.com/UbiqueInnovation/uetlib-spring-boot</url>
+        <url>https://github.com/UbiqueInnovation/uetlib-storage-spring-boot</url>
     </scm>
 </project>
