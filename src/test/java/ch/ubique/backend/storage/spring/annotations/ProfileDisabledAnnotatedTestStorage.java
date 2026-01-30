@@ -6,6 +6,5 @@ import org.springframework.context.annotation.Profile;
 @Storage(
         clientQualifier = "testStorageClient",
         documentationBaseUrl = "documentation/profile",
-        basePath = "storage",
-        objectMapperQualifier = "testObjectMapper")
+        basePath = "storage")
 public interface ProfileDisabledAnnotatedTestStorage extends TestStorage {}
