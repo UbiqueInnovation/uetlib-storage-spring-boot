@@ -66,7 +66,7 @@
         </repository>
     </repositories>
 
-    <scm>
+    <scm child.scm.url.inherit.append.path="false">
         <url>https://github.com/UbiqueInnovation/uetlib-storage-spring-boot</url>
     </scm>
 </project>
