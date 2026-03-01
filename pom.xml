@@ -15,10 +15,10 @@
     <packaging>jar</packaging>
 
     <properties>
-        <uetlib-testcontainers.version>2.0.0</uetlib-testcontainers.version>
-        <uetlib-core.version>2.0.1</uetlib-core.version>
-        <uetlib-storage.version>2.0.0</uetlib-storage.version>
-        <uetlib-spring-boot.version>2.0.2</uetlib-spring-boot.version>
+        <uetlib-testcontainers.version>2.0.1</uetlib-testcontainers.version>
+        <uetlib-core.version>2.0.2</uetlib-core.version>
+        <uetlib-storage.version>2.0.1</uetlib-storage.version>
+        <uetlib-spring-boot.version>2.0.3</uetlib-spring-boot.version>
     </properties>
 
     <dependencies>
