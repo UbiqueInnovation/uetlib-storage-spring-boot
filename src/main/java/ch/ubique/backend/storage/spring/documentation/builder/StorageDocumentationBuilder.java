@@ -158,11 +158,27 @@ public final class StorageDocumentationBuilder<T> {
     public Class<Object> buildForDocumentationClass(
             final Class<T> storageInterface, final Storage storageAnnotation) {
         final var documentationClassName = storageInterface.getSimpleName() + "Documentation";
+        if (storageAnnotation.documentationBaseUrl().startsWith("/")) {
+            throw new IllegalArgumentException(
+                    MessageFormat.format(
+                            "Storage::documentationBaseUrl cannot start with ''/'' for storage {0}. Got: {1}",
+                            storageInterface.getSimpleName(),
+                            storageAnnotation.documentationBaseUrl()));
+        }
         if (storageAnnotation.basePath().startsWith("/")) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
                             "Storage::basePath cannot start with ''/'' for storage {0}. Got: {1}",
                             storageInterface.getSimpleName(), storageAnnotation.basePath()));
+        }
+        if (storageAnnotation.documentationBaseUrl().isBlank()
+                && storageAnnotation.basePath().isBlank()) {
+            throw new IllegalArgumentException(
+                    MessageFormat.format(
+                            "Storage::documentationBaseUrl and Storage::basePath cannot be blank for storage {0}. Got: {1} and {2}",
+                            storageInterface.getSimpleName(),
+                            storageAnnotation.documentationBaseUrl(),
+                            storageAnnotation.basePath()));
         }
         final var basePath =
                 Stream.of(storageAnnotation.documentationBaseUrl(), storageAnnotation.basePath())

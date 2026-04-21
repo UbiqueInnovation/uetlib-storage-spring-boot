@@ -34,13 +34,15 @@ public @interface Storage {
     /**
      * Most of the time, this corresponds to the blob container name. This value is only used in the
      * documentation and has no impact on the output path.
+     * <li>Cannot start with a {@code /} and startup will fail if it does.
+     * <li>This and {@link Storage#basePath()} cannot both be blank.
      */
-    String documentationBaseUrl() default "";
+    String documentationBaseUrl() default "insert-storage-base-url-here";
 
     /**
      * Base path for all output mappings (comparable to @RequestMapping at Controller class level).
-     *
-     * <p>Cannot start with a `/` and startup will fail if it does.
+     * <li>Cannot start with a {@code /} and startup will fail if it does.
+     * <li>This and {@link Storage#documentationBaseUrl()} cannot both be blank.
      */
     String basePath() default "";
 
