@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.0.2
+
+### Bugfixes
+
+- Changed default for `Storage::documentationBaseUrl` to not create empty strings for the `StorageDocumentationController` 
+
 ## 2.0.0
 
 ### Improvements
