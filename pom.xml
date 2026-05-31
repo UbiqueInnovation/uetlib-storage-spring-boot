@@ -7,7 +7,7 @@
     <parent>
         <groupId>ch.ubique</groupId>
         <artifactId>uetlib-parent</artifactId>
-        <version>2026.3.0</version>
+        <version>2026.05.0</version>
     </parent>
 
     <artifactId>uetlib-storage-spring-boot</artifactId>
@@ -16,7 +16,7 @@
 
     <properties>
         <uetlib-testcontainers.version>2.0.1</uetlib-testcontainers.version>
-        <uetlib-core.version>2.2.2</uetlib-core.version>
+        <uetlib-core.version>2.3.0</uetlib-core.version>
         <uetlib-storage.version>2.0.3</uetlib-storage.version>
         <uetlib-spring-boot.version>2.1.1</uetlib-spring-boot.version>
     </properties>
