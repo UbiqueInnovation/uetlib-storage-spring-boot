@@ -2,8 +2,6 @@ package ch.ubique.backend.storage.spring.annotations.utils;
 
 import com.pivovarit.function.exception.WrappedException;
 
-import jakarta.validation.constraints.NotNull;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
@@ -25,15 +23,7 @@ public final class EnableAnnotationUtils {
             final Environment environment,
             final ResourceLoader resourceLoader,
             final Class<? extends Annotation> annotationToFind) {
-        final var scanner =
-                new ClassPathScanningCandidateComponentProvider(false, environment) {
-                    @Override
-                    protected boolean isCandidateComponent(
-                            final @NotNull AnnotatedBeanDefinition beanDefinition) {
-                        return beanDefinition.getMetadata().isIndependent()
-                                && !beanDefinition.getMetadata().isAnnotation();
-                    }
-                };
+        final var scanner = new AnnotatedTypeScanner(environment);
         scanner.setResourceLoader(resourceLoader);
         scanner.addIncludeFilter(new AnnotationTypeFilter(annotationToFind));
         return scanner;
@@ -50,9 +40,7 @@ public final class EnableAnnotationUtils {
         }
 
         return Stream.concat(
-                        Arrays.stream(basePackageClassesAttribute)
-                                .filter(Objects::nonNull)
-                                .map(Class::getPackageName),
+                        Arrays.stream(basePackageClassesAttribute).map(Class::getPackageName),
                         Arrays.stream(basePackagesAttribute).filter(StringUtils::isNotBlank))
                 .collect(Collectors.toSet());
     }
@@ -62,6 +50,19 @@ public final class EnableAnnotationUtils {
             return Class.forName(className);
         } catch (final ClassNotFoundException e) {
             throw new WrappedException(e);
+        }
+    }
+
+    private static class AnnotatedTypeScanner extends ClassPathScanningCandidateComponentProvider {
+
+        AnnotatedTypeScanner(final Environment environment) {
+            super(false, environment);
+        }
+
+        @Override
+        protected boolean isCandidateComponent(final AnnotatedBeanDefinition beanDefinition) {
+            return beanDefinition.getMetadata().isIndependent()
+                    && !beanDefinition.getMetadata().isAnnotation();
         }
     }
 }
