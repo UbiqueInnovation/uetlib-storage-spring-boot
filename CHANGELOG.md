@@ -1,10 +1,18 @@
 # CHANGELOG
 
+## 2.1.0
+
+### Improvements
+
+- Null-marked it all
+- Updated `uetlib` dependecies to their newest versions
+
 ## 2.0.2
 
 ### Bugfixes
 
-- Changed default for `Storage::documentationBaseUrl` to not create empty strings for the `StorageDocumentationController` 
+- Changed default for `Storage::documentationBaseUrl` to not create empty strings for the
+  `StorageDocumentationController`
 
 ## 2.0.0
 

@@ -1,13 +1,12 @@
 package ch.ubique.backend.storage.spring.factory;
 
+import static java.util.Objects.requireNonNull;
+
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.builder.StorageBuilder;
 
-import tools.jackson.databind.ObjectMapper;
-
-import jakarta.validation.constraints.NotNull;
-
 import org.apache.commons.lang3.StringUtils;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
@@ -15,16 +14,18 @@ import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 
+import tools.jackson.databind.ObjectMapper;
+
 public final class StorageFactoryBean<T>
         implements FactoryBean<T>, InitializingBean, BeanFactoryAware {
 
     private final Class<T> type;
 
-    private DefaultListableBeanFactory beanFactory;
-    private String clientQualifier;
-    private String objectMapperQualifier;
-    private String documentationBaseUrl;
-    private String basePath;
+    private @Nullable DefaultListableBeanFactory beanFactory;
+    private @Nullable String clientQualifier;
+    private @Nullable String objectMapperQualifier;
+    private @Nullable String documentationBaseUrl;
+    private @Nullable String basePath;
 
     public StorageFactoryBean(final Class<T> type) {
         this.type = type;
@@ -32,20 +33,22 @@ public final class StorageFactoryBean<T>
 
     @Override
     public T getObject() {
+        final var bf = requireNonNull(beanFactory);
+
         final var storageClient =
                 StringUtils.isNotBlank(clientQualifier)
-                        ? beanFactory.getBean(clientQualifier, StorageClient.class)
-                        : beanFactory.getBean(StorageClient.class);
+                        ? bf.getBean(clientQualifier, StorageClient.class)
+                        : bf.getBean(StorageClient.class);
         final var objectMapper =
                 StringUtils.isNotBlank(objectMapperQualifier)
-                        ? beanFactory.getBean(objectMapperQualifier, ObjectMapper.class)
-                        : beanFactory.getBean(ObjectMapper.class);
+                        ? bf.getBean(objectMapperQualifier, ObjectMapper.class)
+                        : bf.getBean(ObjectMapper.class);
         return StorageBuilder.builder(type)
-                .classLoader(beanFactory.getBeanClassLoader())
+                .classLoader(requireNonNull(bf.getBeanClassLoader()))
                 .storageClient(storageClient)
                 .objectMapper(objectMapper)
-                .basePath(basePath)
-                .documentationBaseUrl(documentationBaseUrl)
+                .basePath(requireNonNull(basePath))
+                .documentationBaseUrl(requireNonNull(documentationBaseUrl))
                 .build();
     }
 
@@ -58,7 +61,7 @@ public final class StorageFactoryBean<T>
     public void afterPropertiesSet() {}
 
     @Override
-    public void setBeanFactory(@NotNull final BeanFactory beanFactory) throws BeansException {
+    public void setBeanFactory(final BeanFactory beanFactory) throws BeansException {
         this.beanFactory = (DefaultListableBeanFactory) beanFactory;
     }
 

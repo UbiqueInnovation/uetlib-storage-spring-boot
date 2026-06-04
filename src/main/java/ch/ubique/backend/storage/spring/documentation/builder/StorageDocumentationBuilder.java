@@ -3,6 +3,8 @@ package ch.ubique.backend.storage.spring.documentation.builder;
 import static ch.ubique.backend.storage.builder.StorageBuilderUtil.getStorageMethodsByAnnotation;
 import static ch.ubique.backend.storage.spring.documentation.builder.StorageObjectTypeResolver.getStorageObjectParameterType;
 
+import static java.util.Objects.requireNonNull;
+
 import ch.ubique.backend.core.utils.StreamUtils;
 import ch.ubique.backend.storage.StorageMappingType;
 import ch.ubique.backend.storage.annotations.CodeGenerationType;
@@ -39,7 +41,6 @@ import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -55,7 +56,7 @@ public final class StorageDocumentationBuilder<T> {
 
     public StorageDocumentationBuilder(
             final ConfigurableBeanFactory beanFactory, final Environment environment) {
-        this.beanClassLoader = beanFactory.getBeanClassLoader();
+        this.beanClassLoader = requireNonNull(beanFactory.getBeanClassLoader());
         this.environment = environment;
     }
 
@@ -144,7 +145,7 @@ public final class StorageDocumentationBuilder<T> {
     private static void writeClassToFileSystem(
             final DynamicType.Unloaded<?> generatedClass, final Environment environment) {
         final var springApplicationName =
-                Objects.requireNonNull(environment.getProperty("spring.application.name"));
+                requireNonNull(environment.getProperty("spring.application.name"));
         final var tempFile = Path.of("/tmp/bytebuddy/").resolve(springApplicationName);
         try {
             generatedClass.saveIn(tempFile.toFile());
