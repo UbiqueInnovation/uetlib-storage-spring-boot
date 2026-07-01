@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import static java.util.Map.entry;
 import static java.util.Map.ofEntries;
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.*;
 
 import ch.ubique.backend.storage.spring.config.EnableStoragesTestConfig;
 
@@ -29,8 +29,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.util.Arrays;
+import java.util.List;
 
 @WebMvcTest
 @ActiveProfiles("test")
@@ -54,22 +56,33 @@ class EnableStoragesDocumentationTest {
                 applicationContext.getBean("annotatedTestStorageDocumentationController");
         final var controllerMethods =
                 Arrays.stream(testStorageDocumentationController.getClass().getDeclaredMethods())
+                        // filter out synthetic methods like $jacocoInit
+                        .filter(method -> !method.isSynthetic())
+                        .filter(method -> Modifier.isPublic(method.getModifiers()))
                         .collect(
-                                toMap(
+                                groupingBy(
                                         Method::getName,
-                                        method ->
-                                                ((ParameterizedType) method.getGenericReturnType())
-                                                        .getActualTypeArguments()[0]
-                                                                .getTypeName()));
+                                        mapping(
+                                                method ->
+                                                        ((ParameterizedType)
+                                                                        method
+                                                                                .getGenericReturnType())
+                                                                .getActualTypeArguments()[0]
+                                                                        .getTypeName(),
+                                                toList())));
         assertEquals(
                 ofEntries(
-                        entry("saveImage", "byte[]"),
-                        entry("saveImageByteOutput", "byte[]"),
-                        entry("saveJson", "ch.ubique.backend.storage.spring.annotations.TestUser"),
-                        entry("saveMap", "java.util.Map<java.lang.Integer, java.lang.Object>"),
+                        entry("saveImage", List.of("byte[]")),
+                        entry("saveImageByteOutput", List.of("byte[]")),
+                        entry(
+                                "saveJson",
+                                List.of("ch.ubique.backend.storage.spring.annotations.TestUser")),
+                        entry(
+                                "saveMap",
+                                List.of("java.util.Map<java.lang.Integer, java.lang.Object>")),
                         entry(
                                 "saveJsonOutput",
-                                "ch.ubique.backend.storage.spring.annotations.TestUser")),
+                                List.of("ch.ubique.backend.storage.spring.annotations.TestUser"))),
                 controllerMethods);
     }
 
