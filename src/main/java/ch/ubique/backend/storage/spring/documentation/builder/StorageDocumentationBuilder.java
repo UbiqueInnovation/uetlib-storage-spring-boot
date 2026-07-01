@@ -4,6 +4,7 @@ import static ch.ubique.backend.storage.builder.StorageBuilderUtil.getStorageMet
 import static ch.ubique.backend.storage.spring.documentation.builder.StorageObjectTypeResolver.getStorageObjectParameterType;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.groupingBy;
 
 import ch.ubique.backend.core.utils.StreamUtils;
 import ch.ubique.backend.storage.StorageMappingType;
@@ -39,10 +40,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -76,9 +79,23 @@ public final class StorageDocumentationBuilder<T> {
                                                 .generateDocumentationCode())
                         .toList();
 
-        final var outputStorageMethodsByMappingPaths =
+        final var outputMethodNames =
                 outputMethodInfos.stream()
-                        .collect(Collectors.groupingBy(StorageMethodInfo::mappingPath));
+                        .map(StorageMethodInfo::storageMethod)
+                        .map(Method::getName)
+                        .collect(groupingBy(Function.identity()));
+        final var duplicateMethodNames =
+                outputMethodNames.entrySet().stream()
+                        .filter(e -> e.getValue().size() > 1)
+                        .map(Map.Entry::getKey)
+                        .toList();
+        if (!duplicateMethodNames.isEmpty()) {
+            throw new IllegalStateException(
+                    "Duplicate output method names found, not supported: " + duplicateMethodNames);
+        }
+
+        final var outputStorageMethodsByMappingPaths =
+                outputMethodInfos.stream().collect(groupingBy(StorageMethodInfo::mappingPath));
         outputStorageMethodsByMappingPaths.entrySet().stream()
                 .filter(e -> e.getValue().size() > 1)
                 .forEach(
