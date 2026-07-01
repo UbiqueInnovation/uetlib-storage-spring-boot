@@ -6,6 +6,9 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
 
+import java.util.Objects;
+import org.jspecify.annotations.Nullable;
+
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -55,16 +58,15 @@ public final class TestStorageReferenceImplementation implements TestStorage {
     }
 
     @Override
-    public void saveImageByteOutput(final ByteOutput byteOutput, final String fileId) throws IOException {
+    public void saveImageByteOutput(final ByteOutput byteOutput, final String fileId)
+            throws IOException {
         storageClient.write(
-                byteOutput.gZip(),
-                "files/{fileId}.png".replace("{fileId}", fileId),
-                null);
+                byteOutput.gZip(), "files/{fileId}.png".replace("{fileId}", fileId), null);
     }
 
     @Override
     public void saveJson(
-            final TestUser json, final String jsonId, final OutputMetaData outputMetaData)
+            final TestUser json, final String jsonId, final @Nullable OutputMetaData outputMetaData)
             throws IOException {
         storageClient.write(
                 new JsonOutput<>(json, objectMapper).gZip(),
@@ -73,8 +75,10 @@ public final class TestStorageReferenceImplementation implements TestStorage {
     }
 
     @Override
-    public void saveGenericMap(
-            final Map<Integer, String> map, final String mapId, final OutputMetaData outputMetaData)
+    public void saveMap(
+            final Map<Integer, Object> map,
+            final String mapId,
+            final @Nullable OutputMetaData outputMetaData)
             throws IOException {
         storageClient.write(
                 new JsonOutput<>(map, objectMapper),
@@ -84,7 +88,9 @@ public final class TestStorageReferenceImplementation implements TestStorage {
 
     @Override
     public void saveJsonOutput(
-            final JsonOutput<TestUser> jsonOutput, final String jsonId, final OutputMetaData outputMetaData)
+            final JsonOutput<TestUser> jsonOutput,
+            final String jsonId,
+            final @Nullable OutputMetaData outputMetaData)
             throws IOException {
         storageClient.write(
                 jsonOutput.gZip(),

@@ -27,6 +27,7 @@ import net.bytebuddy.implementation.Implementation;
 import net.bytebuddy.implementation.MethodDelegation;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -37,6 +38,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.List;
@@ -158,7 +160,15 @@ public final class StorageDocumentationBuilder<T> {
 
     public Class<Object> buildForDocumentationClass(
             final Class<T> storageInterface, final Storage storageAnnotation) {
-        final var documentationClassName = storageInterface.getSimpleName() + "Documentation";
+        final var documentationClassName = storageInterface.getCanonicalName() + "Documentation";
+
+        final var loadedClassIfExists = loadClassIfExists(documentationClassName);
+        if (loadedClassIfExists != null) {
+            // 1. Try to find the class if it was already created in a previous run/context refresh
+            return loadedClassIfExists;
+        }
+        // 2. Class doesn't exist yet, proceed with Byte Buddy generation
+
         if (storageAnnotation.documentationBaseUrl().startsWith("/")) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
@@ -205,20 +215,38 @@ public final class StorageDocumentationBuilder<T> {
         final var annotatedMethodsByAnnotation = getStorageMethodsByAnnotation(storageInterface);
         final var unloaded =
                 buildDocumentationMethods(builder, annotatedMethodsByAnnotation).make();
-        return writeAndLoadClass(unloaded);
+        return writeAndLoadClass(storageInterface, unloaded);
+    }
+
+    @Nullable
+    private Class<Object> loadClassIfExists(final String documentationClassName) {
+        try {
+            //noinspection unchecked
+            return (Class<Object>) Class.forName(documentationClassName, false, beanClassLoader);
+        } catch (final ClassNotFoundException e) {
+            return null;
+        }
     }
 
     @SuppressWarnings("unchecked")
-    private <U> Class<U> writeAndLoadClass(final DynamicType.Unloaded<U> unloaded) {
-        // log the classes to the filesystem of trace logging is enabled :D
+    private <U> Class<U> writeAndLoadClass(
+            final Class<T> storageInterface, final DynamicType.Unloaded<U> unloaded) {
+        // log the classes to the filesystem if trace logging is enabled
         if (logger.isTraceEnabled()) {
             writeClassToFileSystem(unloaded, environment);
         }
 
         try {
+            final var packageLookup =
+                    MethodHandles.privateLookupIn(storageInterface, MethodHandles.lookup());
             return (Class<U>)
-                    unloaded.load(beanClassLoader, ClassLoadingStrategy.Default.INJECTION)
+                    unloaded.load(
+                                    beanClassLoader,
+                                    ClassLoadingStrategy.UsingLookup.of(packageLookup))
                             .getLoaded();
+        } catch (final IllegalAccessException e) {
+            // not allowed to load that class
+            throw new WrappedException(e);
         } catch (final IllegalStateException e) {
             // in case the class is already loaded, just return the loaded class
             final var classToLoad = unloaded.getTypeDescription().getCanonicalName();

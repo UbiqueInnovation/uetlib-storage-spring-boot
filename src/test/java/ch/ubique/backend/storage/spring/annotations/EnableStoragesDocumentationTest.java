@@ -66,9 +66,7 @@ class EnableStoragesDocumentationTest {
                         entry("saveImage", "byte[]"),
                         entry("saveImageByteOutput", "byte[]"),
                         entry("saveJson", "ch.ubique.backend.storage.spring.annotations.TestUser"),
-                        entry(
-                                "saveGenericMap",
-                                "java.util.Map<java.lang.Integer, java.lang.String>"),
+                        entry("saveMap", "java.util.Map<java.lang.Integer, java.lang.Object>"),
                         entry(
                                 "saveJsonOutput",
                                 "ch.ubique.backend.storage.spring.annotations.TestUser")),

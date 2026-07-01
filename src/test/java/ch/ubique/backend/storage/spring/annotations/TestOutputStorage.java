@@ -12,6 +12,7 @@ import ch.ubique.backend.storage.output.JsonOutput;
 
 import jakarta.validation.constraints.NotBlank;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.event.Level;
 
 import java.io.IOException;
@@ -41,17 +42,17 @@ public interface TestOutputStorage {
     void saveJson(
             @StorageObject TestUser json,
             @StoragePathVariable final String jsonId,
-            OutputMetaData outputMetaData)
+            @Nullable OutputMetaData outputMetaData)
             throws IOException;
 
     @OutputMapping(
             path = "files/maps/{mapId}.json",
             contentType = "application/json",
             logLevel = Level.TRACE)
-    void saveGenericMap(
-            @StorageObject Map<Integer, String> map,
+    void saveMap(
+            @StorageObject Map<Integer, Object> map,
             @StoragePathVariable @NotBlank String mapId,
-            OutputMetaData outputMetaData)
+            @Nullable OutputMetaData outputMetaData)
             throws IOException;
 
     @OutputMapping(
@@ -62,6 +63,6 @@ public interface TestOutputStorage {
     void saveJsonOutput(
             @StorageObject JsonOutput<TestUser> jsonOutput,
             @StoragePathVariable final String jsonId,
-            OutputMetaData outputMetaData)
+            @Nullable OutputMetaData outputMetaData)
             throws IOException;
 }
