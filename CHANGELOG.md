@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.2.0
+
+### Improvements
+
+- Java 26 Runtime for storage documentation 
+
 ## 2.1.0
 
 ### Improvements
