@@ -9,14 +9,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.IMAGE_PNG_VALUE;
 
+import static java.util.Map.entry;
+import static java.util.Map.ofEntries;
+
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.GZipOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
 import ch.ubique.backend.storage.spring.config.EnableStoragesTestConfig;
-
-import tools.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,9 +35,13 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Set;
 
 @ActiveProfiles("test")
@@ -114,6 +119,7 @@ class EnableStoragesImplementationTest {
         assertNotNull(referenceImplementation);
 
         final var testUser = new TestUser(32, "Student", "Seong-Hyeon Lebogang");
+
         annotatedTestStorage.saveJson(testUser, "32", null);
         verify(storageClient)
                 .write(
@@ -124,6 +130,34 @@ class EnableStoragesImplementationTest {
                 testUser,
                 objectMapper.readValue(
                         storageClient.read("storage/files/32.json.gz", true), TestUser.class));
+
+        annotatedTestStorage.saveMap(Map.of(32, testUser), "32", null);
+        verify(storageClient)
+                .write(
+                        new GZipOutput(new JsonOutput<>(Map.of(32, testUser), objectMapper)),
+                        "storage/files/maps/32.json",
+                        null);
+        final var testUserMap =
+                Map.of(
+                        32,
+                        ofEntries(
+                                entry("userId", 32),
+                                entry("title", "Student"),
+                                entry("name", "Seong-Hyeon Lebogang")));
+        final var actualTestUserMap =
+                objectMapper.readValue(
+                        storageClient.read("storage/files/maps/32.json", true), new TypeReference<Map<Integer, Object>>() {});
+        assertEquals(testUserMap, actualTestUserMap);
+
+        Map.of(
+                        32,
+                        ofEntries(
+                                entry("userId", 32),
+                                entry("title", "Student"),
+                                entry("name", "Seong-Hyeon Lebogang")))
+                .equals(
+                        objectMapper.readValue(
+                                storageClient.read("storage/files/maps/32.json", true), Map.class));
 
         annotatedTestStorage.saveJsonOutput(new JsonOutput<>(testUser, objectMapper), "32", null);
         verify(storageClient)
