@@ -16,7 +16,7 @@
 
     <properties>
         <uetlib-core.version>2.3.3</uetlib-core.version>
-        <uetlib-spring-boot.version>2.2.1</uetlib-spring-boot.version>
+        <uetlib-spring-boot.version>2.2.2</uetlib-spring-boot.version>
         <uetlib-storage.version>2.2.0</uetlib-storage.version>
         <uetlib-testcontainers.version>2.1.0</uetlib-testcontainers.version>
 
