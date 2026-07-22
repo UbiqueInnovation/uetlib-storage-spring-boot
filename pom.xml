@@ -15,44 +15,40 @@
     <packaging>jar</packaging>
 
     <properties>
-        <uetlib-core.version>2.3.3</uetlib-core.version>
-        <uetlib-spring-boot.version>2.2.2</uetlib-spring-boot.version>
-        <uetlib-storage.version>2.2.0</uetlib-storage.version>
-        <uetlib-testcontainers.version>2.1.0</uetlib-testcontainers.version>
-
         <!-- westemeyer version config -->
         <westemeyer-version-package-name>ch.ubique.backend.storage.spring.boot.version</westemeyer-version-package-name>
+
         <!-- Sonar -->
         <sonar.projectName>uetlib-storage-spring-boot</sonar.projectName>
         <sonar.coverage.module>uetlib-storage-spring-boot</sonar.coverage.module>
     </properties>
 
-        <dependencyManagement>
+    <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>ch.ubique</groupId>
                 <artifactId>uetlib-testcontainers-postgresql</artifactId>
-                <version>${uetlib-testcontainers.version}</version>
+                <version>2.1.0</version>
             </dependency>
             <dependency>
                 <groupId>ch.ubique</groupId>
                 <artifactId>uetlib-storage</artifactId>
-                <version>${uetlib-storage.version}</version>
+                <version>2.2.0</version>
             </dependency>
             <dependency>
                 <groupId>ch.ubique</groupId>
                 <artifactId>uetlib-spring-boot</artifactId>
-                <version>${uetlib-spring-boot.version}</version>
+                <version>2.2.2</version>
             </dependency>
             <dependency>
                 <groupId>ch.ubique</groupId>
                 <artifactId>uetlib-core</artifactId>
-                <version>${uetlib-core.version}</version>
+                <version>2.3.3</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
 
-<dependencies>
+    <dependencies>
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-core</artifactId>
