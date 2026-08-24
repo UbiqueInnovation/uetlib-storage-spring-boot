@@ -7,22 +7,13 @@
     <parent>
         <groupId>ch.ubique</groupId>
         <artifactId>uetlib-parent</artifactId>
-        <version>2026.8.0</version>
+        <version>2026.8.1</version>
         <relativePath/>
     </parent>
 
     <artifactId>uetlib-storage-spring-boot</artifactId>
     <version>3.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
-
-    <properties>
-        <!-- westemeyer version config -->
-        <westemeyer-version-package-name>ch.ubique.backend.storage.spring.boot.version</westemeyer-version-package-name>
-
-        <!-- Sonar -->
-        <sonar.projectName>uetlib-storage-spring-boot</sonar.projectName>
-        <sonar.coverage.module>uetlib-storage-spring-boot</sonar.coverage.module>
-    </properties>
 
     <dependencyManagement>
         <dependencies>
