@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.2.3
+
+- update uetlib-storage `2.3.2` -> `2.3.4`
+
 ## 2.2.2
 
 - latest uetlib parent
@@ -14,7 +18,7 @@
 
 ### Improvements
 
-- Java 26 Runtime for storage documentation 
+- Java 26 Runtime for storage documentation
 
 ## 2.1.0
 
@@ -52,4 +56,3 @@
 ## 1.0.0
 
 First release.
-
