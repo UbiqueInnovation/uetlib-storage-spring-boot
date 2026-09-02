@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.2.4
+- update uetlib-storage `2.3.4` -> `2.3.5`
+- latest uetlib parent
+- latest uetlib testcontainers postgresql
+
 ## 2.2.3
 
 - update uetlib-storage `2.3.2` -> `2.3.4`
