@@ -4,6 +4,7 @@ import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import ch.ubique.backend.storage.annotations.CodeGenerationType;
+
 import org.springframework.context.annotation.Import;
 import org.springframework.core.annotation.AliasFor;
 
@@ -23,13 +24,14 @@ public @interface EnableStorages {
 
     /**
      * Alias for {@link #basePackages()}
+     *
      * @return the array of 'basePackages'.
      */
     @AliasFor("basePackages")
     String[] value() default {};
 
     /**
-     * <p>Base packages to scan for annotated components.
+     * Base packages to scan for annotated components.
      *
      * <p>Use {@link #basePackageClasses()} for a type-safe alternative to String-based package
      * names.
