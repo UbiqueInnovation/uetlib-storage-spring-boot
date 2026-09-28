@@ -6,7 +6,6 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
 
-import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 import tools.jackson.databind.ObjectMapper;
