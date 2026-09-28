@@ -146,7 +146,8 @@ class EnableStoragesImplementationTest {
                                 entry("name", "Seong-Hyeon Lebogang")));
         final var actualTestUserMap =
                 objectMapper.readValue(
-                        storageClient.read("storage/files/maps/32.json", true), new TypeReference<Map<Integer, Object>>() {});
+                        storageClient.read("storage/files/maps/32.json", true),
+                        new TypeReference<Map<Integer, Object>>() {});
         assertEquals(testUserMap, actualTestUserMap);
 
         Map.of(
