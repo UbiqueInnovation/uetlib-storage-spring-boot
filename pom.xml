@@ -65,6 +65,13 @@
             <artifactId>byte-buddy</artifactId>
         </dependency>
 
+        <!-- Only needed by the explicitly configured S3 proxy adapter. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- For testing storage clients -->
         <dependency>
             <groupId>ch.ubique</groupId>

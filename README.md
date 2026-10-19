@@ -50,6 +50,31 @@ new LocalStorageProxyClient(root, Map.of("custom", MediaType.parseMediaType("app
 Servlet context paths, nested keys and URL-encoded filenames are handled by Spring MVC. The
 proxy does not implement range requests, uploads or per-user authorization.
 
+### S3 and compatible providers
+
+Keep your existing SDK client configuration (endpoint, region, credentials and path-style access
+for providers such as Cloudflare R2), then provide the adapter as the proxy client bean:
+
+```java
+@Bean
+@Profile("!local-output")
+StorageProxyClient storageProxyClient(S3Client s3) {
+    return new S3StorageProxyClient(s3, "my-bucket");
+}
+```
+
+The application owns and closes the SDK client. There is no automatic credential, bucket or
+profile selection. Objects are streamed through one conditional GET, with the supplied
+If-None-Match forwarded only when present. Metadata and body come from that same response.
+The response preserves content type/length, encoding, disposition, cache control, ETag and
+Last-Modified (as an HTTP date). S3 user metadata is exposed with its `x-amz-meta-` prefix so it
+cannot override HTTP framing or cache headers.
+
+An unchanged object returns 304 without a body; only cache validator headers are forwarded
+from provider errors. A missing object returns 404. Other SDK/provider failures return 502,
+so an outage or bad credentials do not look like missing content. The adapter does not implement
+range requests, retries beyond those configured on the SDK, or per-user authorization.
+
 ### Migrating existing applications
 
 The controllers in Ridian and SchweizMobil both use `/v1/storage/proxy/**` and manually remove
@@ -59,5 +84,8 @@ for other profiles.
 
 To migrate the local path, replace the application's controller/local proxy client with the
 configuration above and reuse its existing local-output root. Keep the application's profile
-selection and security configuration. Leave any remote proxy implementation registered through
-the shared `StorageProxyClient` contract until its provider adapter is migrated.
+selection and security configuration. For Ridian's remote path, replace its local S3 adapter with `S3StorageProxyClient`
+and reuse the existing `S3Client` and bucket configuration. The shared adapter removes the old HEAD-before-GET
+round trip and uses HTTP dates for Last-Modified. Unlike the old adapter, custom metadata retains
+its `x-amz-meta-` prefix and provider failures other than 404 return 502. Update consumers of
+unprefixed custom metadata headers when migrating.
