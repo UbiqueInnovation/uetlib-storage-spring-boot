@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## Unreleased
+
+- Add an opt-in storage HTTP proxy with a configurable path and shared client contract.
+- Extract filesystem streaming and conditional responses from the Ridian/SchweizMobil backends,
+  with root/symlink confinement and configurable media types.
+
 ## 2.2.4
 - update uetlib-storage `2.3.4` -> `2.3.5`
 - latest uetlib parent
