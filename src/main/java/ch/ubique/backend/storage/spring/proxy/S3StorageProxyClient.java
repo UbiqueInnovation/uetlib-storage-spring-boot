@@ -1,5 +1,7 @@
 package ch.ubique.backend.storage.spring.proxy;
 
+import static ch.ubique.backend.core.utils.StringUtils.requireNonBlank;
+
 import static java.util.Objects.requireNonNull;
 
 import org.slf4j.Logger;
@@ -35,10 +37,7 @@ public class S3StorageProxyClient implements StorageProxyClient {
     /** The caller owns the SDK client's configuration and lifecycle. */
     public S3StorageProxyClient(final S3Client s3, final String bucket) {
         this.s3 = requireNonNull(s3);
-        if (bucket.isBlank()) {
-            throw new IllegalArgumentException("bucket must not be blank");
-        }
-        this.bucket = bucket;
+        this.bucket = requireNonBlank(bucket, "bucket must not be blank");
     }
 
     @Override

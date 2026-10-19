@@ -1,12 +1,11 @@
 # CHANGELOG
 
-## Unreleased
-
-- Add an S3/R2 proxy adapter using a single conditional GET, streamed bodies and HTTP metadata.
+## 2.3.0
 
 - Add an opt-in storage HTTP proxy with a configurable path and shared client contract.
 - Extract filesystem streaming and conditional responses from the Ridian/SchweizMobil backends,
   with root/symlink confinement and configurable media types.
+- Add an S3/R2 proxy adapter using a single conditional GET, streamed bodies and HTTP metadata.
 
 ## 2.2.4
 - update uetlib-storage `2.3.4` -> `2.3.5`
