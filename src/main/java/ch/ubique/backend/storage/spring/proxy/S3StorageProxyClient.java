@@ -51,8 +51,6 @@ public class S3StorageProxyClient implements StorageProxyClient {
             request.ifNoneMatch(eTag);
         }
         try {
-            // One request keeps metadata and bytes consistent if an object is replaced
-            // concurrently.
             final var stream = s3.getObject(request.build());
             try {
                 return ResponseEntity.ok()
@@ -85,6 +83,10 @@ public class S3StorageProxyClient implements StorageProxyClient {
 
     private static HttpHeaders headers(final GetObjectResponse response) {
         final var headers = new HttpHeaders();
+
+        // set metadata first so the later ones override any clashes that might occur
+        headers.setAll(response.metadata());
+
         headers.set(HttpHeaders.CACHE_CONTROL, response.cacheControl());
         headers.set(HttpHeaders.CONTENT_DISPOSITION, response.contentDisposition());
         headers.set(HttpHeaders.CONTENT_ENCODING, response.contentEncoding());
@@ -96,8 +98,6 @@ public class S3StorageProxyClient implements StorageProxyClient {
         if (response.lastModified() != null) {
             headers.setLastModified(response.lastModified());
         }
-        // Namespacing prevents user metadata from overriding response framing/cache headers.
-        response.metadata().forEach((name, value) -> headers.set("x-amz-meta-" + name, value));
         return headers;
     }
 
