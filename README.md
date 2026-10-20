@@ -67,8 +67,9 @@ The application owns and closes the SDK client. There is no automatic credential
 profile selection. Objects are streamed through one conditional GET, with the supplied
 If-None-Match forwarded only when present. Metadata and body come from that same response.
 The response preserves content type/length, encoding, disposition, cache control, ETag and
-Last-Modified (as an HTTP date). S3 user metadata is exposed with its `x-amz-meta-` prefix so it
-cannot override HTTP framing or cache headers.
+Last-Modified (as an HTTP date). S3 user metadata is exposed as unprefixed headers. Standard
+response headers are applied afterwards and take precedence over metadata with the same name,
+including Content-Length.
 
 An unchanged object returns 304 without a body; only cache validator headers are forwarded
 from provider errors. A missing object returns 404. Other SDK/provider failures return 502,
@@ -86,6 +87,5 @@ To migrate the local path, replace the application's controller/local proxy clie
 configuration above and reuse its existing local-output root. Keep the application's profile
 selection and security configuration. For Ridian's remote path, replace its local S3 adapter with `S3StorageProxyClient`
 and reuse the existing `S3Client` and bucket configuration. The shared adapter removes the old HEAD-before-GET
-round trip and uses HTTP dates for Last-Modified. Unlike the old adapter, custom metadata retains
-its `x-amz-meta-` prefix and provider failures other than 404 return 502. Update consumers of
-unprefixed custom metadata headers when migrating.
+round trip and uses HTTP dates for Last-Modified. Custom metadata keeps its unprefixed header
+names, with standard response headers taking precedence. Provider failures other than 404 return 502.

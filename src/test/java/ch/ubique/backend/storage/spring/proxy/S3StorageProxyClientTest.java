@@ -3,6 +3,7 @@ package ch.ubique.backend.storage.spring.proxy;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import ch.ubique.backend.core.http.header.HttpHeader;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -28,9 +29,9 @@ class S3StorageProxyClientTest {
 
     @Test
     void streamsOneConditionalGetWithItsOwnMetadata() throws Exception {
-        var source = spy(new ByteArrayInputStream(new byte[] {1, 2, 3}));
-        var modified = Instant.parse("2026-10-19T12:00:00Z");
-        var metadata =
+        final var source = spy(new ByteArrayInputStream(new byte[] {1, 2, 3}));
+        final var modified = Instant.parse("2026-10-19T12:00:00Z");
+        final var metadata =
                 GetObjectResponse.builder()
                         .contentLength(3L)
                         .contentType("application/vnd.ant.fit")
@@ -44,9 +45,9 @@ class S3StorageProxyClientTest {
         when(s3.getObject(any(GetObjectRequest.class)))
                 .thenReturn(
                         new ResponseInputStream<>(metadata, AbortableInputStream.create(source)));
-        var result = client.proxyStorageRequest("W/\"old\", \"other\"", "v1/land/course.fit");
+        final var result = client.proxyStorageRequest("W/\"old\", \"other\"", "v1/land/course.fit");
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
-        var headers = result.getHeaders();
+        final var headers = result.getHeaders();
         assertThat(headers.getContentLength()).isEqualTo(3);
         assertThat(headers.getLastModified()).isEqualTo(modified.toEpochMilli());
         assertThat(headers.getFirst(HttpHeaders.LAST_MODIFIED)).contains("GMT");
@@ -55,9 +56,12 @@ class S3StorageProxyClientTest {
         assertThat(headers.getETag()).isEqualTo("\"version\"");
         assertThat(headers.getFirst(HttpHeaders.CONTENT_DISPOSITION)).contains("course.fit");
         assertThat(headers.getFirst(HttpHeaders.CONTENT_ENCODING)).isEqualTo("gzip");
-        assertThat(headers.getFirst("x-amz-meta-next-refresh")).isEqualTo("60");
-        assertThat(headers.getFirst("x-amz-meta-content-length")).isEqualTo("999");
-        try (var stream = result.getBody().getInputStream()) {
+        assertThat(headers.getFirst(HttpHeader.NEXT_REFRESH.value())).isEqualTo("60");
+
+        // actual content-length overrides content-length in metadata
+        assertThat(headers.getFirst(HttpHeaders.CONTENT_LENGTH)).isEqualTo("3");
+
+        try (final var stream = result.getBody().getInputStream()) {
             assertThat(stream.readAllBytes()).containsExactly(1, 2, 3);
         }
         verify(source).close();
@@ -79,7 +83,7 @@ class S3StorageProxyClientTest {
                                 GetObjectResponse.builder().build(),
                                 AbortableInputStream.create(
                                         new ByteArrayInputStream(new byte[0]))));
-        var response = client.proxyStorageRequest("", "key");
+        final var response = client.proxyStorageRequest("", "key");
         assertThat(response.getHeaders().getContentLength()).isEqualTo(-1);
         assertThat(response.getHeaders().getLastModified()).isEqualTo(-1);
         response.getBody().getInputStream().close();
@@ -88,7 +92,7 @@ class S3StorageProxyClientTest {
 
     @Test
     void returns304WithOnlyCacheValidatorsAndNoBody() {
-        var http =
+        final var http =
                 SdkHttpResponse.builder()
                         .statusCode(304)
                         .headers(
@@ -109,7 +113,7 @@ class S3StorageProxyClientTest {
                                 .awsErrorDetails(
                                         AwsErrorDetails.builder().sdkHttpResponse(http).build())
                                 .build());
-        var response = client.proxyStorageRequest("\"version\"", "key");
+        final var response = client.proxyStorageRequest("\"version\"", "key");
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_MODIFIED);
         assertThat(response.getBody()).isNull();
         assertThat(response.getHeaders().getETag()).isEqualTo("\"version\"");
@@ -128,7 +132,7 @@ class S3StorageProxyClientTest {
 
     @Test
     void distinguishesMissingObjectsFromProviderAndTransportFailures() {
-        for (var status : new int[] {404, 403, 500, 503}) {
+        for (final var status : new int[] {404, 403, 500, 503}) {
             when(s3.getObject(any(GetObjectRequest.class)))
                     .thenThrow(S3Exception.builder().statusCode(status).build());
             assertThat(client.proxyStorageRequest("", "key").getStatusCode())
@@ -151,8 +155,8 @@ class S3StorageProxyClientTest {
 
     @Test
     void closesTheStreamIfResponseConstructionFails() throws Exception {
-        var source = spy(new ByteArrayInputStream(new byte[0]));
-        var metadata = mock(GetObjectResponse.class);
+        final var source = spy(new ByteArrayInputStream(new byte[0]));
+        final var metadata = mock(GetObjectResponse.class);
         when(metadata.metadata()).thenThrow(new IllegalArgumentException("invalid metadata"));
         when(s3.getObject(any(GetObjectRequest.class)))
                 .thenReturn(
