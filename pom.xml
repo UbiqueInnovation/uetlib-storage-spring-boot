@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>ch.ubique</groupId>
+        <groupId>ch.ubique.uetlib</groupId>
         <artifactId>uetlib-parent</artifactId>
         <version>2026.10.1</version>
         <relativePath/>
@@ -18,22 +18,22 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>ch.ubique</groupId>
+                <groupId>ch.ubique.uetlib</groupId>
                 <artifactId>uetlib-testcontainers-postgresql</artifactId>
                 <version>2.1.2</version>
             </dependency>
             <dependency>
-                <groupId>ch.ubique</groupId>
+                <groupId>ch.ubique.uetlib</groupId>
                 <artifactId>uetlib-storage</artifactId>
                 <version>2.4.1</version>
             </dependency>
             <dependency>
-                <groupId>ch.ubique</groupId>
+                <groupId>ch.ubique.uetlib</groupId>
                 <artifactId>uetlib-spring-boot</artifactId>
                 <version>3.3.0</version>
             </dependency>
             <dependency>
-                <groupId>ch.ubique</groupId>
+                <groupId>ch.ubique.uetlib</groupId>
                 <artifactId>uetlib-core</artifactId>
                 <version>2.7.0</version>
             </dependency>
@@ -42,15 +42,15 @@
 
     <dependencies>
         <dependency>
-            <groupId>ch.ubique</groupId>
+            <groupId>ch.ubique.uetlib</groupId>
             <artifactId>uetlib-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>ch.ubique</groupId>
+            <groupId>ch.ubique.uetlib</groupId>
             <artifactId>uetlib-spring-boot</artifactId>
         </dependency>
         <dependency>
-            <groupId>ch.ubique</groupId>
+            <groupId>ch.ubique.uetlib</groupId>
             <artifactId>uetlib-storage</artifactId>
         </dependency>
 
@@ -74,7 +74,7 @@
 
         <!-- For testing storage clients -->
         <dependency>
-            <groupId>ch.ubique</groupId>
+            <groupId>ch.ubique.uetlib</groupId>
             <artifactId>uetlib-testcontainers-postgresql</artifactId>
             <scope>test</scope>
         </dependency>
