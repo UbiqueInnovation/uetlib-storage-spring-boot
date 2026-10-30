@@ -1,0 +1,118 @@
+package ch.ubique.uetlib.storage.spring.annotations;
+
+import static ch.ubique.uetlib.test.assertion.AssertionUtils.assertThrowsWithMessage;
+import static java.util.Map.entry;
+import static java.util.Map.ofEntries;
+import static java.util.stream.Collectors.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import ch.ubique.uetlib.storage.spring.config.EnableStoragesTestConfig;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.util.Arrays;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.*;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
+
+@WebMvcTest
+@ActiveProfiles("test")
+@ContextConfiguration(classes = EnableStoragesTestConfig.class)
+@AutoConfigureMockMvc
+class EnableStoragesDocumentationTest {
+
+    @MockitoSpyBean private ObjectMapper objectMapper;
+
+    @Autowired private ApplicationContext applicationContext;
+    @Autowired private MockMvc mockMvc;
+
+    @BeforeEach
+    void beforeEach() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void testDocumentationControllerReturnTypes() {
+        final var testStorageDocumentationController =
+                applicationContext.getBean("annotatedTestStorageDocumentationController");
+        final var controllerMethods =
+                Arrays.stream(testStorageDocumentationController.getClass().getDeclaredMethods())
+                        // filter out synthetic methods like $jacocoInit
+                        .filter(method -> !method.isSynthetic())
+                        .filter(method -> Modifier.isPublic(method.getModifiers()))
+                        .collect(
+                                groupingBy(
+                                        Method::getName,
+                                        mapping(
+                                                method ->
+                                                        ((ParameterizedType)
+                                                                        method
+                                                                                .getGenericReturnType())
+                                                                .getActualTypeArguments()[0]
+                                                                        .getTypeName(),
+                                                toList())));
+        assertEquals(
+                ofEntries(
+                        entry("saveImage", List.of("byte[]")),
+                        entry("saveImageByteOutput", List.of("byte[]")),
+                        entry(
+                                "saveJson",
+                                List.of("ch.ubique.uetlib.storage.spring.annotations.TestUser")),
+                        entry(
+                                "saveMap",
+                                List.of("java.util.Map<java.lang.Integer, java.lang.Object>")),
+                        entry(
+                                "saveJsonOutput",
+                                List.of("ch.ubique.uetlib.storage.spring.annotations.TestUser"))),
+                controllerMethods);
+    }
+
+    @Test
+    void testDocumentation() throws Exception {
+        final var testStorageDocumentation =
+                applicationContext.getBean("annotatedTestStorageDocumentationController");
+        assertNotNull(testStorageDocumentation);
+
+        mockMvc.perform(get("/documentation/storage/files/5.json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        content()
+                                .json(
+                                        "{\"detail\":\"this storage method exists only to document blob storage endpoints and must not be called\",\"instance\":\"/documentation/storage/files/5.json\",\"status\":400,\"title\":\"Bad Request\"}"));
+
+        mockMvc.perform(get("/documentation/storage/files/38.png"))
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        content()
+                                .json(
+                                        "{\"detail\":\"this storage method exists only to document blob storage endpoints and must not be called\",\"instance\":\"/documentation/storage/files/38.png\",\"status\":400,\"title\":\"Bad Request\"}"));
+    }
+
+    @Test
+    void profileAnnotationStorage() {
+        assertDoesNotThrow(
+                () ->
+                        applicationContext.getBean(
+                                "profileEnabledAnnotatedTestStorageDocumentationController"));
+        assertThrowsWithMessage(
+                NoSuchBeanDefinitionException.class,
+                () ->
+                        applicationContext.getBean(
+                                "profileDisabledAnnotatedTestStorageDocumentationController"),
+                "No bean named 'profileDisabledAnnotatedTestStorageDocumentationController' available");
+    }
+}
