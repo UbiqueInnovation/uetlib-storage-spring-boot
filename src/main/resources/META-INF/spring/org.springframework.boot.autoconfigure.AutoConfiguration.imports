@@ -1,1 +1,1 @@
-ch.ubique.uetlib.storage.spring.proxy.StorageProxyAutoConfiguration
+ch.ubique.uetlib.storage.spring.boot.proxy.StorageProxyAutoConfiguration

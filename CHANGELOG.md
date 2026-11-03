@@ -2,6 +2,8 @@
 
 ## 3.0.0 (unreleased)
 
+- Rename integration packages to `ch.ubique.uetlib.storage.spring.boot`; keep configuration keys unchanged.
+
 ### Breaking changes
 
 - Move Java packages from `ch.ubique.backend` to `ch.ubique.uetlib`, including class-name resources. Existing Spring configuration property keys are unchanged.
