@@ -14,9 +14,9 @@ Applications must configure their own security rules or implement authorization 
 Enable it in the appropriate application/profile configuration:
 
 ```properties
-ch.ubique.backend.storage.proxy.enabled=true
+ch.uetlib.storage.proxy.enabled=true
 # Optional; no trailing slash:
-ch.ubique.backend.storage.proxy.path=/v1/storage/proxy
+ch.uetlib.storage.proxy.path=/v1/storage/proxy
 ```
 
 Provide exactly one `StorageProxyClient` bean (or a primary bean). For filesystem output:
@@ -92,4 +92,5 @@ names, with standard response headers taking precedence. Provider failures other
 
 ## License
 
-Except where otherwise noted, original uetlib code is licensed under the [Apache License 2.0](LICENSE). Third-party files retain their original license terms; see [NOTICE](NOTICE) and any third-party notices in this repository.
+Except where otherwise noted, original uetlib code is licensed under the [Apache License 2.0](LICENSE). Third-party
+files retain their original license terms; see [NOTICE](NOTICE) and any third-party notices in this repository.
