@@ -10,10 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** Opt-in HTTP facade. The owning application remains responsible for authorization. */
 @RestController
-@ConditionalOnProperty(
-        prefix = "ch.ubique.backend.storage.proxy",
-        name = "enabled",
-        havingValue = "true")
+@ConditionalOnProperty(prefix = "ch.uetlib.storage.proxy", name = "enabled", havingValue = "true")
 public class StorageProxyController {
     private final StorageProxyClient client;
 
@@ -21,7 +18,7 @@ public class StorageProxyController {
         this.client = client;
     }
 
-    @GetMapping("${ch.ubique.backend.storage.proxy.path:/v1/storage/proxy}/{*key}")
+    @GetMapping("${ch.uetlib.storage.proxy.path:/v1/storage/proxy}/{*key}")
     public ResponseEntity<InputStreamResource> proxyStorageRequest(
             @RequestHeader(value = "If-None-Match", defaultValue = "") final String eTag,
             @PathVariable("key") final String key) {

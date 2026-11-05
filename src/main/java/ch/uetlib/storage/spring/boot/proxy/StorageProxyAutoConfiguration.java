@@ -9,10 +9,7 @@ import org.springframework.context.annotation.Bean;
 /** Registers the endpoint only after an application explicitly enables it and supplies a client. */
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnProperty(
-        prefix = "ch.ubique.backend.storage.proxy",
-        name = "enabled",
-        havingValue = "true")
+@ConditionalOnProperty(prefix = "ch.uetlib.storage.proxy", name = "enabled", havingValue = "true")
 public class StorageProxyAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean

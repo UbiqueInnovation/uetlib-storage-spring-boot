@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 3.0.0
+## 3.0.1
 
 - Move Java packages and class references from `ch.ubique.uetlib` to `ch.uetlib`.
 
@@ -8,16 +8,23 @@
 
 ### Breaking changes
 
-- Move Java packages from `ch.ubique.backend` to `ch.uetlib`, including class-name resources. Existing Spring configuration property keys are unchanged.
-- Remove the inherited Ubique Artifactory repository and deployment destination; private consumers must configure their own registry.
-- Add Apache-2.0 licensing for original code, preserve third-party licenses, and add public project metadata and contribution/security guidance.
+- Rename uetlib configuration prefixes to `ch.uetlib.*`, including Spring bindings, `@Value`, conditions,
+  placeholders and external deployment configuration. Use the combined OpenRewrite migration to update consumers.
+
+- Move Java packages from `ch.ubique.backend` to `ch.uetlib`, including class-name resources. Existing Spring
+  configuration property keys are unchanged.
+- Remove the inherited Ubique Artifactory repository and deployment destination; private consumers must configure their
+  own registry.
+- Add Apache-2.0 licensing for original code, preserve third-party licenses, and add public project metadata and
+  contribution/security guidance.
 
 - Move Maven coordinates from `ch.ubique:uetlib-*` to `ch.uetlib:uetlib-*`.
 - Align uetlib parent, BOM and library references with the migration releases.
 
 ### Migration
 
-After the migration releases and `uetlib-rewrite` are published, run this from the consuming project, then review the diff and run its tests:
+After the migration releases and `uetlib-rewrite` are published, run this from the consuming project, then review the
+diff and run its tests:
 
 ```sh
 mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
@@ -25,8 +32,9 @@ mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
   -Drewrite.activeRecipes=ch.uetlib.MigrateToPublicUetlib
 ```
 
-The recipe updates Maven coordinates/versions, Java references and known class-name resources. Review application-owned packages under the old namespace, Kotlin, reflection patterns, native-access module flags and persisted class names separately. Use `:dryRun` instead of `:run` to preview a patch.
-
+The recipe updates Maven coordinates/versions, Java references and known class-name resources. Review application-owned
+packages under the old namespace, Kotlin, reflection patterns, native-access module flags and persisted class names
+separately. Use `:dryRun` instead of `:run` to preview a patch.
 
 ## 2.3.0
 
@@ -36,6 +44,7 @@ The recipe updates Maven coordinates/versions, Java references and known class-n
 - Add an S3/R2 proxy adapter using a single conditional GET, streamed bodies and HTTP metadata.
 
 ## 2.2.4
+
 - update uetlib-storage `2.3.4` -> `2.3.5`
 - latest uetlib parent
 - latest uetlib testcontainers postgresql
