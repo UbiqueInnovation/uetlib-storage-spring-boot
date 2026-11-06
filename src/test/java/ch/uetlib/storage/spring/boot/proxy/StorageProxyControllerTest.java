@@ -4,9 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import java.io.ByteArrayInputStream;
-import java.net.URI;
-import java.util.concurrent.atomic.AtomicReference;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -14,6 +11,10 @@ import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import java.io.ByteArrayInputStream;
+import java.net.URI;
+import java.util.concurrent.atomic.AtomicReference;
 
 class StorageProxyControllerTest {
     @Test
