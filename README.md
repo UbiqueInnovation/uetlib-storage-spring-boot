@@ -14,9 +14,9 @@ Applications must configure their own security rules or implement authorization 
 Enable it in the appropriate application/profile configuration:
 
 ```properties
-ch.ubique.backend.storage.proxy.enabled=true
+ch.uetlib.storage.proxy.enabled=true
 # Optional; no trailing slash:
-ch.ubique.backend.storage.proxy.path=/v1/storage/proxy
+ch.uetlib.storage.proxy.path=/v1/storage/proxy
 ```
 
 Provide exactly one `StorageProxyClient` bean (or a primary bean). For filesystem output:
@@ -89,3 +89,8 @@ selection and security configuration. For Ridian's remote path, replace its loca
 and reuse the existing `S3Client` and bucket configuration. The shared adapter removes the old HEAD-before-GET
 round trip and uses HTTP dates for Last-Modified. Custom metadata keeps its unprefixed header
 names, with standard response headers taking precedence. Provider failures other than 404 return 502.
+
+## License
+
+Except where otherwise noted, original uetlib code is licensed under the [Apache License 2.0](LICENSE). Third-party
+files retain their original license terms; see [NOTICE](NOTICE) and any third-party notices in this repository.
