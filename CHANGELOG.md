@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.0.3
+
+- Use shared Maven build and publish workflows at `v1.0.0` to enforce formatting checks in CI.
+
 ## 3.0.2
 
 - Move Java packages and class references from `ch.ubique.uetlib` to `ch.uetlib`.
