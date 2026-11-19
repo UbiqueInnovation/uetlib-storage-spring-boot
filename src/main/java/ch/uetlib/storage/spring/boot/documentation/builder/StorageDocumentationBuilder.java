@@ -21,7 +21,7 @@ import net.bytebuddy.description.annotation.AnnotationDescription;
 import net.bytebuddy.description.modifier.TypeManifestation;
 import net.bytebuddy.description.modifier.Visibility;
 import net.bytebuddy.description.type.TypeDefinition;
-import net.bytebuddy.description.type.TypeDescription.Generic.Builder;
+import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.Implementation;
@@ -153,11 +153,14 @@ public final class StorageDocumentationBuilder<T> {
         final var documentedClass = methodInfo.outputMappingAnnotation().documentedClass();
         if (!documentedClass.equals(Object.class)) {
             // use documentedClass if it is explicitly set (default value is Object.class)
-            return Builder.parameterizedType(ResponseEntity.class, documentedClass).build();
+            return TypeDescription.Generic.Builder.parameterizedType(
+                            ResponseEntity.class, documentedClass)
+                    .build();
         }
 
         final var type = getStorageObjectParameterType(methodInfo.storageMethod());
-        return Builder.parameterizedType(ResponseEntity.class, type).build();
+        return TypeDescription.Generic.Builder.parameterizedType(ResponseEntity.class, type)
+                .build();
     }
 
     @SuppressWarnings("java:S5443")
