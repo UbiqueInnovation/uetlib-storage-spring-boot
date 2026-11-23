@@ -98,12 +98,11 @@ class ImageStorageServiceTest {
         doReturn(new ByteArrayInputStream(exampleImage))
                 .when(storageClient)
                 .read("sasImage/1-original.png");
-        assertDoesNotThrow(
-                () ->
-                        imageStorageService.processImage(
-                                exampleImageInputStream,
-                                GENERATE_GENERATE_PATH_PNG.apply(1),
-                                MediaType.PNG));
+        assertDoesNotThrow(() ->
+                imageStorageService.processImage(
+                        exampleImageInputStream,
+                        GENERATE_GENERATE_PATH_PNG.apply(1),
+                        MediaType.PNG));
         verify(storageClient, atLeastOnce())
                 .write(
                         new InputStreamOutput(exampleImageInputStream, MediaType.PNG.toString()),

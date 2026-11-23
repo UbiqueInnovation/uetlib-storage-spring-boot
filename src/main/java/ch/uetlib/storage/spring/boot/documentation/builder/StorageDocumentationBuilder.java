@@ -71,12 +71,11 @@ public final class StorageDocumentationBuilder<T> {
         var builder = b;
         final var outputMethodInfos =
                 StreamUtils.emptyIfNull(annotatedMethodsByAnnotation.get(StorageMappingType.OUTPUT))
-                        .filter(
-                                storageMethodInfo ->
-                                        storageMethodInfo
-                                                .outputMappingAnnotation()
-                                                .codeGenerationType()
-                                                .generateDocumentationCode())
+                        .filter(storageMethodInfo ->
+                                storageMethodInfo
+                                        .outputMappingAnnotation()
+                                        .codeGenerationType()
+                                        .generateDocumentationCode())
                         .toList();
 
         final var outputMethodNames =
@@ -98,34 +97,31 @@ public final class StorageDocumentationBuilder<T> {
                 outputMethodInfos.stream().collect(groupingBy(StorageMethodInfo::mappingPath));
         outputStorageMethodsByMappingPaths.entrySet().stream()
                 .filter(e -> e.getValue().size() > 1)
-                .forEach(
-                        entry -> {
-                            final var mappingPath = entry.getKey();
-                            final var methods =
-                                    entry.getValue().stream()
-                                            .map(StorageMethodInfo::storageMethod)
-                                            .toList();
-                            final var methodsString =
-                                    methods.stream()
-                                            .map(
-                                                    m ->
-                                                            m.getDeclaringClass().getSimpleName()
-                                                                    + "#"
-                                                                    + m.getName()
-                                                                    + "()")
-                                            .collect(Collectors.joining(", ", "{", "}"));
-                            final var storageClass =
-                                    methods.getFirst().getDeclaringClass().getSimpleName();
+                .forEach(entry -> {
+                    final var mappingPath = entry.getKey();
+                    final var methods =
+                            entry.getValue().stream()
+                                    .map(StorageMethodInfo::storageMethod)
+                                    .toList();
+                    final var methodsString =
+                            methods.stream()
+                                    .map(m ->
+                                            m.getDeclaringClass().getSimpleName()
+                                                    + "#"
+                                                    + m.getName()
+                                                    + "()")
+                                    .collect(Collectors.joining(", ", "{", "}"));
+                    final var storageClass = methods.getFirst().getDeclaringClass().getSimpleName();
 
-                            throw new IllegalArgumentException(
-                                    MessageFormat.format(
-                                            "Storage {0} is not valid: Methods {1} map to the same documentation path {2}. Deduplicate the mapping paths or set only one of them to {3}.{4}",
-                                            storageClass,
-                                            methodsString,
-                                            mappingPath,
-                                            CodeGenerationType.class.getSimpleName(),
-                                            CodeGenerationType.DOCUMENTATION.name()));
-                        });
+                    throw new IllegalArgumentException(
+                            MessageFormat.format(
+                                    "Storage {0} is not valid: Methods {1} map to the same documentation path {2}. Deduplicate the mapping paths or set only one of them to {3}.{4}",
+                                    storageClass,
+                                    methodsString,
+                                    mappingPath,
+                                    CodeGenerationType.class.getSimpleName(),
+                                    CodeGenerationType.DOCUMENTATION.name()));
+                });
 
         for (final var outputMethodInfo : outputMethodInfos) {
             builder = buildDocumentationMethod(builder, outputMethodInfo);

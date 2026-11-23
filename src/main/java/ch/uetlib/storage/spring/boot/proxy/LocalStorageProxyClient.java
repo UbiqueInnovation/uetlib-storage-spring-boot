@@ -97,11 +97,10 @@ public class LocalStorageProxyClient implements StorageProxyClient {
         headers.set(HttpHeaders.IF_NONE_MATCH, ifNoneMatch);
         try {
             return headers.getIfNoneMatch().stream()
-                    .anyMatch(
-                            candidate ->
-                                    "*".equals(candidate)
-                                            || candidate.equals(eTag)
-                                            || candidate.equals("W/" + eTag));
+                    .anyMatch(candidate ->
+                            "*".equals(candidate)
+                                    || candidate.equals(eTag)
+                                    || candidate.equals("W/" + eTag));
         } catch (final IllegalArgumentException e) {
             // Ignore malformed validators rather than failing an otherwise valid file request.
             return false;
