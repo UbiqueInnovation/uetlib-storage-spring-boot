@@ -97,22 +97,21 @@ class EnableStoragesDocumentationTest {
                 .andExpect(
                         content()
                                 .json(
-                                        "{\"detail\":\"this storage method exists only to document blob storage endpoints and must not be called\",\"instance\":\"/documentation/storage/files/5.json\",\"status\":400,\"title\":\"Bad Request\"}"));
+                                        "{\"detail\":\"this storage method exists only to document blob storage endpoints and must not be called\",\"status\":400,\"title\":\"Bad Request\"}"));
 
         mockMvc.perform(get("/documentation/storage/files/38.png"))
                 .andExpect(status().isBadRequest())
                 .andExpect(
                         content()
                                 .json(
-                                        "{\"detail\":\"this storage method exists only to document blob storage endpoints and must not be called\",\"instance\":\"/documentation/storage/files/38.png\",\"status\":400,\"title\":\"Bad Request\"}"));
+                                        "{\"detail\":\"this storage method exists only to document blob storage endpoints and must not be called\",\"status\":400,\"title\":\"Bad Request\"}"));
     }
 
     @Test
     void profileAnnotationStorage() {
-        assertDoesNotThrow(
-                () ->
-                        applicationContext.getBean(
-                                "profileEnabledAnnotatedTestStorageDocumentationController"));
+        assertDoesNotThrow(() ->
+                applicationContext.getBean(
+                        "profileEnabledAnnotatedTestStorageDocumentationController"));
         assertThrowsWithMessage(
                 NoSuchBeanDefinitionException.class,
                 () ->
