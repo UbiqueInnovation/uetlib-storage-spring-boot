@@ -1,6 +1,18 @@
 # CHANGELOG
 
-## UNRELEASED
+## 3.1.0
+
+- `uetlib-parent` updated to
+  `2026.11.5`: [Changelog/2026.11.5](https://github.com/UbiqueInnovation/uetlib-parent/blob/main/CHANGELOG.md#2026115) [Diff/2026.11.1-2026.11.5](https://github.com/UbiqueInnovation/uetlib-parent/compare/v2026.11.1...v2026.11.5)
+- `uetlib-core` updated to
+  `3.1.0`: [Changelog/3.1.0](https://github.com/UbiqueInnovation/uetlib-core/blob/main/CHANGELOG.md#310) [Diff/3.0.1-3.1.0](https://github.com/UbiqueInnovation/uetlib-core/compare/v3.0.1...v3.1.0)
+- `uetlib-spring-boot` updated to
+  `4.1.0`: [Changelog/4.1.0](https://github.com/UbiqueInnovation/uetlib-spring-boot/blob/main/CHANGELOG.md#410) [Diff/4.0.2-4.1.0](https://github.com/UbiqueInnovation/uetlib-spring-boot/compare/v4.0.2...v4.1.0)
+- `uetlib-storage` updated to
+  `3.1.0`: [Changelog/3.1.0](https://github.com/UbiqueInnovation/uetlib-storage/blob/main/CHANGELOG.md#310) [Diff/3.0.2-3.1.0](https://github.com/UbiqueInnovation/uetlib-storage/compare/v3.0.2...v3.1.0)
+- `uetlib-testcontainers` updated to
+  `3.1.0`: [Changelog/3.1.0](https://github.com/UbiqueInnovation/uetlib-testcontainers/blob/main/CHANGELOG.md#310) [Diff/3.0.1-3.1.0](https://github.com/UbiqueInnovation/uetlib-testcontainers/compare/v3.0.1...v3.1.0)
+- Updated dependencies and actions.
 
 - Fix an ambiguous `Builder` import reported by Error Prone's default checks.
 
